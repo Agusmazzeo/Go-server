@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"server/src/api/controllers"
+	"server/src/worker/controllers"
 
 	"gorm.io/gorm"
 )

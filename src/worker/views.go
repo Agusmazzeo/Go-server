@@ -1,8 +1,8 @@
-package api
+package worker
 
 import (
 	"net/http"
-	handlers "server/src/api/handlers"
+	handlers "server/src/worker/handlers"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -29,6 +29,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) InitRoutes() {
 	s.Router.Get("/alive", handlers.Healthcheck)
+	s.Router.Post("/api/report", handlers.ReportsHandler)
 
 }
 

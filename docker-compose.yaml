@@ -1,14 +1,24 @@
 version: '3.3'
 services:
-  server:
+  api:
     image: go-server:1.0.0
     build: .
     restart: always
+    environment:
+      - SERVICE_TYPE=API
     ports:
       - 8000:8000
     networks:
       - local-net
 
+  worker:
+    image: go-server:1.0.0
+    build: .
+    restart: always
+    environment:
+      - SERVICE_TYPE=WORKER
+    networks:
+      - local-net
 
   db:
     image: mysql:5.7
@@ -33,6 +43,9 @@ services:
       # - ./mysqlsampledatabase.sql:/var/mysqlsampledatabase.sql
     networks:
       - local-net
+
+volumes:
+  esdata:
 
 networks:
   local-net:
