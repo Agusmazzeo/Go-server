@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type ReportSchedule struct {
 	ID                      uint      `gorm:"primaryKey;column:id"`
@@ -16,4 +21,22 @@ type ReportSchedule struct {
 
 func (ReportSchedule) TableName() string {
 	return "report_schedules"
+}
+
+// GetReportScheduleByID fetches a ReportSchedule by its ID
+func GetReportScheduleByID(ctx context.Context, db *gorm.DB, id uint) (*ReportSchedule, error) {
+	var reportSchedule ReportSchedule
+	if err := db.WithContext(ctx).First(&reportSchedule, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &reportSchedule, nil
+}
+
+// GetAllReportSchedules fetches all ReportSchedule records
+func GetAllReportSchedules(ctx context.Context, db *gorm.DB) ([]ReportSchedule, error) {
+	var reportSchedules []ReportSchedule
+	if err := db.WithContext(ctx).Find(&reportSchedules).Error; err != nil {
+		return nil, err
+	}
+	return reportSchedules, nil
 }

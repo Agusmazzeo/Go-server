@@ -29,8 +29,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) InitRoutes() {
 	s.Router.Get("/alive", handlers.Healthcheck)
-	s.Router.Post("/api/report", handlers.ReportsHandler)
-
+	s.Router.Route("/api/report", func(r chi.Router) {
+		r.Post("/all", s.Handler.LoadAllReportSchedules)
+		r.Post("/{id}", s.Handler.LoadReportScheduleByID)
+	})
 }
 
 func NewHTTPServer(server *Server) *http.Server {

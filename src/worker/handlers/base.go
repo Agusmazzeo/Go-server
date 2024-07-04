@@ -17,7 +17,7 @@ func NewHandler(db *gorm.DB) *Handler {
 	return &Handler{Controller: *controller}
 }
 
-func (s *Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
+func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
 	res, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
