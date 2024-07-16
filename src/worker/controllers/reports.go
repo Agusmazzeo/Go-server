@@ -10,13 +10,13 @@ import (
 
 // LoadAllReportSchedule loads all report schedules and schedules them
 func (c *Controller) LoadAllReportSchedule(ctx context.Context) error {
-	reportSchedules, err := models.GetAllReportSchedules(ctx, c.DB)
-	if err != nil {
+	var reportSchedules []*models.ReportSchedule
+	if err := c.DB.WithContext(ctx).Find(&reportSchedules).Error; err != nil {
 		return err
 	}
 
 	for _, reportSchedule := range reportSchedules {
-		if err := c.ScheduleReport(ctx, &reportSchedule, tasks.SendReportByEmail); err != nil {
+		if err := c.ScheduleReport(ctx, reportSchedule, tasks.SendReportByEmail); err != nil {
 			return err
 		}
 	}
@@ -26,11 +26,10 @@ func (c *Controller) LoadAllReportSchedule(ctx context.Context) error {
 
 // LoadReportScheduleByID loads a report schedule by ID and schedules it
 func (c *Controller) LoadReportScheduleByID(ctx context.Context, ID uint) error {
-	reportSchedule, err := models.GetReportScheduleByID(ctx, c.DB, ID)
-	if err != nil {
+	var reportSchedule *models.ReportSchedule
+	if err := c.DB.WithContext(ctx).First(reportSchedule, "id = ?", ID).Error; err != nil {
 		return err
 	}
-
 	if err := c.ScheduleReport(ctx, reportSchedule, tasks.SendReportByEmail); err != nil {
 		return err
 	}

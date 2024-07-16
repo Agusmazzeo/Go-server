@@ -1,4 +1,4 @@
-package controllers
+package controllers_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"server/src/models"
+	"server/src/worker/controllers"
 )
 
 var ch = make(chan bool, 1)
@@ -19,7 +20,7 @@ func mockSendReportByEmail(reportSchedule *models.ReportSchedule) error {
 
 func TestScheduleReport(t *testing.T) {
 
-	c := NewController(nil)
+	c := controllers.NewController(nil)
 
 	reportSchedule := &models.ReportSchedule{
 		ID:       1,
@@ -47,7 +48,7 @@ func TestScheduleReport(t *testing.T) {
 }
 
 func TestScheduleReport_ErrorCreatingTask(t *testing.T) {
-	c := NewController(nil)
+	c := controllers.NewController(nil)
 
 	reportSchedule := &models.ReportSchedule{
 		ID:       1,

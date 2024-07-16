@@ -30,6 +30,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) InitRoutes() {
 	s.Router.Get("/alive", handlers.Healthcheck)
 
+	s.Router.Route("/api/reports", func(r chi.Router) {
+		r.Get("/", s.Handler.GetAllReportSchedules)
+		r.Get("/{id}", s.Handler.GetReportScheduleByID)
+		r.Post("/", s.Handler.CreateReportSchedule)
+		r.Put("/{id}", s.Handler.UpdateReportSchedule)
+		r.Delete("/{id}", s.Handler.DeleteReportSchedule)
+	})
+
 }
 
 func NewHTTPServer(server *Server) *http.Server {
