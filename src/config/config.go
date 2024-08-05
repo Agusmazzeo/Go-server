@@ -1,11 +1,14 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Databases DatabasesConfig `mapstructure:"databases"`
+	Databases       DatabasesConfig      `mapstructure:"databases"`
+	ExternalClients ExternalClientConfig `mapstructure:"externalClients"`
 }
 
 type DatabasesConfig struct {
@@ -22,10 +25,22 @@ type SQLConfig struct {
 	ConnectionString string `mapstructure:"connection_string"`
 }
 
-func LoadConfig() (*Config, error) {
+type ExternalClientConfig struct {
+	ESCO ESCOConfig `mapstructure:"esco"`
+}
+
+type ESCOConfig struct {
+	BaseURL  string `mapstructure:"baseUrl"`
+	TokenURL string `mapstructure:"tokenUrl"`
+	ClientID string `mapstructure:"clientID"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+}
+
+func LoadConfig(baseUrl string) (*Config, error) {
 	var cfg Config
 
-	viper.AddConfigPath("settings")
+	viper.AddConfigPath(fmt.Sprintf("%ssettings", baseUrl))
 	viper.SetConfigName("appsettings")
 	viper.SetConfigType("yaml")
 

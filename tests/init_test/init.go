@@ -28,7 +28,7 @@ func SetUpTestDatabase(t *testing.T, log *logr.Logger) (*gorm.DB, func()) {
 			t.Fatalf("os.Getwd() failed with %s\n", err)
 		}
 
-		composeFile := filepath.Join(wd, "../../docker-compose.yaml") // Concatenate the working directory with the file
+		composeFile := filepath.Join(wd, "../../../docker-compose.yaml") // Concatenate the working directory with the file
 
 		// Check if the services are already up
 		cmd := exec.Command("docker-compose", "-f", composeFile, "ps")
@@ -38,9 +38,9 @@ func SetUpTestDatabase(t *testing.T, log *logr.Logger) (*gorm.DB, func()) {
 		}
 
 		// If the output is empty, the services are not up
-		if len(out) == 0 {
-			cmd := exec.Command("docker-compose", "-f", composeFile, "up", "postgres-db", "-d")
-			err = cmd.Run()
+		if len(out) <= len("Name   Command   State   Ports\n------------------------------\n") {
+			cmd := exec.Command("docker-compose", "-f", composeFile, "up", "-d", "postgres-db")
+			_, err = cmd.Output()
 			if err != nil {
 				t.Fatalf("Failed while setting up DB %s.\n", err)
 			}
@@ -73,8 +73,7 @@ func SetUpTestDatabase(t *testing.T, log *logr.Logger) (*gorm.DB, func()) {
 	})
 
 	cleanup := func() {
-		sqlDB, _ := dbInstance.DB()
-		sqlDB.Close()
+		dbInstance.Unscoped().Where("1 = 1").Delete(&models.ReportSchedule{})
 	}
 
 	return dbInstance, cleanup

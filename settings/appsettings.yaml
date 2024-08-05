@@ -15,3 +15,11 @@ databases:
     username: user
     password: pass
     driver: postgres
+
+externalClients:
+  esco:
+    baseUrl: https://clientes.criteria.com.ar/uniwa/api
+    tokenUrl: https://clientes.criteria.com.ar/uniwa/api/token
+    clientID: Unisync
+    username: icastagno
+    password: Messiusa24!
