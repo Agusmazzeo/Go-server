@@ -8,10 +8,6 @@ import (
 	"server/src/api"
 	"server/src/config"
 	"server/src/worker"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func main() {
@@ -34,25 +30,21 @@ func main() {
 func run(cfg *config.Config) (<-chan error, error) {
 	errC := make(chan error, 1)
 
-	// Setup GORM
-	dsn := "host=" + cfg.Databases.SQL.Host + " user=" + cfg.Databases.SQL.Username + " password=" + cfg.Databases.SQL.Password + " dbname=" + cfg.Databases.SQL.Database + " port=" + cfg.Databases.SQL.Port + " sslmode=disable"
-	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	}
-	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	serviceType := os.Getenv("SERVICE_TYPE")
 	var httpServer *http.Server
 	if serviceType == "API" {
 		// Initialize the API server with GORM DB
-		server := api.NewServer(db)
+		server, err := api.NewServer(cfg)
+		if err != nil {
+			return nil, err
+		}
 		httpServer = api.NewHTTPServer(server)
 	} else {
 		// Initialize the Worker server with GORM DB
-		server := worker.NewServer(db)
+		server, err := worker.NewServer(cfg)
+		if err != nil {
+			return nil, err
+		}
 		httpServer = worker.NewHTTPServer(server)
 	}
 

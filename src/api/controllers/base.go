@@ -1,13 +1,16 @@
 package controllers
 
 import (
+	"server/src/clients/esco"
+
 	"gorm.io/gorm"
 )
 
 type Controller struct {
-	DB *gorm.DB
+	DB         *gorm.DB
+	ESCOClient *esco.ESCOServiceClient
 }
 
-func NewController(db *gorm.DB) *Controller {
-	return &Controller{DB: db}
+func NewController(db *gorm.DB, escoCLient *esco.ESCOServiceClient) *Controller {
+	return &Controller{DB: db, ESCOClient: escoCLient}
 }

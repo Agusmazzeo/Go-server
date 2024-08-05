@@ -10,19 +10,19 @@ import (
 	requests "server/src/utils/requests"
 )
 
-// ESCOService is a struct that uses ExternalAPIService to interact with the ESCO API
-type ESCOService struct {
+// ESCOServiceClient is a struct that uses ExternalAPIService to interact with the ESCO API
+type ESCOServiceClient struct {
 	API *requests.ExternalAPIService
 }
 
-// NewESCOService creates a new instance of ESCOService
-func NewESCOService(baseURL, tokenURL, clientID, clientSecret, username, password string) *ESCOService {
+// NewESCOServiceClient creates a new instance of ESCOServiceClient
+func NewESCOServiceClient(baseURL, tokenURL, clientID, clientSecret, username, password string) *ESCOServiceClient {
 	api := requests.NewExternalAPIService(baseURL, tokenURL, clientID, clientSecret, username, password)
-	return &ESCOService{API: api}
+	return &ESCOServiceClient{API: api}
 }
 
 // BuscarCuentas retrieves all accounts matching filter
-func (s *ESCOService) BuscarCuentas(filter string) ([]CuentaSchema, error) {
+func (s *ESCOServiceClient) BuscarCuentas(filter string) ([]CuentaSchema, error) {
 	userID := s.API.Username // Assuming s.API.Username is the correct way to get the userID
 	body := map[string]string{
 		"Filtro": filter,
@@ -52,7 +52,7 @@ func (s *ESCOService) BuscarCuentas(filter string) ([]CuentaSchema, error) {
 }
 
 // GetCuentaDetalle retrieves detailed account information
-func (s *ESCOService) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, error) {
+func (s *ESCOServiceClient) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, error) {
 	body := map[string]string{
 		"CID_P": cid,
 	}
@@ -80,7 +80,7 @@ func (s *ESCOService) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, error)
 }
 
 // GetEstadoCuenta retrieves the account status information
-func (s *ESCOService) GetEstadoCuenta(cid, fid, nncc string, date time.Time) ([]EstadoCuentaSchema, error) {
+func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc string, date time.Time) ([]EstadoCuentaSchema, error) {
 	headers := map[string]string{
 		"UID":   s.API.Username, // Assuming this is how you get the user ID
 		"CID":   cid,

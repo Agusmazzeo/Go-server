@@ -3,24 +3,28 @@ package api
 import (
 	"net/http"
 	handlers "server/src/api/handlers"
+	"server/src/config"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 )
 
 type Server struct {
 	Router  *chi.Mux
-	Handler handlers.Handler
+	Handler *handlers.Handler
 }
 
-func NewServer(db *gorm.DB) *Server {
+func NewServer(cfg *config.Config) (*Server, error) {
+	handler, err := handlers.NewHandler(cfg)
+	if err != nil {
+		return nil, err
+	}
 	server := &Server{
 		Router:  chi.NewRouter(),
-		Handler: *handlers.NewHandler(db),
+		Handler: handler,
 	}
 	server.InitRoutes()
-	return server
+	return server, nil
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -36,6 +40,10 @@ func (s *Server) InitRoutes() {
 		r.Post("/schedule/", s.Handler.CreateReportSchedule)
 		r.Put("/schedule/{id}", s.Handler.UpdateReportSchedule)
 		r.Delete("/schedule/{id}", s.Handler.DeleteReportSchedule)
+	})
+
+	s.Router.Route("/api/accounts", func(r chi.Router) {
+		r.Get("/", s.Handler.GetAllAccounts)
 	})
 
 }

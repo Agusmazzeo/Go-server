@@ -3,21 +3,25 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"server/src/config"
+	"server/src/database"
 	"server/src/worker/controllers"
-
-	"gorm.io/gorm"
 )
 
 type Handler struct {
-	Controller controllers.Controller
+	Controller *controllers.Controller
 }
 
-func NewHandler(db *gorm.DB) *Handler {
+func NewHandler(cfg *config.Config) (*Handler, error) {
+	db, err := database.SetupDB(cfg)
+	if err != nil {
+		return nil, err
+	}
 	controller := controllers.NewController(db)
-	return &Handler{Controller: *controller}
+	return &Handler{Controller: controller}, nil
 }
 
-func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
+func (h *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {
 	res, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

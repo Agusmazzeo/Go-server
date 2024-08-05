@@ -4,20 +4,33 @@ import (
 	"encoding/json"
 	"net/http"
 	"server/src/api/controllers"
-
-	"gorm.io/gorm"
+	"server/src/clients/esco"
+	"server/src/config"
+	"server/src/database"
 )
 
 type Handler struct {
 	Controller controllers.Controller
 }
 
-func NewHandler(db *gorm.DB) *Handler {
-	controller := controllers.NewController(db)
-	return &Handler{Controller: *controller}
+func NewHandler(cfg *config.Config) (*Handler, error) {
+	db, err := database.SetupDB(cfg)
+	if err != nil {
+		return nil, err
+	}
+	escoClient := esco.NewESCOServiceClient(
+		cfg.ExternalClients.ESCO.BaseURL,
+		cfg.ExternalClients.ESCO.TokenURL,
+		cfg.ExternalClients.ESCO.ClientID,
+		"",
+		cfg.ExternalClients.ESCO.Username,
+		cfg.ExternalClients.ESCO.Password,
+	)
+	controller := controllers.NewController(db, escoClient)
+	return &Handler{Controller: *controller}, nil
 }
 
-func (s *Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
+func (s *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {
 	res, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

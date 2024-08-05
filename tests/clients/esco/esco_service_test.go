@@ -34,7 +34,7 @@ func TestESCOService(t *testing.T) {
 	username := cfg.ExternalClients.ESCO.Username
 	password := cfg.ExternalClients.ESCO.Password
 
-	escoService := esco.NewESCOService(baseURL, tokenURL, clientID, clientSecret, username, password)
+	escoService := esco.NewESCOServiceClient(baseURL, tokenURL, clientID, clientSecret, username, password)
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {
 		result, err := escoService.BuscarCuentas("*")
