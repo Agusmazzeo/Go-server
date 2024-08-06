@@ -22,19 +22,13 @@ func LoadEnv() {
 }
 
 func TestESCOService(t *testing.T) {
-	cfg, err := config.LoadConfig("../../../")
+	cfg, err := config.LoadConfig("../../../settings")
 	if err != nil {
 		log.Println(err, "Error while loading config")
 		return
 	}
-	baseURL := cfg.ExternalClients.ESCO.BaseURL
-	tokenURL := cfg.ExternalClients.ESCO.TokenURL
-	clientID := cfg.ExternalClients.ESCO.ClientID
-	clientSecret := ""
-	username := cfg.ExternalClients.ESCO.Username
-	password := cfg.ExternalClients.ESCO.Password
 
-	escoService := esco.NewESCOServiceClient(baseURL, tokenURL, clientID, clientSecret, username, password)
+	escoService := esco.NewClient(cfg)
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {
 		result, err := escoService.BuscarCuentas("*")

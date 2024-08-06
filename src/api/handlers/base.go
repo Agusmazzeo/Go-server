@@ -18,14 +18,7 @@ func NewHandler(cfg *config.Config) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	escoClient := esco.NewESCOServiceClient(
-		cfg.ExternalClients.ESCO.BaseURL,
-		cfg.ExternalClients.ESCO.TokenURL,
-		cfg.ExternalClients.ESCO.ClientID,
-		"",
-		cfg.ExternalClients.ESCO.Username,
-		cfg.ExternalClients.ESCO.Password,
-	)
+	escoClient := esco.NewClient(cfg)
 	controller := controllers.NewController(db, escoClient)
 	return &Handler{Controller: *controller}, nil
 }

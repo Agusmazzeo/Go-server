@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/viper"
 )
 
@@ -37,10 +35,10 @@ type ESCOConfig struct {
 	Password string `mapstructure:"password"`
 }
 
-func LoadConfig(baseUrl string) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	var cfg Config
 
-	viper.AddConfigPath(fmt.Sprintf("%ssettings", baseUrl))
+	viper.AddConfigPath(path)
 	viper.SetConfigName("appsettings")
 	viper.SetConfigType("yaml")
 

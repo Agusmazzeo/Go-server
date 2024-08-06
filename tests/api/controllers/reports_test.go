@@ -16,7 +16,7 @@ func TestCreateReportSchedule(t *testing.T) {
 	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
 	defer cleanup()
 
-	ctrl := controllers.Controller{DB: db}
+	ctrl := controllers.NewController(db, nil)
 
 	req := &schemas.CreateReportScheduleRequest{
 		SenderID:                1,

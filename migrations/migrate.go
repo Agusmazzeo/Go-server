@@ -13,7 +13,7 @@ import (
 func main() {
 	// Load the appropriate config based on the environment
 
-	cfg, err := config.LoadConfig("./")
+	cfg, err := config.LoadConfig("./settings")
 	if err != nil {
 		log.Fatalf("Error loading config for environment: %v", err)
 	}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"server/src/config"
 	requests "server/src/utils/requests"
 )
 
@@ -15,9 +16,16 @@ type ESCOServiceClient struct {
 	API *requests.ExternalAPIService
 }
 
-// NewESCOServiceClient creates a new instance of ESCOServiceClient
-func NewESCOServiceClient(baseURL, tokenURL, clientID, clientSecret, username, password string) *ESCOServiceClient {
-	api := requests.NewExternalAPIService(baseURL, tokenURL, clientID, clientSecret, username, password)
+// NewClient creates a new instance of ESCOServiceClient
+func NewClient(cfg *config.Config) *ESCOServiceClient {
+	api := requests.NewExternalAPIService(
+		cfg.ExternalClients.ESCO.BaseURL,
+		cfg.ExternalClients.ESCO.TokenURL,
+		cfg.ExternalClients.ESCO.ClientID,
+		"",
+		cfg.ExternalClients.ESCO.Username,
+		cfg.ExternalClients.ESCO.Password,
+	)
 	return &ESCOServiceClient{API: api}
 }
 
