@@ -10,7 +10,7 @@ import (
 )
 
 type Handler struct {
-	Controller controllers.Controller
+	Controller controllers.IController
 }
 
 func NewHandler(cfg *config.Config) (*Handler, error) {
@@ -20,7 +20,7 @@ func NewHandler(cfg *config.Config) (*Handler, error) {
 	}
 	escoClient := esco.NewClient(cfg)
 	controller := controllers.NewController(db, escoClient)
-	return &Handler{Controller: *controller}, nil
+	return &Handler{Controller: controller}, nil
 }
 
 func (s *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {

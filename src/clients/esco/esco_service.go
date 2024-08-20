@@ -90,7 +90,7 @@ func (s *ESCOServiceClient) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, 
 // GetEstadoCuenta retrieves the account status information
 func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc string, date time.Time) ([]EstadoCuentaSchema, error) {
 	headers := map[string]string{
-		"UID":   s.API.Username, // Assuming this is how you get the user ID
+		"UID":   s.API.Username,
 		"CID":   cid,
 		"FID":   fid,
 		"NNCC":  nncc,

@@ -44,6 +44,7 @@ func (s *Server) InitRoutes() {
 
 	s.Router.Route("/api/accounts", func(r chi.Router) {
 		r.Get("/", s.Handler.GetAllAccounts)
+		r.Get("/{id}", s.Handler.GetAccountState)
 	})
 
 }

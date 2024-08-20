@@ -3,6 +3,8 @@
 GO_CMD=go
 BIN_NAME=Carvana.VDI.DescriptionMapperAndValuations
 COVERAGE_FILE=profile.cov
+DOCKER_COMPOSE=docker compose
+POSTGRES_DB=postgres-db
 
 default: build
 
@@ -54,3 +56,9 @@ lint:
 generate:
 	${GO_CMD} get github.com/99designs/gqlgen@v0.17.30
 	go generate ./...
+
+dc-logs:
+	${DOCKER_COMPOSE} logs -f
+
+dc-postgres-up:
+	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
