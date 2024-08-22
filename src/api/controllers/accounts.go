@@ -6,6 +6,7 @@ import (
 	"server/src/clients/esco"
 	"server/src/schemas"
 	"server/src/utils"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -47,7 +48,7 @@ func (c *Controller) GetAccountState(ctx context.Context, id string, date time.T
 	if err != nil {
 		return nil, err
 	}
-	return parseToAccountState(&accStateData)
+	return parseToAccountState(&accStateData, &date)
 }
 
 func (c *Controller) GetAccountStateDateRange(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
@@ -57,47 +58,63 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, id string, st
 	}
 
 	// Calculate the number of days between startDate and endDate
-	numDays := int(endDate.Sub(startDate).Hours() / 24)
+	numDays := int(endDate.Sub(startDate).Hours()/24) + 1
 	vouchers := make(map[string]schemas.Voucher)
 
 	var wg sync.WaitGroup
-	var lock sync.Mutex
+	var voucherChan = make(chan *schemas.AccountState, numDays)
 	for i := 0; i < numDays; i++ {
 		wg.Add(1)
 		go func(i int) {
-			defer wg.Done()
 			date := startDate.AddDate(0, 0, i)
 			accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), date)
 			if err != nil {
+				wg.Done()
 				return
 			}
-			accountState, err := parseToAccountState(&accStateData)
+			accountState, err := parseToAccountState(&accStateData, &date)
 			if err != nil {
+				wg.Done()
 				return
 			}
-			lock.Lock()
-			for key, value := range *accountState.Vouchers {
-				if v, ok := vouchers[key]; ok {
-					v.Holdings = append(v.Holdings, value.Holdings...)
-					vouchers[key] = v
-				} else {
-					vouchers[key] = value
-				}
-			}
-			lock.Unlock()
+			voucherChan <- accountState
 		}(i)
 	}
 
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(voucherChan)
+	}()
 
+	for accountState := range voucherChan {
+		for key, value := range *accountState.Vouchers {
+			if v, ok := vouchers[key]; ok {
+				v.Holdings = append(v.Holdings, value.Holdings...)
+				vouchers[key] = v
+			} else {
+				vouchers[key] = value
+			}
+		}
+		wg.Done()
+	}
+	for _, voucher := range vouchers {
+		sortHoldingsByDateRequested(&voucher)
+	}
 	return &schemas.AccountState{Vouchers: &vouchers}, nil
 }
 
-func parseToAccountState(accStateData *[]esco.EstadoCuentaSchema) (*schemas.AccountState, error) {
+func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
+	sort.Slice(voucher.Holdings, func(i, j int) bool {
+		return voucher.Holdings[i].DateRequested.Before(*voucher.Holdings[j].DateRequested)
+	})
+}
+
+func parseToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Time) (*schemas.AccountState, error) {
 	accStateRes := schemas.NewAccountState()
 	for _, accData := range *accStateData {
 		var voucher schemas.Voucher
 		var exists bool
+		var parsedDate *time.Time
 		if voucher, exists = (*accStateRes.Vouchers)[accData.A]; !exists {
 			(*accStateRes.Vouchers)[accData.A] = schemas.Voucher{
 				ID:          accData.A,
@@ -107,15 +124,21 @@ func parseToAccountState(accStateData *[]esco.EstadoCuentaSchema) (*schemas.Acco
 			}
 			voucher = (*accStateRes.Vouchers)[accData.A]
 		}
-		date, err := time.Parse(utils.ShortSlashDateLayout, accData.F)
-		if err != nil {
-			return nil, err
+		if accData.F != "" {
+			p, err := time.Parse(utils.ShortSlashDateLayout, accData.F)
+			if err != nil {
+				return nil, err
+			}
+			parsedDate = &p
+		} else {
+			parsedDate = nil
 		}
 		voucher.Holdings = append(voucher.Holdings, schemas.Holding{
-			Currency:     accData.M,
-			CurrencySign: accData.MS,
-			Value:        accData.N,
-			Date:         date,
+			Currency:      accData.M,
+			CurrencySign:  accData.MS,
+			Value:         accData.N,
+			DateRequested: date,
+			Date:          parsedDate,
 		})
 		(*accStateRes.Vouchers)[accData.A] = voucher
 	}

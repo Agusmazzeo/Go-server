@@ -112,7 +112,7 @@ func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc string, date time.Tim
 	q := req.URL.Query()
 	q.Add("AG", "true")
 	q.Add("CODCLI", "cliente-CRITERIA")
-	q.Add("FR", date.Format("2006-01-02T15:04:05.000Z"))
+	q.Add("FR", date.Format("2006-01-02"))
 	q.Add("TF", "-1")
 	req.URL.RawQuery = q.Encode()
 

@@ -10,10 +10,11 @@ type AccountReponse struct {
 }
 
 type Holding struct {
-	Currency     string
-	CurrencySign string
-	Value        float64
-	Date         time.Time
+	Currency      string
+	CurrencySign  string
+	Value         float64
+	DateRequested *time.Time
+	Date          *time.Time
 }
 
 type Voucher struct {

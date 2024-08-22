@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"server/src/api"
 	"server/src/config"
 	"server/src/worker"
@@ -30,7 +29,7 @@ func main() {
 func run(cfg *config.Config) (<-chan error, error) {
 	errC := make(chan error, 1)
 
-	serviceType := os.Getenv("SERVICE_TYPE")
+	serviceType := cfg.Service.Type
 	var httpServer *http.Server
 	if serviceType == "API" {
 		// Initialize the API server with GORM DB

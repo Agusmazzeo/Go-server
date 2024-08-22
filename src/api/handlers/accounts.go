@@ -47,7 +47,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
 		}
-		date = date.In(location)
+		date = (date.Add(26 * time.Hour)).In(location)
 		accountState, err = h.Controller.GetAccountState(ctx, id, date)
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
@@ -58,8 +58,9 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
 		}
-		startDate = startDate.AddDate(0, 0, 3).In(location)
-		endDate = endDate.AddDate(0, 0, 3).In(location)
+		//Set +26 hours since we use ARG timezone (UTC-3)
+		startDate = (startDate.Add(26 * time.Hour)).In(location)
+		endDate = (endDate.Add(26 * time.Hour)).In(location)
 		accountState, err = h.Controller.GetAccountStateDateRange(ctx, id, startDate, endDate)
 	}
 

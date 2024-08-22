@@ -5,8 +5,13 @@ import (
 )
 
 type Config struct {
+	Service         ServiceConfig        `mapstructure:"service"`
 	Databases       DatabasesConfig      `mapstructure:"databases"`
 	ExternalClients ExternalClientConfig `mapstructure:"externalClients"`
+}
+
+type ServiceConfig struct {
+	Type string `mapstructure:"type"`
 }
 
 type DatabasesConfig struct {
