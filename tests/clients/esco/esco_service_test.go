@@ -69,7 +69,7 @@ func TestESCOService(t *testing.T) {
 		}
 
 		date := time.Now()
-		result, err := escoService.GetEstadoCuenta(accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), date)
+		result, err := escoService.GetEstadoCuenta(accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", date)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

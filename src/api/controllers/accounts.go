@@ -44,7 +44,7 @@ func (c *Controller) GetAccountState(ctx context.Context, id string, date time.T
 	if err != nil {
 		return nil, err
 	}
-	accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), date)
+	accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, id string, st
 		wg.Add(1)
 		go func(i int) {
 			date := startDate.AddDate(0, 0, i)
-			accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), date)
+			accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
 			if err != nil {
 				wg.Done()
 				return

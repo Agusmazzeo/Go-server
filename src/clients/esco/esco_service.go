@@ -88,7 +88,8 @@ func (s *ESCOServiceClient) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, 
 }
 
 // GetEstadoCuenta retrieves the account status information
-func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc string, date time.Time) ([]EstadoCuentaSchema, error) {
+func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error) {
+	// tf is filter by concertacion (-1) or liquidacion (0)
 	headers := map[string]string{
 		"UID":   s.API.Username,
 		"CID":   cid,
@@ -113,7 +114,7 @@ func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc string, date time.Tim
 	q.Add("AG", "true")
 	q.Add("CODCLI", "cliente-CRITERIA")
 	q.Add("FR", date.Format("2006-01-02"))
-	q.Add("TF", "-1")
+	q.Add("TF", tf)
 	req.URL.RawQuery = q.Encode()
 
 	// Add bearer token
