@@ -33,7 +33,7 @@ services:
     expose:
       - '5440'
     volumes:
-      - ./my-db:/var/lib/postgresql/data
+      - ./database:/var/lib/postgresql/data
     networks:
       - local-net
 
