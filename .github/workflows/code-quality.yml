@@ -7,10 +7,22 @@ on:
     branches: [ master, develop ]
 
 jobs:
-  build:
-
+  linter:
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
 
+    - name: Install pre-commit
+      run: |
+        sudo apt-get install python3-pip -y
+        pip3 install pre-commit
+
+    - name: Run pre-commit
+      run: pre-commit run
+
+  tests:
+    needs: linter
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
 
@@ -25,14 +37,6 @@ jobs:
         sudo apt-get install docker-ce docker-ce-cli containerd.io -y
         sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
-
-    - name: Install pre-commit
-      run: |
-        sudo apt-get install python3-pip -y
-        pip3 install pre-commit
-
-    - name: Run pre-commit
-      run: pre-commit run
 
     - name: Set up Docker Database
       run: make dc-postgres-up
