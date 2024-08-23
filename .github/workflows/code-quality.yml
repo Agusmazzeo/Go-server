@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: docker/compose:1.29.1
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
@@ -19,6 +19,13 @@ jobs:
       with:
         go-version: 1.20.4
 
+    - name: Install Docker and Docker Compose
+      run: |
+        sudo apt-get update
+        sudo apt-get install docker-ce docker-ce-cli containerd.io -y
+        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
     - name: Install pre-commit
       run: |
         sudo apt-get install python3-pip -y
@@ -26,6 +33,9 @@ jobs:
 
     - name: Run pre-commit
       run: pre-commit run
+
+    - name: Set up Docker Database
+      run: make dc-postgres-up
 
     - name: Test
       run: make test
