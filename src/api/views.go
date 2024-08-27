@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth"
 )
 
 type Server struct {
@@ -19,6 +20,10 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	r := chi.NewRouter()
+	var tokenAuth *jwtauth.JWTAuth = jwtauth.New("HS256", []byte("secret"), nil)
+	r.Use(jwtauth.Verifier(tokenAuth))
+	r.Use(jwtauth.Authenticator)
 	server := &Server{
 		Router:  chi.NewRouter(),
 		Handler: handler,
@@ -33,6 +38,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) InitRoutes() {
 	s.Router.Get("/alive", handlers.Healthcheck)
+
+	s.Router.Post("/api/token", s.Handler.PostToken)
 
 	s.Router.Route("/api/report", func(r chi.Router) {
 		r.Get("/schedules", s.Handler.GetAllReportSchedules)

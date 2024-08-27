@@ -35,9 +35,6 @@ type ExternalClientConfig struct {
 type ESCOConfig struct {
 	BaseURL  string `mapstructure:"baseUrl"`
 	TokenURL string `mapstructure:"tokenUrl"`
-	ClientID string `mapstructure:"clientID"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
 }
 
 func LoadConfig(path string) (*Config, error) {

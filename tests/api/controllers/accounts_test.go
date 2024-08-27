@@ -21,9 +21,14 @@ func TestGetAllAccounts(t *testing.T) {
 	}
 	escoClient := esco.NewClient(cfg)
 
+	token, err := escoClient.PostToken(context.Background(), "icastagno", "Messiusa24!")
+	if err != nil {
+		t.Error(err)
+	}
+
 	ctrl := controllers.NewController(db, escoClient)
 
-	accounts, err := ctrl.GetAllAccounts(context.Background(), "DIAGNOSTICO VETERINARIO")
+	accounts, err := ctrl.GetAllAccounts(context.Background(), token.AccessToken, "DIAGNOSTICO VETERINARIO")
 	if err != nil {
 		t.Error(err)
 	}

@@ -1,6 +1,7 @@
 package esco_test
 
 import (
+	"context"
 	"log"
 	"os"
 	"server/src/clients/esco"
@@ -15,10 +16,6 @@ func LoadEnv() {
 	// Set your environment variables here or use a .env file
 	os.Setenv("ESCO_BASE_URL", "https://clientes.criteria.com.ar/uniwa/api")
 	os.Setenv("ESCO_TOKEN_URL", "https://clientes.criteria.com.ar/uniwa/api/token")
-	os.Setenv("ESCO_CLIENT_ID", "Unisync")
-	os.Setenv("ESCO_CLIENT_SECRET", "your_client_secret")
-	os.Setenv("ESCO_USERNAME", "icastagno")
-	os.Setenv("ESCO_PASSWORD", "Messiusa24!")
 }
 
 func TestESCOService(t *testing.T) {
@@ -29,9 +26,13 @@ func TestESCOService(t *testing.T) {
 	}
 
 	escoService := esco.NewClient(cfg)
+	token, err := escoService.PostToken(context.Background(), "icastagno", "Messiusa24!")
+	if err != nil {
+		t.Errorf("an error ocurrec while retrieving the token: %s", err.Error())
+	}
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {
-		result, err := escoService.BuscarCuentas("*")
+		result, err := escoService.BuscarCuentas(token.AccessToken, "*")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -41,7 +42,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetCuentaDetalle with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas("DIAGNOSTICO VETERINARIO")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -49,7 +50,7 @@ func TestESCOService(t *testing.T) {
 			t.Errorf("expected some results, got none")
 		}
 
-		result, err := escoService.GetCuentaDetalle(accounts[0].ID)
+		result, err := escoService.GetCuentaDetalle(token.AccessToken, accounts[0].ID)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -60,7 +61,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetEstadoCuenta with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas("DIAGNOSTICO VETERINARIO")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -69,7 +70,7 @@ func TestESCOService(t *testing.T) {
 		}
 
 		date := time.Now()
-		result, err := escoService.GetEstadoCuenta(accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", date)
+		result, err := escoService.GetEstadoCuenta(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", date)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

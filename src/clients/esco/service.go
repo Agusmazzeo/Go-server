@@ -1,45 +1,88 @@
 package esco
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"server/src/config"
+	"server/src/schemas"
 	requests "server/src/utils/requests"
 )
 
 // ESCOServiceClient is a struct that uses ExternalAPIService to interact with the ESCO API
 type ESCOServiceClient struct {
-	API *requests.ExternalAPIService
+	API      *requests.ExternalAPIService
+	BaseURL  string
+	TokenURL string
 }
 
 // NewClient creates a new instance of ESCOServiceClient
 func NewClient(cfg *config.Config) *ESCOServiceClient {
-	api := requests.NewExternalAPIService(
-		cfg.ExternalClients.ESCO.BaseURL,
-		cfg.ExternalClients.ESCO.TokenURL,
-		cfg.ExternalClients.ESCO.ClientID,
-		"",
-		cfg.ExternalClients.ESCO.Username,
-		cfg.ExternalClients.ESCO.Password,
-	)
-	return &ESCOServiceClient{API: api}
+	api := requests.NewExternalAPIService()
+	return &ESCOServiceClient{
+		API:      api,
+		BaseURL:  cfg.ExternalClients.ESCO.BaseURL,
+		TokenURL: cfg.ExternalClients.ESCO.TokenURL,
+	}
+}
+
+// GetToken retrieves and sets the token for the external service
+func (s *ESCOServiceClient) PostToken(_ context.Context, username, password string) (*schemas.TokenResponse, error) {
+
+	data := url.Values{}
+	data.Set("grant_type", "password")
+	data.Set("username", username)
+	data.Set("password", password)
+	data.Set("client_id", "Unisync")
+
+	req, err := http.NewRequest("POST", s.TokenURL, bytes.NewBufferString(data.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to retrieve token | Status Code: %d | Response: %v", resp.StatusCode, resp.Body)
+	}
+
+	var tokenResponse = new(schemas.TokenResponse)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, &tokenResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenResponse, nil
 }
 
 // BuscarCuentas retrieves all accounts matching filter
-func (s *ESCOServiceClient) BuscarCuentas(filter string) ([]CuentaSchema, error) {
-	userID := s.API.Username // Assuming s.API.Username is the correct way to get the userID
+func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema, error) {
 	body := map[string]string{
 		"Filtro": filter,
-		"USERID": userID,
 	}
 
 	headers := map[string]string{}
 
-	resp, err := s.API.PostWithHeaders("/BuscarCuentas", body, headers)
+	resp, err := s.API.PostWithHeaders(s.BaseURL+"/BuscarCuentas", token, body, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -60,14 +103,14 @@ func (s *ESCOServiceClient) BuscarCuentas(filter string) ([]CuentaSchema, error)
 }
 
 // GetCuentaDetalle retrieves detailed account information
-func (s *ESCOServiceClient) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, error) {
+func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error) {
 	body := map[string]string{
 		"CID_P": cid,
 	}
 
 	headers := map[string]string{}
 
-	resp, err := s.API.PostWithHeaders("/GetCuentaDetalle", body, headers)
+	resp, err := s.API.PostWithHeaders(s.BaseURL+"/GetCuentaDetalle", token, body, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -88,17 +131,16 @@ func (s *ESCOServiceClient) GetCuentaDetalle(cid string) (*CuentaDetalleSchema, 
 }
 
 // GetEstadoCuenta retrieves the account status information
-func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error) {
+func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error) {
 	// tf is filter by concertacion (-1) or liquidacion (0)
 	headers := map[string]string{
-		"UID":   s.API.Username,
 		"CID":   cid,
 		"FID":   fid,
 		"NNCC":  nncc,
 		"AUSER": "False",
 	}
 
-	url := s.API.BaseURL + "/GetEstadoCuenta"
+	url := s.BaseURL + "/GetEstadoCuenta"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -118,7 +160,7 @@ func (s *ESCOServiceClient) GetEstadoCuenta(cid, fid, nncc, tf string, date time
 	req.URL.RawQuery = q.Encode()
 
 	// Add bearer token
-	req.Header.Set("Authorization", "Bearer "+s.API.Token)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

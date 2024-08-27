@@ -12,11 +12,11 @@ import (
 	"time"
 )
 
-func (c *Controller) GetAllAccounts(ctx context.Context, filter string) ([]*schemas.AccountReponse, error) {
+func (c *Controller) GetAllAccounts(ctx context.Context, token, filter string) ([]*schemas.AccountReponse, error) {
 	if filter == "" {
 		filter = "*"
 	}
-	accs, err := c.ESCOClient.BuscarCuentas(filter)
+	accs, err := c.ESCOClient.BuscarCuentas(token, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,8 @@ func (c *Controller) GetAllAccounts(ctx context.Context, filter string) ([]*sche
 	return accounts, nil
 }
 
-func (c *Controller) GetAccountByID(ctx context.Context, id string) (*esco.CuentaSchema, error) {
-	acc, err := c.ESCOClient.BuscarCuentas(id)
+func (c *Controller) GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error) {
+	acc, err := c.ESCOClient.BuscarCuentas(token, id)
 	if err != nil {
 		return nil, err
 	}
@@ -38,21 +38,21 @@ func (c *Controller) GetAccountByID(ctx context.Context, id string) (*esco.Cuent
 	return &acc[0], nil
 }
 
-func (c *Controller) GetAccountState(ctx context.Context, id string, date time.Time) (*schemas.AccountState, error) {
+func (c *Controller) GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error) {
 
-	account, err := c.GetAccountByID(ctx, id)
+	account, err := c.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
+	accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
 	if err != nil {
 		return nil, err
 	}
 	return parseToAccountState(&accStateData, &date)
 }
 
-func (c *Controller) GetAccountStateDateRange(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
-	account, err := c.GetAccountByID(ctx, id)
+func (c *Controller) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+	account, err := c.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, id string, st
 		wg.Add(1)
 		go func(i int) {
 			date := startDate.AddDate(0, 0, i)
-			accStateData, err := c.ESCOClient.GetEstadoCuenta(account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
+			accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
 			if err != nil {
 				wg.Done()
 				return
