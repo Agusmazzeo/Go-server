@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"server/src/api"
 	"server/src/config"
 	"server/src/worker"
@@ -48,7 +49,8 @@ func run(cfg *config.Config) (<-chan error, error) {
 	}
 
 	go func() {
-		log.Println("Starting server on port", 8000)
+		port := os.Getenv("PORT")
+		log.Println("Starting server on port", port)
 
 		// "ListenAndServe always returns a non-nil error. After Shutdown or Close, the returned error is
 		// ErrServerClosed."
