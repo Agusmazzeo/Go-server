@@ -7,7 +7,7 @@ services:
     environment:
       - SERVICE_TYPE=API
     ports:
-      - 8000:8000
+      - 5051:5051
     networks:
       - local-net
 
