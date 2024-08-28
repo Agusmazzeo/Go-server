@@ -17,9 +17,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/bin/app
 
 FROM alpine:3.17
 
-EXPOSE 5051
-ENV PORT 5051
+EXPOSE 8000
+ENV PORT 8000
 
+COPY ./settings /settings
 # copy the ca-certificate.crt from the build stage
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo

@@ -6,7 +6,6 @@ import (
 	"server/src/api/controllers"
 	"server/src/clients/esco"
 	"server/src/config"
-	"server/src/database"
 )
 
 type Handler struct {
@@ -14,12 +13,12 @@ type Handler struct {
 }
 
 func NewHandler(cfg *config.Config) (*Handler, error) {
-	db, err := database.SetupDB(cfg)
-	if err != nil {
-		return nil, err
-	}
+	// db, err := database.SetupDB(cfg)
+	// if err != nil {
+	// 	return nil, err
+	// }
 	escoClient := esco.NewClient(cfg)
-	controller := controllers.NewController(db, escoClient)
+	controller := controllers.NewController(nil, escoClient)
 	return &Handler{Controller: controller}, nil
 }
 

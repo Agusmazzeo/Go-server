@@ -1,7 +1,7 @@
 version: '3.3'
 services:
   api:
-    image: go-server:1.0.0
+    image: agusmazzeo1/reporter:1.0.0
     build: .
     restart: always
     environment:
@@ -12,7 +12,7 @@ services:
       - local-net
 
   worker:
-    image: go-server:1.0.0
+    image: agusmazzeo1/reporter:1.0.0
     build: .
     restart: always
     environment:
