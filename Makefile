@@ -62,3 +62,6 @@ dc-logs:
 
 dc-postgres-up:
 	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
+
+dc-down:
+	${DOCKER_COMPOSE} down
