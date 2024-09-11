@@ -10,8 +10,16 @@ type Config struct {
 	ExternalClients ExternalClientConfig `mapstructure:"externalClients"`
 }
 
+type ServiceType string
+
+const (
+	API    ServiceType = "API"
+	WORKER ServiceType = "WORKER"
+)
+
 type ServiceConfig struct {
-	Type string `mapstructure:"type"`
+	Type ServiceType `mapstructure:"type"`
+	Port string      `mapstructure:"port"`
 }
 
 type DatabasesConfig struct {

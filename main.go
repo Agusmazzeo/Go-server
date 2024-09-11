@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"server/src/api"
 	"server/src/config"
 	"server/src/worker"
@@ -29,27 +28,22 @@ func main() {
 
 func run(cfg *config.Config) (<-chan error, error) {
 	errC := make(chan error, 1)
+	var err error
 
 	serviceType := cfg.Service.Type
+	port := cfg.Service.Port
 	var httpServer *http.Server
-	if serviceType == "API" {
-		// Initialize the API server with GORM DB
-		server, err := api.NewServer(cfg)
-		if err != nil {
-			return nil, err
-		}
-		httpServer = api.NewHTTPServer(server)
-	} else {
-		// Initialize the Worker server with GORM DB
-		server, err := worker.NewServer(cfg)
-		if err != nil {
-			return nil, err
-		}
-		httpServer = worker.NewHTTPServer(server)
+	switch serviceType {
+	case config.API:
+		httpServer, err = api.NewHTTPServer(cfg)
+	case config.WORKER:
+		httpServer, err = worker.NewHTTPServer(cfg)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	go func() {
-		port := os.Getenv("PORT")
 		log.Println("Starting server on port", port)
 
 		// "ListenAndServe always returns a non-nil error. After Shutdown or Close, the returned error is
@@ -59,5 +53,5 @@ func run(cfg *config.Config) (<-chan error, error) {
 			errC <- err
 		}
 	}()
-	return errC, nil
+	return errC, err
 }

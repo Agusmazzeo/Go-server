@@ -1,5 +1,6 @@
 ---
 service:
+  port: 5051
   type: API
 databases:
   elasticsearch:

@@ -56,12 +56,16 @@ func (s *Server) InitRoutes() {
 
 }
 
-func NewHTTPServer(server *Server) *http.Server {
+func NewHTTPServer(cfg *config.Config) (*http.Server, error) {
+	server, err := NewServer(cfg)
+	if err != nil {
+		return nil, err
+	}
 	httpServer := &http.Server{
-		Addr:         ":" + "8000",
+		Addr:         ":" + cfg.Service.Port,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		Handler:      server,
 	}
-	return httpServer
+	return httpServer, nil
 }
