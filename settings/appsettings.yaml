@@ -23,3 +23,5 @@ externalClients:
   esco:
     baseUrl: https://clientes.criteria.com.ar/uniwa/api
     tokenUrl: https://clientes.criteria.com.ar/uniwa/api/token
+  bcra:
+    baseUrl: https://api.bcra.gob.ar

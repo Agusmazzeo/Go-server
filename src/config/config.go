@@ -38,11 +38,16 @@ type SQLConfig struct {
 
 type ExternalClientConfig struct {
 	ESCO ESCOConfig `mapstructure:"esco"`
+	BCRA BCRAConfig `mapstructure:"bcra"`
 }
 
 type ESCOConfig struct {
 	BaseURL  string `mapstructure:"baseUrl"`
 	TokenURL string `mapstructure:"tokenUrl"`
+}
+
+type BCRAConfig struct {
+	BaseURL string `mapstructure:"baseUrl"`
 }
 
 func LoadConfig(path string) (*Config, error) {

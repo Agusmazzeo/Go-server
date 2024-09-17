@@ -3,20 +3,12 @@ package esco_test
 import (
 	"context"
 	"log"
-	"os"
 	"server/src/clients/esco"
 	"server/src/config"
 	"strconv"
 	"testing"
 	"time"
 )
-
-// LoadEnv loads environment variables for testing
-func LoadEnv() {
-	// Set your environment variables here or use a .env file
-	os.Setenv("ESCO_BASE_URL", "https://clientes.criteria.com.ar/uniwa/api")
-	os.Setenv("ESCO_TOKEN_URL", "https://clientes.criteria.com.ar/uniwa/api/token")
-}
 
 func TestESCOService(t *testing.T) {
 	cfg, err := config.LoadConfig("../../../settings")
