@@ -61,7 +61,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetEstadoCuenta with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
