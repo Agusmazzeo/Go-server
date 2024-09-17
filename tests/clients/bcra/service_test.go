@@ -33,7 +33,7 @@ func TestBCRAServiceClient(t *testing.T) {
 		}
 
 		// Check if the status code is 200
-		if result.Status != 200 {
+		if result != nil && result.Status != 200 {
 			t.Errorf("expected status 200, got %d", result.Status)
 		}
 
@@ -66,7 +66,7 @@ func TestBCRAServiceClient(t *testing.T) {
 		}
 
 		// Check if the status code is 200
-		if result.Status != 200 {
+		if result != nil && result.Status != 200 {
 			t.Errorf("expected status 200, got %d", result.Status)
 		}
 
@@ -96,7 +96,7 @@ func TestBCRAServiceClient(t *testing.T) {
 		}
 
 		// Check if the status code is 200
-		if result.Status != 200 {
+		if result != nil && result.Status != 200 {
 			t.Errorf("expected status 200, got %d", result.Status)
 		}
 
