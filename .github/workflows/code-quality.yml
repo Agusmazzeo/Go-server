@@ -2,44 +2,47 @@ name: Go CI
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [master, develop]
   pull_request:
-    branches: [ master, develop ]
+    branches: [master, develop]
 
 jobs:
   linter:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Install pre-commit
-      run: |
-        sudo apt-get install python3-pip -y
-        pip3 install pre-commit
+      - name: Install pre-commit
+        run: |
+          sudo apt-get install python3-pip -y
+          pip3 install pre-commit
 
-    - name: Run pre-commit
-      run: pre-commit run
+      - name: Run pre-commit
+        run: pre-commit run
 
   tests:
     needs: linter
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.20.4
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.20.4
 
-    - name: Install Docker and Docker Compose
-      run: |
-        sudo apt-get update
-        sudo apt-get install docker-ce docker-ce-cli containerd.io -y
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
+      - name: Install CA certificates
+        run: sudo apt-get install -y ca-certificates
 
-    - name: Set up Docker Database
-      run: make dc-postgres-up
+      - name: Install Docker and Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io -y
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
 
-    - name: Test
-      run: make test
+      - name: Set up Docker Database
+        run: make dc-postgres-up
+
+      - name: Test
+        run: make test
