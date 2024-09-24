@@ -17,7 +17,10 @@ func NewHandler(cfg *config.Config) (*Handler, error) {
 	// if err != nil {
 	// 	return nil, err
 	// }
-	escoClient := esco.NewClient(cfg)
+	escoClient, err := esco.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
 	controller := controllers.NewController(nil, escoClient)
 	return &Handler{Controller: controller}, nil
 }

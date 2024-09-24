@@ -13,24 +13,31 @@ import (
 
 	"server/src/config"
 	"server/src/schemas"
+	"server/src/utils"
 	requests "server/src/utils/requests"
 )
 
 // ESCOServiceClient is a struct that uses ExternalAPIService to interact with the ESCO API
 type ESCOServiceClient struct {
-	API      *requests.ExternalAPIService
-	BaseURL  string
-	TokenURL string
+	API         *requests.ExternalAPIService
+	BaseURL     string
+	TokenURL    string
+	CategoryMap *map[string]string
 }
 
 // NewClient creates a new instance of ESCOServiceClient
-func NewClient(cfg *config.Config) *ESCOServiceClient {
+func NewClient(cfg *config.Config) (*ESCOServiceClient, error) {
 	api := requests.NewExternalAPIService()
-	return &ESCOServiceClient{
-		API:      api,
-		BaseURL:  cfg.ExternalClients.ESCO.BaseURL,
-		TokenURL: cfg.ExternalClients.ESCO.TokenURL,
+	categoryMap, err := utils.CSVToMap(cfg.ExternalClients.ESCO.CategoryMapFile)
+	if err != nil {
+		return nil, err
 	}
+	return &ESCOServiceClient{
+		API:         api,
+		BaseURL:     cfg.ExternalClients.ESCO.BaseURL,
+		TokenURL:    cfg.ExternalClients.ESCO.TokenURL,
+		CategoryMap: categoryMap,
+	}, nil
 }
 
 // GetToken retrieves and sets the token for the external service

@@ -42,8 +42,9 @@ type ExternalClientConfig struct {
 }
 
 type ESCOConfig struct {
-	BaseURL  string `mapstructure:"baseUrl"`
-	TokenURL string `mapstructure:"tokenUrl"`
+	BaseURL         string `mapstructure:"baseUrl"`
+	TokenURL        string `mapstructure:"tokenUrl"`
+	CategoryMapFile string `mapstructure:"categoryMapFile"`
 }
 
 type BCRAConfig struct {

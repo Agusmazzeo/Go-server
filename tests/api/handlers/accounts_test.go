@@ -24,6 +24,7 @@ func TestMain(m *testing.M) {
 		log.Println(err, "Error while loading config")
 		os.Exit(1)
 	}
+	cfg.ExternalClients.ESCO.CategoryMapFile = "../../test_files/utils/denominaciones.csv"
 
 	r := chi.NewRouter()
 	h, err := handlers.NewHandler(cfg)

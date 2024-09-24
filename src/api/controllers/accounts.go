@@ -48,7 +48,7 @@ func (c *Controller) GetAccountState(ctx context.Context, token, id string, date
 	if err != nil {
 		return nil, err
 	}
-	return parseToAccountState(&accStateData, &date)
+	return c.parseToAccountState(&accStateData, &date)
 }
 
 func (c *Controller) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
@@ -72,7 +72,7 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, token, id str
 				wg.Done()
 				return
 			}
-			accountState, err := parseToAccountState(&accStateData, &date)
+			accountState, err := c.parseToAccountState(&accStateData, &date)
 			if err != nil {
 				wg.Done()
 				return
@@ -103,24 +103,21 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, token, id str
 	return &schemas.AccountState{Vouchers: &vouchers}, nil
 }
 
-func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
-	sort.Slice(voucher.Holdings, func(i, j int) bool {
-		return voucher.Holdings[i].DateRequested.Before(*voucher.Holdings[j].DateRequested)
-	})
-}
-
-func parseToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Time) (*schemas.AccountState, error) {
+func (c *Controller) parseToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Time) (*schemas.AccountState, error) {
+	var categoryKey string
 	accStateRes := schemas.NewAccountState()
 	for _, accData := range *accStateData {
 		var voucher schemas.Voucher
 		var exists bool
 		var parsedDate *time.Time
 		if voucher, exists = (*accStateRes.Vouchers)[accData.A]; !exists {
+			categoryKey = fmt.Sprintf("%s - %s", accData.A, accData.D)
 			(*accStateRes.Vouchers)[accData.A] = schemas.Voucher{
-				ID:          accData.A,
-				Type:        accData.TI,
-				Description: accData.D,
-				Holdings:    make([]schemas.Holding, 0, len(*accStateData)),
+				ID:           accData.A,
+				Type:         accData.TI,
+				Denomination: accData.D,
+				Category:     (*c.ESCOClient.CategoryMap)[categoryKey],
+				Holdings:     make([]schemas.Holding, 0, len(*accStateData)),
 			}
 			voucher = (*accStateRes.Vouchers)[accData.A]
 		}
@@ -144,4 +141,10 @@ func parseToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Tim
 	}
 
 	return accStateRes, nil
+}
+
+func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
+	sort.Slice(voucher.Holdings, func(i, j int) bool {
+		return voucher.Holdings[i].DateRequested.Before(*voucher.Holdings[j].DateRequested)
+	})
 }

@@ -17,10 +17,13 @@ func TestESCOService(t *testing.T) {
 		return
 	}
 
-	escoService := esco.NewClient(cfg)
+	escoService, err := esco.NewClient(cfg)
+	if err != nil {
+		t.Errorf("an error ocurred while creating the escoService: %s", err.Error())
+	}
 	token, err := escoService.PostToken(context.Background(), "icastagno", "Messiusa24!")
 	if err != nil {
-		t.Errorf("an error ocurrec while retrieving the token: %s", err.Error())
+		t.Errorf("an error ocurred while retrieving the token: %s", err.Error())
 	}
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {

@@ -18,10 +18,11 @@ type Holding struct {
 }
 
 type Voucher struct {
-	ID          string
-	Type        string
-	Description string
-	Holdings    []Holding
+	ID           string
+	Type         string
+	Denomination string
+	Category     string
+	Holdings     []Holding
 }
 
 type AccountState struct {
