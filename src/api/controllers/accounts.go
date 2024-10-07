@@ -105,6 +105,7 @@ func (c *Controller) GetAccountStateDateRange(ctx context.Context, token, id str
 
 func (c *Controller) parseToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Time) (*schemas.AccountState, error) {
 	var categoryKey string
+	categoryMap := c.ESCOClient.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
 	for _, accData := range *accStateData {
 		var voucher schemas.Voucher
@@ -116,7 +117,7 @@ func (c *Controller) parseToAccountState(accStateData *[]esco.EstadoCuentaSchema
 				ID:           accData.A,
 				Type:         accData.TI,
 				Denomination: accData.D,
-				Category:     (*c.ESCOClient.CategoryMap)[categoryKey],
+				Category:     categoryMap[categoryKey],
 				Holdings:     make([]schemas.Holding, 0, len(*accStateData)),
 			}
 			voucher = (*accStateRes.Vouchers)[accData.A]

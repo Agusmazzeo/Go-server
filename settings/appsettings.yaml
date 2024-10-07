@@ -23,6 +23,6 @@ externalClients:
   esco:
     baseUrl: https://clientes.criteria.com.ar/uniwa/api
     tokenUrl: https://clientes.criteria.com.ar/uniwa/api/token
-    categoryMapFile: settings/configFiles/denominaciones.csv
+    categoryMapFile: /Users/asmazzeo/Documents/Go/Go-server/settings/configFiles/denominaciones.csv
   bcra:
     baseUrl: https://api.bcra.gob.ar

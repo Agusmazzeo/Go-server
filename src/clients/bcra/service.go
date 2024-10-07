@@ -9,18 +9,24 @@ import (
 	"server/src/utils/requests"
 )
 
+type BCRAServiceClientI interface {
+	GetDivisas() (*GetDivisasResponse, error)
+	GetCotizaciones(fecha string) (*GetCotizacionesResponse, error)
+	GetCotizacionesPorMoneda(moneda string, fechaDesde string, fechaHasta string) (*GetCotizacionesByMonedaResponse, error)
+}
+
 type BCRAServiceClient struct {
 	API     *requests.ExternalAPIService
 	BaseURL string
 }
 
 // NewClient creates a new instance of BCRAServiceClient
-func NewClient(cfg *config.Config) *BCRAServiceClient {
+func NewClient(cfg *config.Config) (*BCRAServiceClient, error) {
 	api := requests.NewExternalAPIService()
 	return &BCRAServiceClient{
 		API:     api,
 		BaseURL: cfg.ExternalClients.BCRA.BaseURL,
-	}
+	}, nil
 }
 
 // GetDivisas fetches the available currencies (Divisas) from BCRA

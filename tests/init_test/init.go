@@ -17,7 +17,7 @@ import (
 var dbInstance *gorm.DB
 var dbOnce sync.Once
 
-func SetUpTestDatabase(t *testing.T, log *logr.Logger) (*gorm.DB, func()) {
+func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
 	t.Helper()
 
 	dbOnce.Do(func() {

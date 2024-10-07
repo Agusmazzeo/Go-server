@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"server/src/api/controllers"
+	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/config"
 )
@@ -21,7 +22,11 @@ func NewHandler(cfg *config.Config) (*Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	controller := controllers.NewController(nil, escoClient)
+	bcraClient, err := bcra.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	controller := controllers.NewController(nil, escoClient, bcraClient)
 	return &Handler{Controller: controller}, nil
 }
 

@@ -17,6 +17,14 @@ import (
 	requests "server/src/utils/requests"
 )
 
+type ESCOServiceClientI interface {
+	PostToken(_ context.Context, username, password string) (*schemas.TokenResponse, error)
+	BuscarCuentas(token, filter string) ([]CuentaSchema, error)
+	GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error)
+	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error)
+	GetCategoryMap() map[string]string
+}
+
 // ESCOServiceClient is a struct that uses ExternalAPIService to interact with the ESCO API
 type ESCOServiceClient struct {
 	API         *requests.ExternalAPIService
@@ -192,4 +200,11 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 	}
 
 	return result, nil
+}
+
+func (s *ESCOServiceClient) GetCategoryMap() map[string]string {
+	if s.CategoryMap == nil {
+		return map[string]string{}
+	}
+	return *s.CategoryMap
 }
