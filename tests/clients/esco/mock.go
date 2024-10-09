@@ -48,11 +48,14 @@ func (c *ESCOServiceClientMock) PostToken(_ context.Context, _, _ string) (*sche
 }
 
 // BuscarCuentas reads saved account data from a mock file.
-func (c *ESCOServiceClientMock) BuscarCuentas(_, _ string) ([]esco.CuentaSchema, error) {
+func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string) ([]esco.CuentaSchema, error) {
 	var cuentas []esco.CuentaSchema
 	err := c.ReadMockResponse("cuentas_response.json", &cuentas)
 	if err != nil {
 		return nil, err
+	}
+	if filter != "*" {
+		return cuentas[0:1], nil
 	}
 	return cuentas, nil
 }
