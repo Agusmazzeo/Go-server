@@ -1,26 +1,25 @@
 package bcra_test
 
 import (
-	"log"
-	"server/src/clients/bcra"
-	"server/src/config"
 	"testing"
 )
 
 func TestBCRAServiceClient(t *testing.T) {
-	t.Skip("BCRA API calls fail in the CI agent")
+	// t.Skip("BCRA API calls fail in the CI agent")
 	// Load configuration
-	cfg, err := config.LoadConfig("../../../settings")
-	if err != nil {
-		log.Println(err, "Error while loading config")
-		return
-	}
+	// cfg, err := config.LoadConfig("../../../settings")
+	// if err != nil {
+	// 	log.Println(err, "Error while loading config")
+	// 	return
+	// }
 
-	// Initialize the BCRA service client
-	bcraService, err := bcra.NewClient(cfg)
-	if err != nil {
-		t.Errorf("expected no error, got %v", err)
-	}
+	// // Initialize the BCRA service client
+	// bcraService, err := bcra.NewClient(cfg)
+	// if err != nil {
+	// 	t.Errorf("expected no error, got %v", err)
+	// }
+
+	bcraService := NewMockClient("../../test_files/clients/bcra")
 
 	t.Run("GetDivisas works correctly", func(t *testing.T) {
 		// Call the GetDivisas method

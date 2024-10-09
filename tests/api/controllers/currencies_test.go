@@ -38,8 +38,8 @@ func TestGetCurrencyWithValuationByID(t *testing.T) {
 func TestGetCurrencyWithValuationDateRangeByID(t *testing.T) {
 
 	// Use a valid account ID and date range here
-	startDate := time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)
-	endDate := startDate.AddDate(0, 0, 6)
+	startDate := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2024, 10, 8, 0, 0, 0, 0, time.UTC)
 	currency, err := ctrl.GetCurrencyWithValuationDateRangeByID(context.Background(), "USD", startDate, endDate) // Use a valid account ID here
 	if err != nil {
 		t.Error(err)

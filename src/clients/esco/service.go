@@ -76,6 +76,8 @@ func (s *ESCOServiceClient) PostToken(_ context.Context, username, password stri
 	}
 
 	var tokenResponse = new(schemas.TokenResponse)
+	// Save the response and get the response bytes for further processing
+	// body, err := utils.SaveResponseToFile(resp.Body, "token_response.json")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -104,6 +106,9 @@ func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema,
 	defer resp.Body.Close()
 
 	var result []CuentaSchema
+
+	// Save the response and get the response bytes for further processing
+	// responseBody, err := utils.SaveResponseToFile(resp.Body, "cuentas_response.json")
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -132,6 +137,9 @@ func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleS
 	defer resp.Body.Close()
 
 	var result = new(CuentaDetalleSchema)
+
+	// Save the response and get the response bytes for further processing
+	// responseBody, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("cuenta_detalle_%s_response.json", cid))
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -189,6 +197,9 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 	}
 
 	var result []EstadoCuentaSchema
+
+	// Save the response and get the response bytes for further processing
+	// body, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("estado_cuenta_%s_date_response.json", cid))
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

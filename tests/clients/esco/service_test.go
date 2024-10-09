@@ -2,26 +2,24 @@ package esco_test
 
 import (
 	"context"
-	"log"
-	"server/src/clients/esco"
-	"server/src/config"
 	"strconv"
 	"testing"
 	"time"
 )
 
 func TestESCOService(t *testing.T) {
-	cfg, err := config.LoadConfig("../../../settings")
-	if err != nil {
-		log.Println(err, "Error while loading config")
-		return
-	}
+	// cfg, err := config.LoadConfig("../../../settings")
+	// if err != nil {
+	// 	log.Println(err, "Error while loading config")
+	// 	return
+	// }
 
-	escoService, err := esco.NewClient(cfg)
+	// escoService, err := esco.NewClient(cfg)
+	escoService, err := NewMockESCOClient("../../test_files/clients/esco")
 	if err != nil {
 		t.Errorf("an error ocurred while creating the escoService: %s", err.Error())
 	}
-	token, err := escoService.PostToken(context.Background(), "icastagno", "Messiusa24!")
+	token, err := escoService.PostToken(context.Background(), "user", "pass")
 	if err != nil {
 		t.Errorf("an error ocurred while retrieving the token: %s", err.Error())
 	}

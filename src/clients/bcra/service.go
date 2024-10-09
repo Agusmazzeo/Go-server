@@ -42,6 +42,9 @@ func (c *BCRAServiceClient) GetDivisas() (*GetDivisasResponse, error) {
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
+
+	// Save the response and get the response bytes for further processing
+	// responseBody, err := utils.SaveResponseToFile(resp.Body, "divisas_response.json")
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +74,8 @@ func (c *BCRAServiceClient) GetCotizaciones(fecha string) (*GetCotizacionesRespo
 	}
 	defer resp.Body.Close()
 
+	// Save the response and get the response bytes for further processing
+	// responseBody, err := utils.SaveResponseToFile(resp.Body, "divisas_by_date_response.json")
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -102,6 +107,8 @@ func (c *BCRAServiceClient) GetCotizacionesPorMoneda(moneda string, fechaDesde s
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
+	// Save the response and get the response bytes for further processing
+	// responseBody, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("%s_%s_%s_response.json", moneda, fechaDesde, fechaHasta))
 	if err != nil {
 		return nil, err
 	}

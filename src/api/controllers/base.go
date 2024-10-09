@@ -27,7 +27,7 @@ type IController interface {
 	DeleteReportSchedule(ctx context.Context, id uint) error
 
 	// Currencies
-	GetAllCurrencies(ctx context.Context) (*schemas.CurrenciesResponse, error)
+	GetAllCurrencies(ctx context.Context) ([]schemas.Currency, error)
 	GetCurrencyWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.CurrencyWithValuationResponse, error)
 	GetCurrencyWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.CurrencyWithValuationResponse, error)
 

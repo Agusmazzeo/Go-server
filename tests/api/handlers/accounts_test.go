@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 	ts = httptest.NewServer(r)
 	defer ts.Close()
 
-	token, err = h.Controller.PostToken(context.Background(), "icastagno", "Messiusa24!")
+	token, err = h.Controller.PostToken(context.Background(), "user", "pass")
 	if err != nil {
 		log.Println(err, "Error while getting esco token")
 		os.Exit(1)

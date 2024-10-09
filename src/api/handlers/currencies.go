@@ -13,7 +13,7 @@ import (
 func (h *Handler) GetAllCurrencies(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	var currencies *schemas.CurrenciesResponse
+	var currencies []schemas.Currency
 	currencies, err := h.Controller.GetAllCurrencies(ctx)
 
 	if err != nil {
