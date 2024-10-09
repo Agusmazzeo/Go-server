@@ -51,7 +51,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) InitRoutes() {
-	s.Router.Get("/alive", handlers.Healthcheck)
+	s.Router.Get("/", handlers.Healthcheck)
+	s.Router.Get("/api/alive", handlers.Healthcheck)
 
 	s.Router.Post("/api/token", s.Handler.PostToken)
 
