@@ -1,0 +1,3 @@
+externalClients:
+  esco:
+    categoryMapFile: /Users/asmazzeo/Documents/Go/Go-server/settings/configFiles/denominaciones.csv

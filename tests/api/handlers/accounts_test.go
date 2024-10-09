@@ -21,7 +21,7 @@ var ts *httptest.Server
 var token *schemas.TokenResponse
 
 func TestMain(m *testing.M) {
-	cfg, err := config.LoadConfig("../../../settings")
+	cfg, err := config.LoadConfig("../../../settings", os.Getenv("ENV"))
 	if err != nil {
 		log.Println(err, "Error while loading config")
 		os.Exit(1)

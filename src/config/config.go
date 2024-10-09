@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -51,20 +53,31 @@ type BCRAConfig struct {
 	BaseURL string `mapstructure:"baseUrl"`
 }
 
-func LoadConfig(path string) (*Config, error) {
+// LoadConfig loads the base appsettings file and the environment-specific settings file.
+func LoadConfig(path string, environment string) (*Config, error) {
 	var cfg Config
 
+	// Load the base appsettings.yaml
 	viper.AddConfigPath(path)
 	viper.SetConfigName("appsettings")
 	viper.SetConfigType("yaml")
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		return nil, err
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading base config file: %w", err)
 	}
-	err = viper.Unmarshal(&cfg)
-	if err != nil {
-		return nil, err
+
+	// Load the environment-specific appsettings.{env}.yaml if provided
+	if environment != "" {
+		viper.SetConfigName(fmt.Sprintf("appsettings.%s", environment))
+		if err := viper.MergeInConfig(); err != nil {
+			return nil, fmt.Errorf("error reading environment-specific config file: %w", err)
+		}
 	}
+
+	// Unmarshal the final config into the struct
+	if err := viper.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to decode into struct: %w", err)
+	}
+
 	return &cfg, nil
 }

@@ -4,13 +4,14 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"server/src/api"
 	"server/src/config"
 	"server/src/worker"
 )
 
 func main() {
-	cfg, err := config.LoadConfig("./settings")
+	cfg, err := config.LoadConfig("./settings", os.Getenv("ENV"))
 	if err != nil {
 		log.Println(err, "Error while loading config")
 		return

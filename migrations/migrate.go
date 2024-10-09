@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"server/src/config"
 
 	"github.com/pressly/goose/v3"
@@ -13,7 +14,7 @@ import (
 func main() {
 	// Load the appropriate config based on the environment
 
-	cfg, err := config.LoadConfig("./settings")
+	cfg, err := config.LoadConfig("./settings", os.Getenv("ENV"))
 	if err != nil {
 		log.Fatalf("Error loading config for environment: %v", err)
 	}
