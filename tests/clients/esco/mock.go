@@ -16,8 +16,8 @@ type ESCOServiceClientMock struct {
 	categoryMap *map[string]string
 }
 
-// NewMockESCOClient creates a new instance of ESCOServiceClientMock.
-func NewMockESCOClient(mockDataDir string) (*ESCOServiceClientMock, error) {
+// NewMockClient creates a new instance of ESCOServiceClientMock.
+func NewMockClient(mockDataDir string) (*ESCOServiceClientMock, error) {
 	categoryMap, err := utils.CSVToMap(fmt.Sprintf("%s/denominaciones.csv", mockDataDir))
 	if err != nil {
 		return nil, err

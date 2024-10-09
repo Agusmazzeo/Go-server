@@ -11,6 +11,8 @@ import (
 	"server/src/api/handlers"
 	"server/src/config"
 	"server/src/schemas"
+	bcra_test "server/tests/clients/bcra"
+	esco_test "server/tests/clients/esco"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -24,10 +26,21 @@ func TestMain(m *testing.M) {
 		log.Println(err, "Error while loading config")
 		os.Exit(1)
 	}
-	cfg.ExternalClients.ESCO.CategoryMapFile = "../../test_files/utils/denominaciones.csv"
+	cfg.ExternalClients.ESCO.CategoryMapFile = "../../test_files/clients/esco/denominaciones.csv"
+
+	escoClient, err := esco_test.NewMockClient("../../test_files/clients/esco")
+	if err != nil {
+		log.Println(err, "Error while creating Mock Esco Client")
+		os.Exit(1)
+	}
+	bcraClient, err := bcra_test.NewMockClient("../../test_files/clients/bcra")
+	if err != nil {
+		log.Println(err, "Error while creating Mock BCRA Client")
+		os.Exit(1)
+	}
 
 	r := chi.NewRouter()
-	h, err := handlers.NewHandler(cfg)
+	h, err := handlers.NewHandler(nil, escoClient, bcraClient)
 	if err != nil {
 		log.Println(err, "Error while starting handler")
 		os.Exit(1)

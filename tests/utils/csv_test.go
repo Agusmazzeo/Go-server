@@ -6,7 +6,7 @@ import (
 )
 
 func TestCSVToMap(t *testing.T) {
-	file := "../test_files/utils/denominaciones.csv"
+	file := "../test_files/clients/esco/denominaciones.csv"
 
 	denominationMap, err := utils.CSVToMap(file)
 

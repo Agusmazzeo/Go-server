@@ -15,7 +15,7 @@ func TestESCOService(t *testing.T) {
 	// }
 
 	// escoService, err := esco.NewClient(cfg)
-	escoService, err := NewMockESCOClient("../../test_files/clients/esco")
+	escoService, err := NewMockClient("../../test_files/clients/esco")
 	if err != nil {
 		t.Errorf("an error ocurred while creating the escoService: %s", err.Error())
 	}

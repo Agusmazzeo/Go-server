@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	cfg.ExternalClients.ESCO.CategoryMapFile = "../../test_files/utils/denominaciones.csv"
 
 	// escoClient, err = esco.NewClient(cfg)
-	escoClient, err = esco_test.NewMockESCOClient("../../test_files/clients/esco")
+	escoClient, err = esco_test.NewMockClient("../../test_files/clients/esco")
 	if err != nil {
 		log.Println(err, "Error while creating ESCO Client")
 		os.Exit(1)
@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 	// 	log.Println(err, "Error while creating BCRA Client")
 	// 	os.Exit(1)
 	// }
-	bcraClient = bcra_test.NewMockClient("../../test_files/clients/bcra")
+	bcraClient, _ = bcra_test.NewMockClient("../../test_files/clients/bcra")
 
 	token, err = escoClient.PostToken(context.Background(), "icastagno", "Cavaniusa25!")
 	if err != nil {

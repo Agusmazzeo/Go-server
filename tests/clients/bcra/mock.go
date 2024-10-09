@@ -14,10 +14,10 @@ type BCRAServiceClientMock struct {
 }
 
 // NewMockClient creates a new instance of BCRAServiceClientMock.
-func NewMockClient(mockDataDir string) *BCRAServiceClientMock {
+func NewMockClient(mockDataDir string) (*BCRAServiceClientMock, error) {
 	return &BCRAServiceClientMock{
 		mockDataDir: mockDataDir,
-	}
+	}, nil
 }
 
 // GetDivisas reads the saved Divisas response from a file and returns the data.

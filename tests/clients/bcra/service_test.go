@@ -19,7 +19,7 @@ func TestBCRAServiceClient(t *testing.T) {
 	// 	t.Errorf("expected no error, got %v", err)
 	// }
 
-	bcraService := NewMockClient("../../test_files/clients/bcra")
+	bcraService, _ := NewMockClient("../../test_files/clients/bcra")
 
 	t.Run("GetDivisas works correctly", func(t *testing.T) {
 		// Call the GetDivisas method

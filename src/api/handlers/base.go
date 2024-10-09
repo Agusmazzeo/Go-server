@@ -6,27 +6,16 @@ import (
 	"server/src/api/controllers"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
-	"server/src/config"
+
+	"gorm.io/gorm"
 )
 
 type Handler struct {
 	Controller controllers.IController
 }
 
-func NewHandler(cfg *config.Config) (*Handler, error) {
-	// db, err := database.SetupDB(cfg)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	escoClient, err := esco.NewClient(cfg)
-	if err != nil {
-		return nil, err
-	}
-	bcraClient, err := bcra.NewClient(cfg)
-	if err != nil {
-		return nil, err
-	}
-	controller := controllers.NewController(nil, escoClient, bcraClient)
+func NewHandler(db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
+	controller := controllers.NewController(db, escoClient, bcraClient)
 	return &Handler{Controller: controller}, nil
 }
 

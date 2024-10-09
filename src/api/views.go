@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	handlers "server/src/api/handlers"
+	"server/src/clients/bcra"
+	"server/src/clients/esco"
 	"server/src/config"
 	"time"
 
@@ -16,7 +18,19 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config) (*Server, error) {
-	handler, err := handlers.NewHandler(cfg)
+	// db, err := database.SetupDB(cfg)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	escoClient, err := esco.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	bcraClient, err := bcra.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	handler, err := handlers.NewHandler(nil, escoClient, bcraClient)
 	if err != nil {
 		return nil, err
 	}
