@@ -31,6 +31,11 @@ type IController interface {
 	GetCurrencyWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.CurrencyWithValuationResponse, error)
 	GetCurrencyWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.CurrencyWithValuationResponse, error)
 
+	// Variables
+	GetAllVariables(ctx context.Context) ([]schemas.Variable, error)
+	GetVariableWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.VariableWithValuationResponse, error)
+	GetVariableWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error)
+
 	PostToken(ctx context.Context, username, password string) (*schemas.TokenResponse, error)
 }
 

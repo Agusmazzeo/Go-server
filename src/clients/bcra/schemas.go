@@ -52,3 +52,16 @@ type GetCotizacionesByMonedaResponse struct {
 	Metadata Metadata             `json:"metadata"`
 	Results  []CotizacionByMoneda `json:"results"`
 }
+
+type GetVariablesResponse struct {
+	Status  int        `json:"status"`
+	Results []Variable `json:"results"`
+}
+
+type Variable struct {
+	IDVariable  int     `json:"idVariable"`
+	CDSerie     int     `json:"cdSerie"`
+	Descripcion string  `json:"descripcion"`
+	Fecha       string  `json:"fecha"`
+	Valor       float64 `json:"valor"`
+}

@@ -20,3 +20,23 @@ type CurrencyValuation struct {
 	ArgCurrencyRelation float32
 	UsdCurrencyRelation float32
 }
+
+type VariablesResponse struct {
+	Variables []Variable
+}
+
+type Variable struct {
+	ID          string
+	Description string
+}
+
+type VariableWithValuationResponse struct {
+	ID          string
+	Description string
+	Valuations  []VariableValuation
+}
+
+type VariableValuation struct {
+	Date  string
+	Value float64
+}

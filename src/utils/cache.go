@@ -3,7 +3,56 @@ package utils
 import (
 	"io"
 	"os"
+	"sync"
+	"time"
 )
+
+type Cache[T any] struct {
+	value      T
+	cachedAt   time.Time
+	expiration time.Time
+	mutex      sync.RWMutex
+}
+
+// NewCache initializes a new cache with an empty value.
+func NewCache[T any]() *Cache[T] {
+	var zero T
+	return &Cache[T]{
+		value: zero,
+	}
+}
+
+// Set sets a new value in the cache with an expiration time.
+func (c *Cache[T]) Set(value T, duration time.Duration) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.value = value
+	c.cachedAt = time.Now()
+	c.expiration = time.Now().Add(duration)
+}
+
+// Get retrieves the cached value, checking if it's valid based on refreshAfter.
+func (c *Cache[T]) Get(refreshAfter time.Time) (T, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if time.Now().After(c.expiration) || c.cachedAt.After(refreshAfter) {
+		var zero T
+		return zero, false
+	}
+	return c.value, true
+}
+
+// Clear removes the cached value.
+func (c *Cache[T]) Clear() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	var zero T
+	c.value = zero
+	c.expiration = time.Time{}
+}
 
 // SaveResponseToFile is a middleware that saves the response bytes to a file and returns them
 func SaveResponseToFile(reader io.ReadCloser, filePath string) ([]byte, error) {

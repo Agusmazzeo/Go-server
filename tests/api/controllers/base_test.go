@@ -36,13 +36,13 @@ func TestMain(m *testing.M) {
 	}
 
 	// bcraClient, err = bcra.NewClient(cfg)
-	// if err != nil {
-	// 	log.Println(err, "Error while creating BCRA Client")
-	// 	os.Exit(1)
-	// }
-	bcraClient, _ = bcra_test.NewMockClient("../../test_files/clients/bcra")
+	bcraClient, err = bcra_test.NewMockClient("../../test_files/clients/bcra")
+	if err != nil {
+		log.Println(err, "Error while creating BCRA Client")
+		os.Exit(1)
+	}
 
-	token, err = escoClient.PostToken(context.Background(), "icastagno", "Cavaniusa25!")
+	token, err = escoClient.PostToken(context.Background(), "user", "password")
 	if err != nil {
 		log.Println(err, "Error while getting esco token")
 		// os.Exit(1)

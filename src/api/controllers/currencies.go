@@ -7,7 +7,7 @@ import (
 )
 
 func (c *Controller) GetAllCurrencies(ctx context.Context) ([]schemas.Currency, error) {
-	response, err := c.BCRAClient.GetDivisas()
+	response, err := c.BCRAClient.GetDivisas(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func (c *Controller) GetAllCurrencies(ctx context.Context) ([]schemas.Currency, 
 }
 
 func (c *Controller) GetCurrencyWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.CurrencyWithValuationResponse, error) {
-	response, err := c.BCRAClient.GetCotizacionesPorMoneda(id, date.Format("2006-01-02"), date.AddDate(0, 0, 1).Format("2006-01-02"))
+	response, err := c.BCRAClient.GetCotizacionesPorMoneda(ctx, id, date.Format("2006-01-02"), date.AddDate(0, 0, 1).Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *Controller) GetCurrencyWithValuationByID(ctx context.Context, id string
 }
 
 func (c *Controller) GetCurrencyWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.CurrencyWithValuationResponse, error) {
-	response, err := c.BCRAClient.GetCotizacionesPorMoneda(id, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	response, err := c.BCRAClient.GetCotizacionesPorMoneda(ctx, id, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}

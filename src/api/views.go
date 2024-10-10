@@ -74,6 +74,11 @@ func (s *Server) InitRoutes() {
 		r.Get("/{id}", s.Handler.GetCurrencyWithValuationByID)
 	})
 
+	s.Router.Route("/api/variables", func(r chi.Router) {
+		r.Get("/", s.Handler.GetAllVariables)
+		r.Get("/{id}", s.Handler.GetVariableWithValuationByID)
+	})
+
 }
 
 func NewHTTPServer(cfg *config.Config) (*http.Server, error) {
