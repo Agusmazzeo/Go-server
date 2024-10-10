@@ -54,8 +54,9 @@ type GetCotizacionesByMonedaResponse struct {
 }
 
 type GetVariablesResponse struct {
-	Status  int        `json:"status"`
-	Results []Variable `json:"results"`
+	Status        int        `json:"status"`
+	Results       []Variable `json:"results"`
+	ErrorMessages []string   `json:"errorMessages"`
 }
 
 type Variable struct {

@@ -1,0 +1,268 @@
+{
+	"info": {
+		"_postman_id": "584cd610-194a-46c9-a073-b1ce87dd77fd",
+		"name": "Reporter API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "35197252",
+		"_collection_link": "https://reporter-6454.postman.co/workspace/Reporter-Workspace~11e19217-98dd-496f-8159-84e0366f25b4/collection/35197252-584cd610-194a-46c9-a073-b1ce87dd77fd?action=share&source=collection_link&creator=35197252"
+	},
+	"item": [
+		{
+			"name": "Post Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"",
+							"// Ensure the response is in JSON format",
+							"if (pm.response.headers.get('Content-Type').includes('application/json')) {",
+							"    var jsonData = pm.response.json();",
+							"    ",
+							"    // Save the token from the response (adjust the key based on the actual response)",
+							"    pm.environment.set(\"access_token\", jsonData.access_token);",
+							"    pm.environment.set(\"user_id\", jsonData.userID);",
+							"    ",
+							"    // You can log the token to verify it's being saved correctly",
+							"    console.log('Access token:', jsonData.token);",
+							"} else {",
+							"    console.error('Response is not in JSON format');",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"{{user}}\",\n    \"password\": \"{{password}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{service_url}}/api/token",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAccounts",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/accounts?filter=DIAGNOSTICO",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"accounts"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "DIAGNOSTICO"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAccountStatusByRange",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/accounts/11170?startDate=2024-06-01&endDate=2024-06-10",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"accounts",
+						"11170"
+					],
+					"query": [
+						{
+							"key": "startDate",
+							"value": "2024-06-01"
+						},
+						{
+							"key": "endDate",
+							"value": "2024-06-10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAccountStatusByDate",
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {}
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{access_token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/accounts/11170?date=2024-08-02",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"accounts",
+						"11170"
+					],
+					"query": [
+						{
+							"key": "date",
+							"value": "2024-08-02"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAllCurrencies",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/currencies",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"currencies"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetCurrencyByID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/currencies/USD?startDate=2024-09-01&endDate=2024-09-03",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"currencies",
+						"USD"
+					],
+					"query": [
+						{
+							"key": "startDate",
+							"value": "2024-09-01"
+						},
+						{
+							"key": "endDate",
+							"value": "2024-09-03"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetAllVariables",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/variables",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"variables"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetVariablesByID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{service_url}}/api/variables/27?startDate=2024-01-01&endDate=2024-10-01",
+					"host": [
+						"{{service_url}}"
+					],
+					"path": [
+						"api",
+						"variables",
+						"27"
+					],
+					"query": [
+						{
+							"key": "startDate",
+							"value": "2024-01-01"
+						},
+						{
+							"key": "endDate",
+							"value": "2024-10-01"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

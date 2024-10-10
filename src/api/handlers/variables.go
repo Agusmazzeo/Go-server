@@ -25,7 +25,11 @@ func (h *Handler) GetAllVariables(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.respond(w, r, variables, 200)
+	if err != nil {
+		utils.WriteError(w, err)
+	} else {
+		h.respond(w, r, variables, 200)
+	}
 }
 
 func (h *Handler) GetVariableWithValuationByID(w http.ResponseWriter, r *http.Request) {
@@ -69,8 +73,8 @@ func (h *Handler) GetVariableWithValuationByID(w http.ResponseWriter, r *http.Re
 	}
 
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusInternalServerError)
+		utils.WriteError(w, err)
+	} else {
+		h.respond(w, r, variable, 200)
 	}
-
-	h.respond(w, r, variable, 200)
 }

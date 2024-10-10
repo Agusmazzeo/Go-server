@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"server/src/schemas"
+	"server/src/utils"
 	"strconv"
 	"time"
 )
@@ -28,6 +31,9 @@ func (c *Controller) GetVariableWithValuationByID(ctx context.Context, id string
 	response, err := c.BCRAClient.GetVariablePorFecha(ctx, id, date.Format("2006-01-02"), date.AddDate(0, 0, 1).Format("2006-01-02"))
 	if err != nil {
 		return nil, err
+	}
+	if response.Status != http.StatusOK {
+		return nil, utils.NewHTTPError(response.Status, fmt.Sprintf("Error requesting BCRA variables: %s", response.ErrorMessages[0]))
 	}
 	if len(response.Results) == 0 {
 		return nil, nil
@@ -56,6 +62,9 @@ func (c *Controller) GetVariableWithValuationDateRangeByID(ctx context.Context, 
 	response, err := c.BCRAClient.GetVariablePorFecha(ctx, id, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		return nil, err
+	}
+	if response.Status != http.StatusOK {
+		return nil, utils.NewHTTPError(response.Status, fmt.Sprintf("Error requesting BCRA variables: %s", response.ErrorMessages[0]))
 	}
 	if len(response.Results) == 0 {
 		return nil, nil
