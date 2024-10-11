@@ -11,12 +11,16 @@ import (
 )
 
 type Handler struct {
-	Controller controllers.IController
+	Controller         controllers.IController
+	AccountsController controllers.AccountsControllerI
+	ReportsController  controllers.ReportsControllerI
 }
 
 func NewHandler(db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
 	controller := controllers.NewController(db, escoClient, bcraClient)
-	return &Handler{Controller: controller}, nil
+	accountsController := controllers.NewAccountsController(escoClient)
+	reportsController := controllers.NewReportsController(escoClient, bcraClient, nil)
+	return &Handler{Controller: controller, AccountsController: accountsController, ReportsController: reportsController}, nil
 }
 
 func (s *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {

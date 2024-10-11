@@ -19,7 +19,7 @@ func (h *Handler) GetAllAccounts(w http.ResponseWriter, r *http.Request) {
 	token := jwtauth.TokenFromHeader(r)
 
 	filter := r.URL.Query().Get("filter")
-	accounts, err := h.Controller.GetAllAccounts(ctx, token, filter)
+	accounts, err := h.AccountsController.GetAllAccounts(ctx, token, filter)
 
 	if err != nil {
 		h.HandleErrors(w, err, http.StatusInternalServerError)
@@ -57,7 +57,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
 		}
 		date = (date.Add(26 * time.Hour)).In(location)
-		accountState, err = h.Controller.GetAccountState(ctx, token, id, date)
+		accountState, err = h.AccountsController.GetAccountState(ctx, token, id, date)
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 		if err != nil {
@@ -70,7 +70,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
 		endDate = (endDate.Add(26 * time.Hour)).In(location)
-		accountState, err = h.Controller.GetAccountStateDateRange(ctx, token, id, startDate, endDate)
+		accountState, err = h.AccountsController.GetAccountStateDateRange(ctx, token, id, startDate, endDate)
 	}
 
 	if err != nil {

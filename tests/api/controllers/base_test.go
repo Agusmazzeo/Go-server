@@ -11,13 +11,20 @@ import (
 	"server/src/schemas"
 	bcra_test "server/tests/clients/bcra"
 	esco_test "server/tests/clients/esco"
+	"server/tests/init_test"
 	"testing"
+
+	"github.com/go-logr/logr"
+	"gorm.io/gorm"
 )
 
 var token *schemas.TokenResponse
 var escoClient esco.ESCOServiceClientI
 var bcraClient bcra.BCRAServiceClientI
 var ctrl *controllers.Controller
+var accountsController *controllers.AccountsController
+var reportsController *controllers.ReportsController
+var testDB *gorm.DB
 
 func TestMain(m *testing.M) {
 
@@ -42,6 +49,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	db, cleanup := init_test.SetUpTestDatabase(&logr.Logger{})
+	testDB = db
+
+	defer cleanup()
+
 	token, err = escoClient.PostToken(context.Background(), "user", "password")
 	if err != nil {
 		log.Println(err, "Error while getting esco token")
@@ -49,6 +61,8 @@ func TestMain(m *testing.M) {
 	}
 
 	ctrl = controllers.NewController(nil, escoClient, bcraClient)
+	accountsController = controllers.NewAccountsController(escoClient)
+	reportsController = controllers.NewReportsController(escoClient, bcraClient, db)
 
 	os.Exit(m.Run())
 }

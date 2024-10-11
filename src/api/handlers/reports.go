@@ -3,20 +3,77 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"server/src/schemas"
+	"server/src/utils"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/jwtauth"
 	"gorm.io/gorm"
 )
+
+// HandleGenerateXLSX is the HTTP handler to generate an Excel file
+func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
+
+	token := jwtauth.TokenFromHeader(r)
+	if token == "" {
+		h.HandleErrors(w, fmt.Errorf("empty token detected"), http.StatusUnauthorized)
+	}
+
+	id := chi.URLParam(r, "id")
+	var err error
+
+	startDateStr := r.URL.Query().Get("startDate")
+	var startDate time.Time
+
+	endDateStr := r.URL.Query().Get("endDate")
+	var endDate time.Time
+
+	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
+	if err != nil {
+		h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+	}
+	endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
+	if err != nil {
+		h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+	}
+	//Set +26 hours since we use ARG timezone (UTC-3)
+	startDate = (startDate.Add(26 * time.Hour)).In(location)
+	endDate = (endDate.Add(26 * time.Hour)).In(location)
+	accountState, err := h.AccountsController.GetAccountStateDateRange(ctx, token, id, startDate, endDate)
+	if err != nil {
+		h.HandleErrors(w, err, http.StatusInternalServerError)
+		return
+	}
+	// Generate the XLSX file using the controller logic
+	xlsxFile, err := h.ReportsController.GenerateXLSX(ctx, accountState)
+	if err != nil {
+		http.Error(w, "Failed to generate XLSX file", http.StatusInternalServerError)
+		return
+	}
+
+	// Set response headers to download the file
+	w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+	// Write the XLSX file to the HTTP response
+	err = xlsxFile.Write(w)
+	if err != nil {
+		http.Error(w, "Failed to write XLSX file", http.StatusInternalServerError)
+	}
+}
 
 func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	_, err := h.Controller.GetAllReportSchedules(ctx)
+	_, err := h.ReportsController.GetAllReportSchedules(ctx)
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -41,7 +98,7 @@ func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = h.Controller.GetReportScheduleByID(ctx, uint(id))
+	_, err = h.ReportsController.GetReportScheduleByID(ctx, uint(id))
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
@@ -68,7 +125,7 @@ func (h *Handler) CreateReportSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := h.Controller.CreateReportSchedule(ctx, &reportSchedule)
+	created, err := h.ReportsController.CreateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,7 +153,7 @@ func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 	reportSchedule.ID = uint(id)
 
-	updated, err := h.Controller.UpdateReportSchedule(ctx, &reportSchedule)
+	updated, err := h.ReportsController.UpdateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
@@ -122,7 +179,7 @@ func (h *Handler) DeleteReportSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.Controller.DeleteReportSchedule(ctx, uint(id))
+	err = h.ReportsController.DeleteReportSchedule(ctx, uint(id))
 	if err != nil {
 		if err == context.DeadlineExceeded {
 			http.Error(w, "Request timed out", http.StatusGatewayTimeout)

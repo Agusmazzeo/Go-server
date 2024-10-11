@@ -2,21 +2,13 @@ package controllers_test
 
 import (
 	"context"
-	"server/src/api/controllers"
 	"server/src/models"
 	"server/src/schemas"
-	"server/tests/init_test"
 
 	"testing"
-
-	"github.com/go-logr/logr"
 )
 
 func TestCreateReportSchedule(t *testing.T) {
-	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
-	defer cleanup()
-
-	ctrl := controllers.NewController(db, nil, nil)
 
 	req := &schemas.CreateReportScheduleRequest{
 		SenderID:                1,
@@ -26,7 +18,7 @@ func TestCreateReportSchedule(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	resp, err := ctrl.CreateReportSchedule(ctx, req)
+	resp, err := reportsController.CreateReportSchedule(ctx, req)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -49,18 +41,13 @@ func TestCreateReportSchedule(t *testing.T) {
 }
 
 func TestGetAllReportSchedules(t *testing.T) {
-	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
-	defer cleanup()
-
-	ctrl := controllers.Controller{DB: db}
-
 	ctx := context.Background()
 
 	// Create some test data
-	db.Create(&models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true})
-	db.Create(&models.ReportSchedule{SenderID: 4, RecipientOrganizationID: 5, ReportTemplateID: 6, CronTime: "0 0 * * *", Active: true})
+	testDB.Create(&models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true})
+	testDB.Create(&models.ReportSchedule{SenderID: 4, RecipientOrganizationID: 5, ReportTemplateID: 6, CronTime: "0 0 * * *", Active: true})
 
-	resp, err := ctrl.GetAllReportSchedules(ctx)
+	resp, err := reportsController.GetAllReportSchedules(ctx)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -71,18 +58,13 @@ func TestGetAllReportSchedules(t *testing.T) {
 }
 
 func TestGetReportScheduleByID(t *testing.T) {
-	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
-
-	defer cleanup()
-
-	ctrl := controllers.Controller{DB: db}
 
 	// Create a test record
 	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	db.Create(rs)
+	testDB.Create(rs)
 
 	ctx := context.Background()
-	resp, err := ctrl.GetReportScheduleByID(ctx, rs.ID)
+	resp, err := reportsController.GetReportScheduleByID(ctx, rs.ID)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -96,15 +78,10 @@ func TestGetReportScheduleByID(t *testing.T) {
 }
 
 func TestUpdateReportSchedule(t *testing.T) {
-	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
-
-	defer cleanup()
-
-	ctrl := controllers.Controller{DB: db}
 
 	// Create a test record
 	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	db.Create(rs)
+	testDB.Create(rs)
 
 	// Update the record
 	req := &schemas.UpdateReportScheduleRequest{
@@ -123,7 +100,7 @@ func TestUpdateReportSchedule(t *testing.T) {
 	*req.Active = false
 
 	ctx := context.Background()
-	resp, err := ctrl.UpdateReportSchedule(ctx, req)
+	resp, err := reportsController.UpdateReportSchedule(ctx, req)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -149,18 +126,13 @@ func TestUpdateReportSchedule(t *testing.T) {
 }
 
 func TestDeleteReportSchedule(t *testing.T) {
-	db, cleanup := init_test.SetUpTestDatabase(t, &logr.Logger{})
-
-	defer cleanup()
-
-	ctrl := controllers.Controller{DB: db}
 
 	// Create a test record
 	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	db.Create(rs)
+	testDB.Create(rs)
 
 	ctx := context.Background()
-	err := ctrl.DeleteReportSchedule(ctx, rs.ID)
+	err := reportsController.DeleteReportSchedule(ctx, rs.ID)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -168,7 +140,7 @@ func TestDeleteReportSchedule(t *testing.T) {
 
 	// Verify deletion
 	var count int64
-	db.Model(&models.ReportSchedule{}).Where("id = ?", rs.ID).Count(&count)
+	testDB.Model(&models.ReportSchedule{}).Where("id = ?", rs.ID).Count(&count)
 	if count != 0 {
 		t.Fatalf("Expected count 0, got %d", count)
 	}

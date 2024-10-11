@@ -8,7 +8,7 @@ import (
 
 func TestGetAllAccounts(t *testing.T) {
 
-	accounts, err := ctrl.GetAllAccounts(context.Background(), token.AccessToken, "DIAGNOSTICO VETERINARIO")
+	accounts, err := accountsController.GetAllAccounts(context.Background(), token.AccessToken, "DIAGNOSTICO VETERINARIO")
 	if err != nil {
 		t.Error(err)
 	}
@@ -21,7 +21,7 @@ func TestGetAllAccounts(t *testing.T) {
 
 func TestGetAccountByID(t *testing.T) {
 
-	account, err := ctrl.GetAccountByID(context.Background(), token.AccessToken, "11170") // Use a valid account ID here
+	account, err := accountsController.GetAccountByID(context.Background(), token.AccessToken, "11170") // Use a valid account ID here
 	if err != nil {
 		t.Error(err)
 	}
@@ -35,7 +35,7 @@ func TestGetAccountState(t *testing.T) {
 
 	// Use a valid account ID and date here
 	date := time.Now()
-	accountState, err := ctrl.GetAccountState(context.Background(), token.AccessToken, "11170", date)
+	accountState, err := accountsController.GetAccountState(context.Background(), token.AccessToken, "11170", date)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,7 +50,7 @@ func TestGetAccountStateDateRange(t *testing.T) {
 	// Use a valid account ID and date range here
 	startDate := time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 0, 6)
-	accountState, err := ctrl.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	accountState, err := accountsController.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
 	if err != nil {
 		t.Error(err)
 	}

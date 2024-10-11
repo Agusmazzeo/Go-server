@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"server/src/models"
 	"sync"
-	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -17,15 +16,14 @@ import (
 var dbInstance *gorm.DB
 var dbOnce sync.Once
 
-func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
-	t.Helper()
+func SetUpTestDatabase(log *logr.Logger) (*gorm.DB, func()) {
 
 	dbOnce.Do(func() {
 		log.Info("Setting up local DB")
 
 		wd, err := os.Getwd() // Get the current working directory
 		if err != nil {
-			t.Fatalf("os.Getwd() failed with %s\n", err)
+			log.Error(err, "os.Getwd() failed")
 		}
 
 		composeFile := filepath.Join(wd, "../../../docker-compose.yaml") // Concatenate the working directory with the file
@@ -34,7 +32,7 @@ func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
 		cmd := exec.Command("docker-compose", "-f", composeFile, "ps")
 		out, err := cmd.Output()
 		if err != nil {
-			t.Fatalf("Failed while checking DB status %s.\n", err)
+			log.Error(err, "Failed while checking DB status.")
 		}
 
 		// If the output is empty, the services are not up
@@ -42,7 +40,7 @@ func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
 			cmd := exec.Command("docker-compose", "-f", composeFile, "up", "-d", "postgres-db")
 			_, err = cmd.Output()
 			if err != nil {
-				t.Fatalf("Failed while setting up DB %s.\n", err)
+				log.Error(err, "Failed while setting up DB.")
 			}
 		}
 
@@ -50,11 +48,11 @@ func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
 		cmd = exec.Command("docker-compose", "-f", composeFile, "ps")
 		out, err = cmd.Output()
 		if err != nil {
-			t.Fatalf("Failed while checking DB status %s.\n", err)
+			log.Error(err, "Failed while checking DB status.")
 		}
 
 		if len(out) == 0 {
-			t.Fatalf("no DB instance found to run tests with")
+			log.Error(err, "no DB instance found to run tests with")
 		}
 
 		// Wait a bit for the DB to be ready
@@ -63,12 +61,12 @@ func SetUpTestDatabase(t testing.TB, log *logr.Logger) (*gorm.DB, func()) {
 		dsn := "host=localhost port=5440 user=user password=pass dbname=db sslmode=disable"
 		dbInstance, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err != nil {
-			t.Fatalf("failed to connect to database: %v", err)
+			log.Error(err, "failed to connect to database")
 		}
 
 		err = dbInstance.AutoMigrate(&models.ReportSchedule{})
 		if err != nil {
-			t.Fatalf("failed to migrate database: %v", err)
+			log.Error(err, "failed to migrate database")
 		}
 	})
 
