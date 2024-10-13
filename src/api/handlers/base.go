@@ -26,7 +26,7 @@ func NewHandler(db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra
 func (s *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {
 	res, err := json.Marshal(data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

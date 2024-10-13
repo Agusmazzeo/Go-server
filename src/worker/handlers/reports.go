@@ -18,9 +18,9 @@ func (h *Handler) LoadAllReportSchedules(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -35,7 +35,7 @@ func (h *Handler) LoadReportScheduleByID(w http.ResponseWriter, r *http.Request)
 	// Get the ID from the URL parameter
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -43,11 +43,11 @@ func (h *Handler) LoadReportScheduleByID(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Report schedule not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}

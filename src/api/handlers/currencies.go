@@ -18,9 +18,9 @@ func (h *Handler) GetAllCurrencies(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}

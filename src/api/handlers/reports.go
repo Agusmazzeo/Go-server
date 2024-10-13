@@ -101,9 +101,9 @@ func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) 
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -118,7 +118,7 @@ func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) 
 	// Get the ID from the URL parameter
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -126,11 +126,11 @@ func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) 
 
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Report schedule not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -151,7 +151,7 @@ func (h *Handler) CreateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 	created, err := h.ReportsController.CreateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -180,11 +180,11 @@ func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.ReportsController.UpdateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Report schedule not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -199,18 +199,18 @@ func (h *Handler) DeleteReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	err = h.ReportsController.DeleteReportSchedule(ctx, uint(id))
 	if err != nil {
 		if err == context.DeadlineExceeded {
-			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			h.HandleErrors(w, err, http.StatusGatewayTimeout)
 		} else if err == gorm.ErrRecordNotFound {
 			http.Error(w, "Report schedule not found", http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
 		return
 	}
