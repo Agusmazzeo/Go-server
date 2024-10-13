@@ -9,7 +9,7 @@ import (
 
 func TestGetReport(t *testing.T) {
 	// Create a request for the XLSX report
-	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/reports/11170?startDate=2024-08-01&endDate=2024-08-03", nil)
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/reports/11170?startDate=2024-08-01&endDate=2024-08-03&format=XLSX", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
