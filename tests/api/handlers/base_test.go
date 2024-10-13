@@ -44,6 +44,10 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	r.Route("/api/reports", func(r chi.Router) {
+		r.Get("/{id}", h.GetXLSXReport)
+	})
+
 	r.Route("/api/accounts", func(r chi.Router) {
 		r.Get("/", h.GetAllAccounts)
 		r.Get("/{id}", h.GetAccountState)

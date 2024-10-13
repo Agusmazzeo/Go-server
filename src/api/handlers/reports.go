@@ -35,6 +35,17 @@ func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
 	endDateStr := r.URL.Query().Get("endDate")
 	var endDate time.Time
 
+	intervalStr := r.URL.Query().Get("interval")
+	if intervalStr == "" {
+		// Set interval per day as default
+		intervalStr = "0m:0w:1d"
+	}
+	interval, err := utils.ParseTimeInterval(intervalStr)
+	if err != nil {
+		h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+		return
+	}
+
 	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
 		h.HandleErrors(w, err, http.StatusUnprocessableEntity)
@@ -46,13 +57,13 @@ func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
 	//Set +26 hours since we use ARG timezone (UTC-3)
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
-	accountState, err := h.AccountsController.GetAccountStateDateRange(ctx, token, id, startDate, endDate)
+	accountState, err := h.AccountsController.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
 	// Generate the XLSX file using the controller logic
-	xlsxFile, err := h.ReportsController.GenerateXLSX(ctx, accountState)
+	xlsxFile, err := h.ReportsController.GenerateXLSX(ctx, accountState, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		http.Error(w, "Failed to generate XLSX file", http.StatusInternalServerError)
 		return

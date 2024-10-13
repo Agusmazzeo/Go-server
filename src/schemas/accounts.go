@@ -29,6 +29,10 @@ type AccountState struct {
 	Vouchers *map[string]Voucher
 }
 
+type AccountStateByCategory struct {
+	CategoryVouchers *map[string][]Voucher
+}
+
 func NewAccountState() *AccountState {
 	return &AccountState{Vouchers: &map[string]Voucher{}}
 }

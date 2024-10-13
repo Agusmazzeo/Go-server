@@ -16,7 +16,7 @@ type AccountsControllerI interface {
 	GetAllAccounts(ctx context.Context, token, filter string) ([]*schemas.AccountReponse, error)
 	GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error)
 	GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error)
-	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
+	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
 }
 
 type AccountsController struct {
@@ -66,14 +66,14 @@ func (c *AccountsController) GetAccountState(ctx context.Context, token, id stri
 	return c.parseToAccountState(&accStateData, &date)
 }
 
-func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
 	account, err := c.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-
+	intervalHours := interval.Hours()
 	// Calculate the number of days between startDate and endDate
-	numDays := int(endDate.Sub(startDate).Hours()/24) + 1
+	numDays := int(endDate.Sub(startDate).Hours()/intervalHours) + 1
 	vouchers := make(map[string]schemas.Voucher)
 
 	var wg sync.WaitGroup
@@ -81,7 +81,7 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 	for i := 0; i < numDays; i++ {
 		wg.Add(1)
 		go func(i int) {
-			date := startDate.AddDate(0, 0, i)
+			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
 			accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
 			if err != nil {
 				wg.Done()

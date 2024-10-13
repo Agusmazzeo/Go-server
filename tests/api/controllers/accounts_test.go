@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"context"
+	"server/src/utils"
 	"testing"
 	"time"
 )
@@ -50,7 +51,8 @@ func TestGetAccountStateDateRange(t *testing.T) {
 	// Use a valid account ID and date range here
 	startDate := time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 0, 6)
-	accountState, err := accountsController.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	interval, _ := utils.ParseTimeInterval("0m:1w:0d")
+	accountState, err := accountsController.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate, interval.ToDuration())
 	if err != nil {
 		t.Error(err)
 	}
