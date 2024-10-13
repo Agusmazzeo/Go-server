@@ -12,13 +12,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install pre-commit
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9" # Specify the Python version you need
+
+      - name: Install pre-commit in a virtual environment
         run: |
-          sudo apt-get install python3-pip -y
-          pip3 install pre-commit
+          python3 -m venv venv            # Create a virtual environment
+          source venv/bin/activate         # Activate the virtual environment
+          pip install --upgrade pip        # Upgrade pip
+          pip install pre-commit           # Install pre-commit
 
       - name: Run pre-commit
-        run: pre-commit run
+        run: |
+          source venv/bin/activate         # Activate the virtual environment
+          pre-commit run --all-files       # Run pre-commit
 
   tests:
     needs: linter
