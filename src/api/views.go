@@ -57,7 +57,7 @@ func (s *Server) InitRoutes() {
 	s.Router.Post("/api/token", s.Handler.PostToken)
 
 	s.Router.Route("/api/reports", func(r chi.Router) {
-		r.Get("/{id}", s.Handler.GetXLSXReport)
+		r.Get("/{id}", s.Handler.GetReportFile)
 		r.Get("/schedules", s.Handler.GetAllReportSchedules)
 		r.Get("/schedule/{id}", s.Handler.GetReportScheduleByID)
 		r.Post("/schedule/", s.Handler.CreateReportSchedule)

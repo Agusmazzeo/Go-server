@@ -9,16 +9,20 @@ import (
 	"server/src/models"
 	"server/src/schemas"
 	"server/src/utils"
+	"strings"
 	"time"
 
+	"github.com/go-gota/gota/dataframe"
+	"github.com/go-gota/gota/series"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
 
 type ReportsControllerI interface {
-	GenerateXLSX(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
-	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
+	GetXLSXReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
+	GetDataFrameReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
+	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
 	CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
 	UpdateReportSchedule(ctx context.Context, req *schemas.UpdateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
 	DeleteReportSchedule(ctx context.Context, id uint) error
@@ -34,199 +38,153 @@ func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BC
 	return &ReportsController{ESCOClient: escoClient, BCRAClient: bcraClient, DB: db}
 }
 
-func (rc *ReportsController) GenerateXLSX(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
+func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
+	df, err := rc.GetDataFrameReport(ctx, accountState, startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+	return convertDataframeToExcel(df)
+}
 
+// CreateDataFrameWithDatesAndVoucher creates a DataFrame with dates as rows and Voucher IDs as columns
+func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
 	dates, err := utils.GenerateDates(startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
-	groupedVouchers := GroupVouchersByCategory(accountState)
-
-	// Create a new Excel file
-	f := excelize.NewFile()
-
-	// Create a new sheet
-	sheetName := "Tenencia"
-	index, err := f.NewSheet(sheetName)
-	if err != nil {
-		return nil, err
+	dateStrs := make([]string, len(dates))
+	for i, date := range dates {
+		dateStrs[i] = date.Format("2006-01-02")
 	}
 
-	datesIndex, err := setDateRequestedInFile(f, sheetName, 'A', dates)
-	if err != nil {
-		return nil, err
+	// Initialize an empty DataFrame with the DateRequested as the index (as the first column)
+	df := dataframe.New(
+		series.New(dateStrs, series.String, "DateRequested"),
+	)
+
+	// Iterate through the vouchers and add each as a new column
+	for _, voucher := range *accountState.Vouchers {
+		voucherValues := make([]interface{}, len(dates))
+
+		// Initialize all rows with empty values for this voucher
+		for i := range voucherValues {
+			voucherValues[i] = "-" // Default value if no match found
+		}
+
+		// Iterate through holdings and match the dates to fill the corresponding values
+		for _, holding := range voucher.Holdings {
+			if holding.DateRequested != nil {
+				dateStr := holding.DateRequested.Format("2006-01-02")
+				// Find the index in the dates array that matches this holding's date
+				for i, date := range dateStrs {
+					if date == dateStr {
+						if holding.Value >= 1.0 {
+							voucherValues[i] = holding.Value
+						} else {
+							voucherValues[i] = "-"
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// Add the new series (column) for this voucher to the DataFrame
+		voucherSeries := series.New(voucherValues, series.String, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID))
+		df = df.Mutate(voucherSeries)
 	}
 
-	err = setVouchersInFile(f, sheetName, 'B', datesIndex, groupedVouchers)
-	if err != nil {
-		return nil, err
-	}
-
-	// // Collect all unique DateRequested values across all vouchers
-	// datesMap := map[string]struct{}{}
-	// for _, voucher := range *accountState.Vouchers {
-	// 	for _, holding := range voucher.Holdings {
-	// 		formattedDate := holding.DateRequested.Format("2006-01-02")
-	// 		datesMap[formattedDate] = struct{}{}
-	// 	}
-	// }
-
-	// // Convert the dates map keys into a sorted slice
-	// dates := make([]string, 0, len(datesMap))
-	// for date := range datesMap {
-	// 	dates = append(dates, date)
-	// }
-	// sort.Strings(dates)
-
-	// // Write the header row with categories in the first row
-	// _ = f.SetCellValue(sheetName, "A2", "Requested Date")
-	// col := 2
-	// categoryMap := make(map[string][]string)
-
-	// // Collect vouchers under their respective categories
-	// for voucherID, voucher := range *accountState.Vouchers {
-	// 	categoryMap[voucher.Category] = append(categoryMap[voucher.Category], voucherID)
-	// }
-
-	// // Write categories in the first row and voucher IDs in the second row
-	// for category, vouchers := range categoryMap {
-	// 	startCol := col
-	// 	for _, voucherID := range vouchers {
-	// 		// Write the voucher ID in the second row
-	// 		_ = f.SetCellValue(sheetName, fmt.Sprintf("%s2", string('A'+col-1)), voucherID)
-	// 		col++
-	// 	}
-	// 	// Merge the category header over the voucher columns
-	// 	endCol := col - 1
-	// 	_ = f.MergeCell(sheetName, fmt.Sprintf("%s1", string('A'+startCol-1)), fmt.Sprintf("%s1", string('A'+endCol-1)))
-	// 	_ = f.SetCellValue(sheetName, fmt.Sprintf("%s1", string('A'+startCol-1)), category)
-	// }
-
-	// // Write the dates in the first column for each data row
-	// for i, date := range dates {
-	// 	row := i + 3
-	// 	_ = f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), date)
-	// }
-
-	// // Now, populate the values by iterating over the vouchers and the holdings
-	// col = 2
-	// for _, vouchers := range categoryMap {
-	// 	for _, voucherID := range vouchers {
-	// 		voucher := (*accountState.Vouchers)[voucherID]
-
-	// 		// Iterate over each date and populate values for the corresponding voucher ID
-	// 		for i, date := range dates {
-	// 			row := i + 3
-	// 			valueSet := false
-
-	// 			for _, holding := range voucher.Holdings {
-	// 				if holding.DateRequested.Format("2006-01-02") == date {
-	// 					if holding.Value < 1.0 {
-	// 						_ = f.SetCellValue(sheetName, fmt.Sprintf("%s%d", string('A'+col-1), row), "-")
-	// 					} else {
-	// 						_ = f.SetCellValue(sheetName, fmt.Sprintf("%s%d", string('A'+col-1), row), holding.Value)
-	// 					}
-	// 					valueSet = true
-	// 					break
-	// 				}
-	// 			}
-
-	// 			// If no value was set for this date, set it to "-"
-	// 			if !valueSet {
-	// 				_ = f.SetCellValue(sheetName, fmt.Sprintf("%s%d", string('A'+col-1), row), "-")
-	// 			}
-	// 		}
-	// 		col++
-	// 	}
-	// }
-
-	// Set the active sheet and return the file
-	f.SetActiveSheet(index)
-	return f, nil
+	return &df, nil
 }
 
-func setDateRequestedInFile(f *excelize.File, sheetName string, column rune, dates []time.Time) (map[string]int, error) {
-	var err error
-	i := 2
-	var dateStr string
-	dateIndex := map[string]int{}
-	cell := fmt.Sprintf("%c%d", column, i)
-	err = f.SetCellStr(sheetName, cell, "Fecha")
+func convertDataframeToExcel(df *dataframe.DataFrame) (*excelize.File, error) {
+	// Create a new Excel file
+	f := excelize.NewFile()
+	sheetName := "Tenencia"
+
+	err := f.SetSheetName("Sheet1", sheetName)
 	if err != nil {
 		return nil, err
 	}
-	for _, date := range dates {
-		i++
-		cell = fmt.Sprintf("%c%d", column, i)
-		dateStr = date.Format("2006-01-02")
-		err = f.SetCellStr(sheetName, cell, dateStr)
+	// Define variables for column and row indices
+	startRow := 1
+	categoryRow := startRow
+	idRow := startRow + 1
+
+	// Extract column names from DataFrame
+	cols := df.Names()
+
+	// Variables to track categories and column ranges for merging
+	categoryStartCol := make(map[string]int)
+	categoryEndCol := make(map[string]int)
+
+	// Set the DateRequested in the first column (A) for both the first and second rows
+	err = f.SetCellValue(sheetName, "A2", "DateRequested")
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over the columns in the DataFrame, starting from the second one (ignoring DateRequested)
+	columnIndex := 2               // Excel columns start from B (index 2) for data columns
+	for _, col := range cols[1:] { // Skip the first column "DateRequested"
+		parts := strings.Split(col, "-")
+		category := parts[0]
+		id := parts[1]
+
+		// Set the ID in the second row (e.g., ID1, ID2, etc.)
+		cell := fmt.Sprintf("%s%d", ToAlphaString(columnIndex), idRow)
+		err = f.SetCellValue(sheetName, cell, id)
 		if err != nil {
 			return nil, err
 		}
-		dateIndex[dateStr] = i
-	}
-	return dateIndex, nil
-}
 
-func setVouchersInFile(f *excelize.File, sheetName string, startColumn rune, datesIndex map[string]int, groupedVouchers *schemas.AccountStateByCategory) error {
-	var err error
-	var column rune
-	var cell string
-	columnIndex := 0
-	for category, vouchers := range *groupedVouchers.CategoryVouchers {
-		rowIndex := 1
-		column = startColumn + rune(columnIndex)
-		cell = fmt.Sprintf("%c%d", column, rowIndex)
-		err = f.SetCellStr(sheetName, cell, category)
+		// Track the start and end columns for merging categories
+		if _, exists := categoryStartCol[category]; !exists {
+			categoryStartCol[category] = columnIndex
+		}
+		categoryEndCol[category] = columnIndex
+
+		columnIndex++
+	}
+
+	// Merge cells for each category and set the category name in the first row
+	for category, startCol := range categoryStartCol {
+		endCol := categoryEndCol[category]
+		startCell := fmt.Sprintf("%s%d", ToAlphaString(startCol), categoryRow)
+		endCell := fmt.Sprintf("%s%d", ToAlphaString(endCol), categoryRow)
+		err = f.MergeCell(sheetName, startCell, endCell)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if len(vouchers) > 1 {
-			columnToMerge := column + rune(len(vouchers)-1)
-			cellToMerge := fmt.Sprintf("%c%d", columnToMerge, rowIndex)
-			err = f.MergeCell(sheetName, cell, cellToMerge)
-			if err != nil {
-				return err
-			}
-		}
-		rowIndex++
-		for _, voucher := range vouchers {
-			cell = fmt.Sprintf("%c%d", column, rowIndex)
-			err = f.SetCellStr(sheetName, cell, voucher.ID)
-			if err != nil {
-				return err
-			}
-			for _, holding := range voucher.Holdings {
-				holdingRowIndex := datesIndex[holding.DateRequested.Format("2006-01-02")]
-				cell = fmt.Sprintf("%c%d", column, holdingRowIndex)
-				err = f.SetCellFloat(sheetName, cell, holding.Value, 2, 32)
-				if err != nil {
-					return err
-				}
-			}
-			columnIndex++
-			column = startColumn + rune(columnIndex)
+		err = f.SetCellValue(sheetName, startCell, category)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return nil
+
+	// Now fill in the data for the rest of the rows starting from the third row
+	for rowIndex, row := range df.Records()[1:] { // Skip the first row (headers)
+		for colIndex, cellValue := range row {
+			cell := fmt.Sprintf("%s%d", ToAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
+			err = f.SetCellValue(sheetName, cell, cellValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return f, nil
 }
 
-// OrganizeVouchersByCategory takes an AccountState and returns an AccountStateByCategory
-// which groups Vouchers by their Category.
-func GroupVouchersByCategory(accountState *schemas.AccountState) *schemas.AccountStateByCategory {
-	// Initialize a map to store vouchers by category
-	categoryVouchers := make(map[string][]schemas.Voucher)
-
-	// Iterate over the vouchers in AccountState and group them by Category
-	for _, voucher := range *accountState.Vouchers {
-		category := voucher.Category
-		categoryVouchers[category] = append(categoryVouchers[category], voucher)
+// ToAlphaString converts a column index to an Excel column string (e.g., 1 -> A, 2 -> B, 28 -> AB)
+func ToAlphaString(column int) string {
+	result := ""
+	for column > 0 {
+		column-- // Decrement to handle 1-based indexing for Excel columns
+		result = string(rune('A'+(column%26))) + result
+		column /= 26
 	}
-
-	// Return the result as AccountStateByCategory
-	return &schemas.AccountStateByCategory{
-		CategoryVouchers: &categoryVouchers,
-	}
+	return result
 }
 
 // GetAllReportSchedules loads all report schedules and schedules them

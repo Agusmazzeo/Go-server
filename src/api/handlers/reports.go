@@ -16,7 +16,7 @@ import (
 )
 
 // HandleGenerateXLSX is the HTTP handler to generate an Excel file
-func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
@@ -34,6 +34,8 @@ func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
 
 	endDateStr := r.URL.Query().Get("endDate")
 	var endDate time.Time
+
+	format := r.URL.Query().Get("Format")
 
 	intervalStr := r.URL.Query().Get("interval")
 	if intervalStr == "" {
@@ -62,22 +64,33 @@ func (h *Handler) GetXLSXReport(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, err, http.StatusInternalServerError)
 		return
 	}
-	// Generate the XLSX file using the controller logic
-	xlsxFile, err := h.ReportsController.GenerateXLSX(ctx, accountState, startDate, endDate, interval.ToDuration())
-	if err != nil {
-		http.Error(w, "Failed to generate XLSX file", http.StatusInternalServerError)
-		return
-	}
 
-	// Set response headers to download the file
-	w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	if format == "XLSX" {
 
-	// Write the XLSX file to the HTTP response
-	err = xlsxFile.Write(w)
-	if err != nil {
-		http.Error(w, "Failed to write XLSX file", http.StatusInternalServerError)
+		xlsxFile, err := h.ReportsController.GetXLSXReport(ctx, accountState, startDate, endDate, interval.ToDuration())
+		if err != nil {
+			h.HandleErrors(w, err, http.StatusInternalServerError)
+		}
+
+		// Write the XLSX file to the HTTP response
+		err = xlsxFile.Write(w)
+		if err != nil {
+			h.HandleErrors(w, err, http.StatusInternalServerError)
+		}
+		// Set response headers to download the file
+		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
+	} else {
+		df, err := h.ReportsController.GetDataFrameReport(ctx, accountState, startDate, endDate, interval.ToDuration())
+		if err != nil {
+			h.HandleErrors(w, err, http.StatusInternalServerError)
+		}
+		err = df.WriteCSV(w)
+		if err != nil {
+			h.HandleErrors(w, err, http.StatusInternalServerError)
+		}
 	}
+
 }
 
 func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) {

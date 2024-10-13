@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGetXLSXReport(t *testing.T) {
+func TestGetReport(t *testing.T) {
 	// Create a request for the XLSX report
 	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/reports/11170?startDate=2024-08-01&endDate=2024-08-03", nil)
 	if err != nil {
