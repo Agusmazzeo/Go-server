@@ -90,11 +90,3 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 
 	h.respond(w, r, accountState, 200)
 }
-
-func (h *Handler) HandleErrors(w http.ResponseWriter, err error, status int) {
-	if err == context.DeadlineExceeded {
-		h.respond(w, nil, map[string]string{"error": "Request timed out"}, status)
-	} else {
-		h.respond(w, nil, map[string]string{"error": err.Error()}, status)
-	}
-}

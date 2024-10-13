@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"server/src/config"
@@ -31,4 +32,12 @@ func (h *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(status)
 	_, _ = w.Write(res)
+}
+
+func (h *Handler) HandleErrors(w http.ResponseWriter, err error, status int) {
+	if err == context.DeadlineExceeded {
+		h.respond(w, nil, map[string]string{"error": "Request timed out"}, status)
+	} else {
+		h.respond(w, nil, map[string]string{"error": err.Error()}, status)
+	}
 }
