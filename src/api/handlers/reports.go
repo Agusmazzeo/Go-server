@@ -35,7 +35,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	endDateStr := r.URL.Query().Get("endDate")
 	var endDate time.Time
 
-	format := r.URL.Query().Get("Format")
+	format := r.URL.Query().Get("format")
 
 	intervalStr := r.URL.Query().Get("interval")
 	if intervalStr == "" {
