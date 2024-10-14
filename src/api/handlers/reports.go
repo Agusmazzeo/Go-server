@@ -89,6 +89,8 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			h.HandleErrors(w, err, http.StatusInternalServerError)
 		}
+		// Set response headers to download the file
+		w.Header().Set("Content-Disposition", "attachment; filename=holdings.csv")
 	}
 
 }

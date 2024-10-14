@@ -9,6 +9,8 @@ import (
 	"server/src/models"
 	"server/src/schemas"
 	"server/src/utils"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,11 +41,24 @@ func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BC
 }
 
 func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
-	df, err := rc.GetDataFrameReport(ctx, accountState, startDate, endDate, interval)
+	reportDf, err := rc.GetDataFrameReport(ctx, accountState, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
-	return convertDataframeToExcel(df)
+	file, err := convertReportDataframeToExcel(nil, reportDf)
+	if err != nil {
+		return nil, err
+	}
+	variationDf := rc.GetDataFramePercentageVariation(reportDf)
+	file, err = addVariationDataFrameToExcel(file, variationDf)
+	if err != nil {
+		return nil, err
+	}
+	err = applyStylesToAllSheets(file)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 // CreateDataFrameWithDatesAndVoucher creates a DataFrame with dates as rows and Voucher IDs as columns
@@ -79,7 +94,7 @@ func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountState 
 				for i, date := range dateStrs {
 					if date == dateStr {
 						if holding.Value >= 1.0 {
-							voucherValues[i] = holding.Value
+							voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
 						} else {
 							voucherValues[i] = "-"
 						}
@@ -94,17 +109,60 @@ func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountState 
 		df = df.Mutate(voucherSeries)
 	}
 
-	return &df, nil
+	return sortDataFrameColumns(&df), nil
 }
 
-func convertDataframeToExcel(df *dataframe.DataFrame) (*excelize.File, error) {
+func (rc *ReportsController) GetDataFramePercentageVariation(df *dataframe.DataFrame) *dataframe.DataFrame {
+	// Apply the percentage change calculation to all columns in parallel using Capply
+	result := df.Capply(func(s series.Series) series.Series {
+		// For the DateRequested column, return the same series
+		if s.Name == "DateRequested" {
+			return s
+		}
+
+		// Create a new slice for percentage changes
+		newValues := make([]float64, s.Len())
+		newValues[0] = 0 // No percentage change for the first row
+
+		// Calculate the percentage variation for each row
+		for i := 1; i < s.Len(); i++ {
+			currentValue, err1 := strconv.ParseFloat(s.Elem(i).String(), 64)
+			previousValue, err2 := strconv.ParseFloat(s.Elem(i-1).String(), 64)
+
+			// If parsing fails or previous value is zero, set the change to 0
+			if err1 != nil || err2 != nil || previousValue == 0 {
+				newValues[i] = 0
+			} else {
+				newValues[i] = ((currentValue - previousValue) / previousValue) * 100
+			}
+		}
+
+		// Return the new series with percentage changes
+		return series.Floats(newValues)
+	})
+
+	return &result
+}
+
+func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.DataFrame) (*excelize.File, error) {
 	// Create a new Excel file
-	f := excelize.NewFile()
+	var err error
+	var index int
+	f := file
 	sheetName := "Tenencia"
 
-	err := f.SetSheetName("Sheet1", sheetName)
-	if err != nil {
-		return nil, err
+	if f == nil {
+		f = excelize.NewFile()
+		err := f.SetSheetName("Sheet1", sheetName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		index, err = f.NewSheet(sheetName)
+		if err != nil {
+			return nil, err
+		}
+		defer f.SetActiveSheet(index)
 	}
 	// Define variables for column and row indices
 	startRow := 1
@@ -112,14 +170,14 @@ func convertDataframeToExcel(df *dataframe.DataFrame) (*excelize.File, error) {
 	idRow := startRow + 1
 
 	// Extract column names from DataFrame
-	cols := df.Names()
+	cols := reportDf.Names()
 
 	// Variables to track categories and column ranges for merging
 	categoryStartCol := make(map[string]int)
 	categoryEndCol := make(map[string]int)
 
 	// Set the DateRequested in the first column (A) for both the first and second rows
-	err = f.SetCellValue(sheetName, "A2", "DateRequested")
+	err = f.SetCellValue(sheetName, "A2", "Fecha")
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +221,97 @@ func convertDataframeToExcel(df *dataframe.DataFrame) (*excelize.File, error) {
 	}
 
 	// Now fill in the data for the rest of the rows starting from the third row
-	for rowIndex, row := range df.Records()[1:] { // Skip the first row (headers)
+	for rowIndex, row := range reportDf.Records()[1:] { // Skip the first row (headers)
+		for colIndex, cellValue := range row {
+			cell := fmt.Sprintf("%s%d", ToAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
+			err = f.SetCellValue(sheetName, cell, cellValue)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return f, nil
+}
+
+func addVariationDataFrameToExcel(file *excelize.File, variationDf *dataframe.DataFrame) (*excelize.File, error) {
+	// Create a new Excel file
+	var err error
+	var index int
+	f := file
+	sheetName := "Variacion - Retorno"
+
+	if f == nil {
+		f = excelize.NewFile()
+		err := f.SetSheetName("Sheet1", sheetName)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		index, err = f.NewSheet(sheetName)
+		if err != nil {
+			return nil, err
+		}
+		defer f.SetActiveSheet(index)
+	}
+	// Define variables for column and row indices
+	startRow := 1
+	categoryRow := startRow
+	idRow := startRow + 1
+
+	// Extract column names from DataFrame
+	cols := variationDf.Names()
+
+	// Variables to track categories and column ranges for merging
+	categoryStartCol := make(map[string]int)
+	categoryEndCol := make(map[string]int)
+
+	// Set the DateRequested in the first column (A) for both the first and second rows
+	err = f.SetCellValue(sheetName, "A2", "Fecha")
+	if err != nil {
+		return nil, err
+	}
+
+	// Iterate over the columns in the DataFrame, starting from the second one (ignoring DateRequested)
+	columnIndex := 2               // Excel columns start from B (index 2) for data columns
+	for _, col := range cols[1:] { // Skip the first column "DateRequested"
+		parts := strings.Split(col, "-")
+		category := parts[0]
+		id := parts[1]
+
+		// Set the ID in the second row (e.g., ID1, ID2, etc.)
+		cell := fmt.Sprintf("%s%d", ToAlphaString(columnIndex), idRow)
+		err = f.SetCellValue(sheetName, cell, id)
+		if err != nil {
+			return nil, err
+		}
+
+		// Track the start and end columns for merging categories
+		if _, exists := categoryStartCol[category]; !exists {
+			categoryStartCol[category] = columnIndex
+		}
+		categoryEndCol[category] = columnIndex
+
+		columnIndex++
+	}
+
+	// Merge cells for each category and set the category name in the first row
+	for category, startCol := range categoryStartCol {
+		endCol := categoryEndCol[category]
+		startCell := fmt.Sprintf("%s%d", ToAlphaString(startCol), categoryRow)
+		endCell := fmt.Sprintf("%s%d", ToAlphaString(endCol), categoryRow)
+		err = f.MergeCell(sheetName, startCell, endCell)
+		if err != nil {
+			return nil, err
+		}
+		err = f.SetCellValue(sheetName, startCell, category)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Now fill in the data for the rest of the rows starting from the third row
+	for rowIndex, row := range variationDf.Records()[1:] { // Skip the first row (headers)
 		for colIndex, cellValue := range row {
 			cell := fmt.Sprintf("%s%d", ToAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
 			err = f.SetCellValue(sheetName, cell, cellValue)
@@ -185,6 +333,111 @@ func ToAlphaString(column int) string {
 		column /= 26
 	}
 	return result
+}
+
+func sortDataFrameColumns(df *dataframe.DataFrame) *dataframe.DataFrame {
+	// Get the column names
+	cols := df.Names()
+
+	// Separate DateRequested from the other columns
+	var otherCols []string
+	for _, col := range cols {
+		if col != "DateRequested" {
+			otherCols = append(otherCols, col)
+		}
+	}
+
+	// Sort the remaining columns
+	sort.Strings(otherCols)
+
+	// Reassemble the column list, putting DateRequested first
+	sortedCols := append([]string{"DateRequested"}, otherCols...)
+
+	// Rearrange the DataFrame by the sorted columns
+	sortedDf := df.Select(sortedCols)
+
+	// Return the sorted DataFrame
+	return &sortedDf
+}
+
+func applyStylesToAllSheets(f *excelize.File) error {
+	// Define styles for the first column (DateRequested)
+	firstColumnStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Color: "000000"},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"DDEBF7"}, Pattern: 1},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Define two alternating tones of blue for the first row (header row)
+	lightBlueStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Color: "FFFFFF"},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"ADD8E6"}, Pattern: 1}, // Light blue
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	blueStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Bold: true, Color: "FFFFFF"},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"4682B4"}, Pattern: 1}, // Blue
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Define a style for the second row (Voucher IDs)
+	secondRowStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{Italic: true, Color: "000000"},
+		Fill: excelize.Fill{Type: "pattern", Color: []string{"E2EFDA"}, Pattern: 1}, // Light green
+	})
+	if err != nil {
+		return err
+	}
+
+	// Get all the sheet names
+	sheets := f.GetSheetList()
+
+	// Loop through each sheet and apply the styles
+	for _, sheetName := range sheets {
+		// Apply style to the first column (A)
+		err = f.SetColStyle(sheetName, "A", firstColumnStyle)
+		if err != nil {
+			return err
+		}
+
+		// Loop through each column in the first row (starting from B) to alternate colors
+		for i := 0; i < 10; i++ { // Assuming there are 10 columns, adjust as necessary
+			colLetter := string('B' + rune(i)) // Columns starting from B
+
+			// Alternate between light blue and blue
+			if i%2 == 0 {
+				err = f.SetCellStyle(sheetName, fmt.Sprintf("%s1", colLetter), fmt.Sprintf("%s1", colLetter), lightBlueStyle)
+			} else {
+				err = f.SetCellStyle(sheetName, fmt.Sprintf("%s1", colLetter), fmt.Sprintf("%s1", colLetter), blueStyle)
+			}
+			if err != nil {
+				return err
+			}
+		}
+
+		// Apply style to the second row
+		err = f.SetRowStyle(sheetName, 2, 2, secondRowStyle)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // GetAllReportSchedules loads all report schedules and schedules them
