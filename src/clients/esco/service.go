@@ -22,6 +22,8 @@ type ESCOServiceClientI interface {
 	BuscarCuentas(token, filter string) ([]CuentaSchema, error)
 	GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error)
 	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error)
+	GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Liquidacion, error)
+	GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Boleto, error)
 	GetCategoryMap() map[string]string
 }
 
@@ -200,6 +202,127 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 
 	// Save the response and get the response bytes for further processing
 	// body, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("estado_cuenta_%s_date_response.json", cid))
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// GetEstadoCuenta retrieves the account status information
+func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Liquidacion, error) {
+	// tf is filter by concertacion (-1) or liquidacion (0)
+	headers := map[string]string{
+		"CID":   cid,
+		"FID":   fid,
+		"NNCC":  nncc,
+		"AUSER": "False",
+	}
+
+	url := s.BaseURL + "/GetLiquidaciones"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	q.Add("AG", "true")
+	q.Add("CODCLI", "cliente-CRITERIA")
+	q.Add("FD", startDate.Format("2006-01-02"))
+	q.Add("FH", endDate.Format("2006-01-02"))
+	q.Add("TF", tf)
+	req.URL.RawQuery = q.Encode()
+
+	// Add bearer token
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to retrieve liquidaciones")
+	}
+
+	var result []Liquidacion
+
+	// Save the response and get the response bytes for further processing
+	// body, err := utils.SaveResponseToFile(resp.Body, "liquidaciones_response.json")
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Boleto, error) {
+	// tf is filter by concertacion (-1) or liquidacion (0)
+	headers := map[string]string{
+		"CID":   cid,
+		"FID":   fid,
+		"NNCC":  nncc,
+		"AUSER": "False",
+	}
+
+	url := s.BaseURL + "/GetBoletos"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	q.Add("AG", "true")
+	q.Add("CODCLI", "cliente-CRITERIA")
+	q.Add("FD", startDate.Format("2006-01-02"))
+	q.Add("FH", endDate.Format("2006-01-02"))
+	q.Add("TF", tf)
+	req.URL.RawQuery = q.Encode()
+
+	// Add bearer token
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to retrieve boletos")
+	}
+
+	var result []Boleto
+
+	// Save the response and get the response bytes for further processing
+	// body, err := utils.SaveResponseToFile(resp.Body, "boletos_response.json")
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

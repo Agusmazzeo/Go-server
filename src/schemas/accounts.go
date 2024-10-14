@@ -17,12 +17,20 @@ type Holding struct {
 	Date          *time.Time
 }
 
+type Transaction struct {
+	Currency     string
+	CurrencySign string
+	Value        float64
+	Date         *time.Time
+}
+
 type Voucher struct {
 	ID           string
 	Type         string
 	Denomination string
 	Category     string
 	Holdings     []Holding
+	Transactions []Transaction
 }
 
 type AccountState struct {

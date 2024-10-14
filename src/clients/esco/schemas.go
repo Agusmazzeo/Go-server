@@ -76,3 +76,54 @@ type EstadoCuentaSchema struct {
 	PPPRendimiento interface{} `json:"PPPRendimiento"`
 	PPPPorcentaje  interface{} `json:"PPPPorcentaje"`
 }
+
+type Liquidacion struct {
+	CFM  float64  `json:"CFM"`
+	C    float64  `json:"C"`
+	N    float64  `json:"N"`
+	NFM  float64  `json:"NFM"`
+	S    float64  `json:"S"`
+	R    *float64 `json:"R"`
+	FC   string   `json:"FC"`
+	FL   string   `json:"FL"`
+	F    string   `json:"F"`
+	Q    float64  `json:"Q"`
+	TO   string   `json:"TO"`
+	VC   float64  `json:"VC"`
+	I    float64  `json:"I"`
+	MS   string   `json:"MS"`
+	MSF  string   `json:"MSF"`
+	CF   string   `json:"CF"`
+	IDL  string   `json:"IDL"`
+	CODF int      `json:"CODF"`
+	CA   string   `json:"CA"`
+	CD   string   `json:"CD"`
+	FA   string   `json:"FA"`
+	FD   string   `json:"FD"`
+}
+
+type Boleto struct {
+	T   string   `json:"T"`
+	I   string   `json:"I"`
+	NRO int      `json:"NRO"`
+	F   string   `json:"F"`
+	FL  string   `json:"FL"`
+	O   string   `json:"O"`
+	C   float64  `json:"C"`
+	PR  float64  `json:"PR"`
+	B   float64  `json:"B"`
+	A   *float64 `json:"A"`
+	DB  float64  `json:"DB"`
+	DM  float64  `json:"DM"`
+	MS  string   `json:"MS"`
+	N   float64  `json:"N"`
+	AS  string   `json:"A_S"`
+	PRS string   `json:"PR_S"`
+	BS  string   `json:"B_S"`
+	DBS string   `json:"DB_S"`
+	DMS string   `json:"DM_S"`
+	NS  string   `json:"N_S"`
+	ID  string   `json:"ID"`
+	TM  string   `json:"TM"`
+	ORI string   `json:"ORI"`
+}

@@ -72,4 +72,46 @@ func TestESCOService(t *testing.T) {
 			t.Errorf("expected some results, got none")
 		}
 	})
+
+	t.Run("GetBoletos with defined account works correctly", func(t *testing.T) {
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if len(accounts) == 0 {
+			t.Errorf("expected some results, got none")
+		}
+
+		startDate := time.Now()
+		endDate := startDate.AddDate(0, 0, 1)
+		result, err := escoService.GetBoletos(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(result) == 0 {
+			t.Errorf("expected some results, got none")
+		}
+	})
+
+	t.Run("GetLiquidaciones with defined account works correctly", func(t *testing.T) {
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if len(accounts) == 0 {
+			t.Errorf("expected some results, got none")
+		}
+
+		startDate := time.Now()
+		endDate := startDate.AddDate(0, 0, 1)
+		result, err := escoService.GetLiquidaciones(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(result) == 0 {
+			t.Errorf("expected some results, got none")
+		}
+	})
 }

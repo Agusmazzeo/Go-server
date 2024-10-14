@@ -61,3 +61,33 @@ func TestGetAccountStateDateRange(t *testing.T) {
 		t.Errorf("expected non-empty account state for the date range")
 	}
 }
+
+func TestGetBoletosDateRange(t *testing.T) {
+
+	// Use a valid account ID and date range here
+	startDate := time.Date(2024, 6, 25, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 0, 6)
+	accountState, err := accountsController.GetBoletosDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if accountState == nil || len(*accountState.Vouchers) == 0 {
+		t.Errorf("expected non-empty account state for the date range")
+	}
+}
+
+func TestGetLiquidacionesDateRange(t *testing.T) {
+
+	// Use a valid account ID and date range here
+	startDate := time.Date(2024, 6, 25, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 0, 6)
+	accountState, err := accountsController.GetLiquidacionesDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if accountState == nil || len(*accountState.Vouchers) == 0 {
+		t.Errorf("expected non-empty account state for the date range")
+	}
+}

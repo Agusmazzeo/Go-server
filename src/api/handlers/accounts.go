@@ -81,7 +81,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
 		endDate = (endDate.Add(26 * time.Hour)).In(location)
-		accountState, err = h.AccountsController.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval.ToDuration())
+		accountState, err = h.AccountsController.GetAccountStateWithTransactionsDateRange(ctx, token, id, startDate, endDate, interval.ToDuration())
 	}
 
 	if err != nil {

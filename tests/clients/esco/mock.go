@@ -80,6 +80,26 @@ func (c *ESCOServiceClientMock) GetEstadoCuenta(_, cid, _, _, _ string, _ time.T
 	return estadoCuenta, nil
 }
 
+// GetLiquidaciones reads account liquidaciones information from a mock file.
+func (c *ESCOServiceClientMock) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]esco.Liquidacion, error) {
+	var liquidaciones []esco.Liquidacion
+	err := c.ReadMockResponse("liquidaciones_response.json", &liquidaciones)
+	if err != nil {
+		return nil, err
+	}
+	return liquidaciones, nil
+}
+
+// GetBoletos reads account boletos information from a mock file.
+func (c *ESCOServiceClientMock) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]esco.Boleto, error) {
+	var boletos []esco.Boleto
+	err := c.ReadMockResponse("boletos_response.json", &boletos)
+	if err != nil {
+		return nil, err
+	}
+	return boletos, nil
+}
+
 // GetCategoryMap returns a mocked category map.
 func (c *ESCOServiceClientMock) GetCategoryMap() map[string]string {
 	return *c.categoryMap
