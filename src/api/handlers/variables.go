@@ -17,19 +17,11 @@ func (h *Handler) GetAllVariables(w http.ResponseWriter, r *http.Request) {
 	variables, err := h.Controller.GetAllVariables(ctx)
 
 	if err != nil {
-		if err == context.DeadlineExceeded {
-			h.HandleErrors(w, err, http.StatusGatewayTimeout)
-		} else {
-			h.HandleErrors(w, err, http.StatusInternalServerError)
-		}
+		h.HandleErrors(w, err)
 		return
 	}
 
-	if err != nil {
-		utils.WriteError(w, err)
-	} else {
-		h.respond(w, r, variables, 200)
-	}
+	h.respond(w, r, variables, 200)
 }
 
 func (h *Handler) GetVariableWithValuationByID(w http.ResponseWriter, r *http.Request) {
@@ -53,18 +45,21 @@ func (h *Handler) GetVariableWithValuationByID(w http.ResponseWriter, r *http.Re
 	if dateStr != "" {
 		date, err = time.Parse(utils.ShortDashDateLayout, dateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+			return
 		}
 		date = (date.Add(26 * time.Hour)).In(location)
 		variable, err = h.Controller.GetVariableWithValuationByID(ctx, id, date)
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+			return
 		}
 		endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+			return
 		}
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
@@ -73,8 +68,8 @@ func (h *Handler) GetVariableWithValuationByID(w http.ResponseWriter, r *http.Re
 	}
 
 	if err != nil {
-		utils.WriteError(w, err)
-	} else {
-		h.respond(w, r, variable, 200)
+		h.HandleErrors(w, err)
+		return
 	}
+	h.respond(w, r, variable, 200)
 }

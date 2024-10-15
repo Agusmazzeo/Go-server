@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 )
 
 func (h *Handler) LoadAllReportSchedules(w http.ResponseWriter, r *http.Request) {
@@ -17,11 +16,7 @@ func (h *Handler) LoadAllReportSchedules(w http.ResponseWriter, r *http.Request)
 	err := h.Controller.LoadAllReportSchedule(ctx)
 
 	if err != nil {
-		if err == context.DeadlineExceeded {
-			h.HandleErrors(w, err, http.StatusGatewayTimeout)
-		} else {
-			h.HandleErrors(w, err, http.StatusInternalServerError)
-		}
+		h.HandleErrors(w, err)
 		return
 	}
 
@@ -35,20 +30,14 @@ func (h *Handler) LoadReportScheduleByID(w http.ResponseWriter, r *http.Request)
 	// Get the ID from the URL parameter
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusInternalServerError)
+		h.HandleErrors(w, err)
 		return
 	}
 
 	err = h.Controller.LoadReportScheduleByID(ctx, uint(id))
 
 	if err != nil {
-		if err == context.DeadlineExceeded {
-			h.HandleErrors(w, err, http.StatusGatewayTimeout)
-		} else if err == gorm.ErrRecordNotFound {
-			http.Error(w, "Report schedule not found", http.StatusNotFound)
-		} else {
-			h.HandleErrors(w, err, http.StatusInternalServerError)
-		}
+		h.HandleErrors(w, err)
 		return
 	}
 

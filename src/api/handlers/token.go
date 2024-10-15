@@ -16,13 +16,13 @@ func (h *Handler) PostToken(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(tokenRequestCreds)
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusBadRequest)
+		h.HandleErrors(w, err)
 		return
 	}
 
 	tokenResponse, err := h.Controller.PostToken(ctx, tokenRequestCreds.Username, tokenRequestCreds.Password)
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusInternalServerError)
+		h.HandleErrors(w, err)
 		return
 	}
 

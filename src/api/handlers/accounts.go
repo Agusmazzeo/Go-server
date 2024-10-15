@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"server/src/schemas"
 	"server/src/utils"
@@ -22,7 +21,8 @@ func (h *Handler) GetAllAccounts(w http.ResponseWriter, r *http.Request) {
 	accounts, err := h.AccountsController.GetAllAccounts(ctx, token, filter)
 
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusInternalServerError)
+		h.HandleErrors(w, err)
+		return
 	}
 
 	h.respond(w, r, accounts, 200)
@@ -35,7 +35,8 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 
 	token := jwtauth.TokenFromHeader(r)
 	if token == "" {
-		h.HandleErrors(w, fmt.Errorf("empty token detected"), http.StatusUnauthorized)
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusBadRequest, "empty token detected"))
+		return
 	}
 
 	id := chi.URLParam(r, "id")
@@ -57,7 +58,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 	}
 	interval, err := utils.ParseTimeInterval(intervalStr)
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+		h.HandleErrors(w, err)
 		return
 	}
 
@@ -65,18 +66,21 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 	if dateStr != "" {
 		date, err = time.Parse(utils.ShortDashDateLayout, dateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, err)
+			return
 		}
 		date = (date.Add(26 * time.Hour)).In(location)
 		accountState, err = h.AccountsController.GetAccountState(ctx, token, id, date)
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+			return
 		}
 		endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
 		if err != nil {
-			h.HandleErrors(w, err, http.StatusUnprocessableEntity)
+			h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+			return
 		}
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
@@ -85,7 +89,8 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		h.HandleErrors(w, err, http.StatusInternalServerError)
+		h.HandleErrors(w, err)
+		return
 	}
 
 	h.respond(w, r, accountState, 200)

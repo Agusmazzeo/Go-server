@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -195,7 +194,7 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to retrieve account status")
+		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve account status: %s", resp.Status))
 	}
 
 	var result []EstadoCuentaSchema
@@ -256,7 +255,7 @@ func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to retrieve liquidaciones")
+		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve liquidaciones: %s", resp.Status))
 	}
 
 	var result []Liquidacion
@@ -316,7 +315,7 @@ func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDa
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to retrieve boletos")
+		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve boletos: %s", resp.Status))
 	}
 
 	var result []Boleto

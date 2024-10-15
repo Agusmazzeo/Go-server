@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"server/src/utils"
 )
 
 // ExternalAPIService is a struct representing a configurable external service
@@ -90,5 +91,13 @@ func (s *ExternalAPIService) PostWithHeaders(endpoint, token string, body interf
 	}
 
 	client := &http.Client{}
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode > http.StatusCreated {
+		return nil, utils.NewHTTPError(resp.StatusCode, resp.Status)
+	}
+	return resp, nil
 }
