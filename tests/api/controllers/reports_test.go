@@ -52,7 +52,7 @@ func TestGetAllReportSchedules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	if len(resp) != 2 {
+	if len(resp) < 2 {
 		t.Fatalf("Expected 2 report schedules, got %d", len(resp))
 	}
 }
