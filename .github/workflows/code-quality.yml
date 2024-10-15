@@ -17,13 +17,17 @@ jobs:
         with:
           python-version: "3.9" # Specify the Python version you need
 
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.20.4
+
       - name: Install pre-commit in a virtual environment
         run: |
           python3 -m venv venv            # Create a virtual environment
           source venv/bin/activate         # Activate the virtual environment
           pip install --upgrade pip        # Upgrade pip
           pip install pre-commit           # Install pre-commit
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
       - name: Run pre-commit
         run: |
