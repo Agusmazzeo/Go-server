@@ -36,7 +36,7 @@ type ESCOServiceClient struct {
 
 // NewClient creates a new instance of ESCOServiceClient
 func NewClient(cfg *config.Config) (*ESCOServiceClient, error) {
-	api := requests.NewExternalAPIService()
+	api := requests.NewExternalAPIService(nil)
 	categoryMap, err := utils.CSVToMap(cfg.ExternalClients.ESCO.CategoryMapFile)
 	if err != nil {
 		return nil, err

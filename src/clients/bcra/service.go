@@ -2,6 +2,7 @@ package bcra
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ type BCRAServiceClient struct {
 
 // NewClient creates a new instance of BCRAServiceClient
 func NewClient(cfg *config.Config) (*BCRAServiceClient, error) {
-	api := requests.NewExternalAPIService()
+	api := requests.NewExternalAPIService(&tls.Config{InsecureSkipVerify: true})
 	cache := utils.NewCache[GetVariablesResponse]()
 	return &BCRAServiceClient{
 		API:            api,

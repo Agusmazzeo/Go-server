@@ -2,6 +2,7 @@ package requests
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -9,11 +10,13 @@ import (
 )
 
 // ExternalAPIService is a struct representing a configurable external service
-type ExternalAPIService struct{}
+type ExternalAPIService struct {
+	TLSClientConfig *tls.Config
+}
 
 // NewExternalAPIService creates a new instance of ExternalAPIService
-func NewExternalAPIService() *ExternalAPIService {
-	return &ExternalAPIService{}
+func NewExternalAPIService(tlsConfig *tls.Config) *ExternalAPIService {
+	return &ExternalAPIService{TLSClientConfig: tlsConfig}
 }
 
 // makeRequest is a helper function to make HTTP requests, supporting optional query parameters
@@ -43,8 +46,14 @@ func (s *ExternalAPIService) makeRequest(method, endpoint, token string, params 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
-	// Execute the request
 	client := &http.Client{}
+	// Execute the request
+	if s.TLSClientConfig != nil {
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client = &http.Client{Transport: tr}
+	}
 	return client.Do(req)
 }
 
