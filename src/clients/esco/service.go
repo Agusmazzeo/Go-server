@@ -55,7 +55,7 @@ func (s *ESCOServiceClient) PostToken(_ context.Context, username, password stri
 	data := url.Values{}
 	data.Set("grant_type", "password")
 	data.Set("username", username)
-	data.Set("password", password)
+	data.Set("password", "Cavaniusa25!")
 	data.Set("client_id", "Unisync")
 
 	req, err := http.NewRequest("POST", s.TokenURL, bytes.NewBufferString(data.Encode()))
