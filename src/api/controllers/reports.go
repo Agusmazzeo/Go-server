@@ -21,8 +21,8 @@ import (
 )
 
 type ReportsControllerI interface {
-	GetXLSXReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
-	GetDataFrameReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
+	GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
+	GetDataFrameReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
 	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
 	CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
@@ -40,8 +40,8 @@ func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BC
 	return &ReportsController{ESCOClient: escoClient, BCRAClient: bcraClient, DB: db}
 }
 
-func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
-	reportDf, err := rc.GetDataFrameReport(ctx, accountState, startDate, endDate, interval)
+func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
+	reportDf, err := rc.GetDataFrameReport(ctx, accountsStates, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountState *sc
 }
 
 // CreateDataFrameWithDatesAndVoucher creates a DataFrame with dates as rows and Voucher IDs as columns
-func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountState *schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
+func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
 	dates, err := utils.GenerateDates(startDate, endDate, interval)
 	if err != nil {
 		return nil, err
@@ -78,35 +78,40 @@ func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountState 
 	)
 
 	// Iterate through the vouchers and add each as a new column
-	for _, voucher := range *accountState.Vouchers {
-		voucherValues := make([]interface{}, len(dates))
+	for _, accountState := range accountsStates {
+		for _, voucher := range *accountState.Vouchers {
+			voucherValues := make([]string, len(dates))
 
-		// Initialize all rows with empty values for this voucher
-		for i := range voucherValues {
-			voucherValues[i] = "-" // Default value if no match found
-		}
+			// Initialize all rows with empty values for this voucher
+			for i := range voucherValues {
+				voucherValues[i] = "-" // Default value if no match found
+			}
 
-		// Iterate through holdings and match the dates to fill the corresponding values
-		for _, holding := range voucher.Holdings {
-			if holding.DateRequested != nil {
-				dateStr := holding.DateRequested.Format("2006-01-02")
-				// Find the index in the dates array that matches this holding's date
-				for i, date := range dateStrs {
-					if date == dateStr {
-						if holding.Value >= 1.0 {
-							voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
-						} else {
-							voucherValues[i] = "-"
+			// Iterate through holdings and match the dates to fill the corresponding values
+			for _, holding := range voucher.Holdings {
+				if holding.DateRequested != nil {
+					dateStr := holding.DateRequested.Format("2006-01-02")
+					// Find the index in the dates array that matches this holding's date
+					for i, date := range dateStrs {
+						if date == dateStr {
+							if holding.Value >= 1.0 {
+								voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
+							} else {
+								voucherValues[i] = "-"
+							}
+							break
 						}
-						break
 					}
 				}
 			}
-		}
 
-		// Add the new series (column) for this voucher to the DataFrame
-		voucherSeries := series.New(voucherValues, series.String, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID))
-		df = df.Mutate(voucherSeries)
+			// Add the new series (column) for this voucher to the DataFrame
+			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID), voucherValues)
+			if err != nil {
+				return nil, err
+			}
+			df = *updatedDf
+		}
 	}
 
 	return sortDataFrameColumns(&df), nil
@@ -358,6 +363,68 @@ func sortDataFrameColumns(df *dataframe.DataFrame) *dataframe.DataFrame {
 
 	// Return the sorted DataFrame
 	return &sortedDf
+}
+
+// updateDataFrame receives the attributes (columnName and values) and the DataFrame,
+// and returns the updated DataFrame. It assumes that the values are floats.
+func updateDataFrame(df dataframe.DataFrame, columnName string, newValues []string) (*dataframe.DataFrame, error) {
+	// Check if the column already exists in the DataFrame
+	var err error
+	columnExists := false
+	for _, name := range df.Names() {
+		if name == columnName {
+			columnExists = true
+			break
+		}
+	}
+
+	if columnExists {
+		// If the column exists, add the new values to the existing ones
+		existingCol := df.Col(columnName).Records()
+		updatedValues := make([]string, len(existingCol))
+
+		// Loop through and add the values (assuming string to float conversion)
+		for i, existingVal := range existingCol {
+			// Convert string to float for addition
+			var existingFloat float64
+			var newFloat float64
+			if existingVal == "-" {
+				existingFloat = 0.0
+			} else {
+				existingFloat, err = strconv.ParseFloat(existingVal, 64)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if newValues[i] == "-" {
+				newFloat = 0.0
+			} else {
+				newFloat, err = strconv.ParseFloat(newValues[i], 64)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			// Add the existing and new values together
+			sum := existingFloat + newFloat
+
+			// Convert back to string and store in updatedValues
+			updatedValues[i] = fmt.Sprintf("%.2f", sum)
+		}
+
+		// Create a new series with the updated values
+		updatedSeries := series.New(updatedValues, series.String, columnName)
+
+		// Mutate the DataFrame with the updated series
+		df = df.Mutate(updatedSeries)
+
+	} else {
+		// If the column doesn't exist, create a new column with the new values
+		newSeries := series.New(newValues, series.String, columnName)
+		df = df.Mutate(newSeries)
+	}
+
+	return &df, nil
 }
 
 func applyStylesToAllSheets(f *excelize.File) error {

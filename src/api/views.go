@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth"
+	"github.com/rs/cors"
 )
 
 type Server struct {
@@ -57,7 +58,7 @@ func (s *Server) InitRoutes() {
 	s.Router.Post("/api/token", s.Handler.PostToken)
 
 	s.Router.Route("/api/reports", func(r chi.Router) {
-		r.Get("/{id}", s.Handler.GetReportFile)
+		r.Get("/{ids}", s.Handler.GetReportFile)
 		r.Get("/schedules", s.Handler.GetAllReportSchedules)
 		r.Get("/schedule/{id}", s.Handler.GetReportScheduleByID)
 		r.Post("/schedule/", s.Handler.CreateReportSchedule)
@@ -82,16 +83,31 @@ func (s *Server) InitRoutes() {
 
 }
 
+// NewHTTPServer creates a new HTTP server with CORS middleware
 func NewHTTPServer(cfg *config.Config) (*http.Server, error) {
 	server, err := NewServer(cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	// Configure CORS options
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*"}, // Allow any localhost config
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+		Debug:            true, // Enable debug for development; remove in production
+	})
+
+	// Apply the CORS middleware to your router
+	corsHandler := corsMiddleware.Handler(server.Router)
+
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Service.Port,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
-		Handler:      server,
+		Handler:      corsHandler, // Use the router with CORS enabled
 	}
+
 	return httpServer, nil
 }
