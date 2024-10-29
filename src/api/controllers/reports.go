@@ -21,6 +21,7 @@ import (
 )
 
 type ReportsControllerI interface {
+	GetReport(ctx context.Context, accountsStates *schemas.AccountStateByCategory, variablesWithValuations []*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
 	GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
 	GetDataFrameReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
@@ -38,6 +39,16 @@ type ReportsController struct {
 
 func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI, db *gorm.DB) *ReportsController {
 	return &ReportsController{ESCOClient: escoClient, BCRAClient: bcraClient, DB: db}
+}
+
+func (rc *ReportsController) GetReport(
+	ctx context.Context,
+	accountsStates *schemas.AccountStateByCategory,
+	variablesWithValuations []*schemas.VariableWithValuationResponse,
+	startDate, endDate time.Time,
+	interval time.Duration,
+) (*schemas.AccountsReports, error) {
+	return GenerateAccountReports(accountsStates)
 }
 
 func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
@@ -505,6 +516,113 @@ func applyStylesToAllSheets(f *excelize.File) error {
 	}
 
 	return nil
+}
+
+// findDateRange returns the earliest and latest DateRequested from the holdings.
+func findDateRange(holdings []schemas.Holding) (time.Time, time.Time, error) {
+	if len(holdings) == 0 {
+		return time.Time{}, time.Time{}, fmt.Errorf("no holdings found")
+	}
+
+	// Initialize with the first holding's date
+	startDate := *holdings[0].DateRequested
+	endDate := *holdings[0].DateRequested
+
+	// Loop through holdings to find the earliest and latest DateRequested
+	for _, holding := range holdings {
+		if holding.DateRequested != nil {
+			if holding.DateRequested.Before(startDate) {
+				startDate = *holding.DateRequested
+			}
+			if holding.DateRequested.After(endDate) {
+				endDate = *holding.DateRequested
+			}
+		}
+	}
+
+	return startDate, endDate, nil
+}
+
+// CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
+func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, error) {
+	if len(voucher.Holdings) < 2 {
+		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
+	}
+
+	// Sort holdings by date
+	sortedHoldings := sortHoldingsByDate(voucher.Holdings)
+	var returnsByDateRange []schemas.ReturnByDate
+
+	// Iterate through each pair of consecutive holdings
+	for i := 0; i < len(sortedHoldings)-1; i++ {
+		startingHolding := sortedHoldings[i]
+		endingHolding := sortedHoldings[i+1]
+
+		startDate := *startingHolding.DateRequested
+		endDate := *endingHolding.DateRequested
+		startingValue := startingHolding.Value
+		endingValue := endingHolding.Value
+
+		// Calculate the net transactions within the date range
+		var netTransactions float64
+		for _, transaction := range voucher.Transactions {
+			if transaction.Date != nil && (transaction.Date.After(startDate) && !transaction.Date.After(endDate)) {
+				netTransactions += transaction.Value
+			}
+		}
+
+		// Calculate return for this date range
+		if startingValue == 0 {
+			continue
+		}
+
+		returnPercentage := ((endingValue - (startingValue - netTransactions)) / (startingValue - netTransactions)) * 100
+
+		// Append the return for this date range
+		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
+			StartDate:        startDate,
+			EndDate:          endDate,
+			ReturnPercentage: returnPercentage,
+		})
+	}
+
+	// Return the result
+	return schemas.VoucherReturn{
+		ID:                 voucher.ID,
+		Type:               voucher.Type,
+		Denomination:       voucher.Denomination,
+		Category:           voucher.Category,
+		ReturnsByDateRange: returnsByDateRange,
+	}, nil
+}
+
+// sortHoldingsByDate sorts the holdings by DateRequested.
+func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
+	sort.Slice(holdings, func(i, j int) bool {
+		return holdings[i].DateRequested.Before(*holdings[j].DateRequested)
+	})
+	return holdings
+}
+
+// GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
+func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory) (*schemas.AccountsReports, error) {
+	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
+
+	// Iterate through each category and its associated vouchers
+	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
+		for _, voucher := range vouchers {
+			voucherReturn, _ := CalculateVoucherReturn(voucher)
+			// if err != nil {
+			// 	return &schemas.AccountsReports{}, err
+			// }
+			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
+		}
+	}
+
+	return &schemas.AccountsReports{
+		VouchersByCategory:       accountStateByCategory.VouchersByCategory,
+		VouchersReturnByCategory: &voucherReturnsByCategory,
+	}, nil
 }
 
 // GetAllReportSchedules loads all report schedules and schedules them

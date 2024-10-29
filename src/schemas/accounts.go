@@ -38,7 +38,7 @@ type AccountState struct {
 }
 
 type AccountStateByCategory struct {
-	CategoryVouchers *map[string][]Voucher
+	VouchersByCategory *map[string][]Voucher
 }
 
 func NewAccountState() *AccountState {

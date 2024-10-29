@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"server/src/schemas"
 	"server/src/utils"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -38,9 +39,15 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusBadRequest, "empty token detected"))
 		return
 	}
-
-	id := chi.URLParam(r, "id")
 	var err error
+	idsStr := chi.URLParam(r, "ids")
+	// Split the comma-separated ids into a slice
+	ids := strings.Split(idsStr, ",")
+
+	if len(ids) == 0 {
+		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)
+		return
+	}
 
 	dateStr := r.URL.Query().Get("date")
 	var date time.Time
@@ -62,7 +69,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var accountState *schemas.AccountState
+	var accountState *schemas.AccountStateByCategory
 	if dateStr != "" {
 		date, err = time.Parse(utils.ShortDashDateLayout, dateStr)
 		if err != nil {
@@ -70,7 +77,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		date = (date.Add(26 * time.Hour)).In(location)
-		accountState, err = h.AccountsController.GetAccountState(ctx, token, id, date)
+		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, date, date, interval.ToDuration())
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 		if err != nil {
@@ -85,7 +92,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
 		endDate = (endDate.Add(26 * time.Hour)).In(location)
-		accountState, err = h.AccountsController.GetAccountStateWithTransactionsDateRange(ctx, token, id, startDate, endDate, interval.ToDuration())
+		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
 	}
 
 	if err != nil {

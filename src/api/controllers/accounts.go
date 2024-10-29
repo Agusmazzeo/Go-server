@@ -23,6 +23,7 @@ type AccountsControllerI interface {
 	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error)
+	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
 }
 
 type AccountsController struct {
@@ -52,6 +53,9 @@ func (c *AccountsController) GetAccountByID(ctx context.Context, token, id strin
 	acc, err := c.ESCOClient.BuscarCuentas(token, id)
 	if err != nil {
 		return nil, err
+	}
+	if len(acc) == 0 {
+		return nil, fmt.Errorf("no accounts received for given id %s", id)
 	}
 	if len(acc) != 1 {
 		return nil, fmt.Errorf("more than 1 account received for given id %s", id)
@@ -99,13 +103,17 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 
 	for id := range *accountState.Vouchers {
 		voucher := (*accountState.Vouchers)[id]
-		if boleto, ok := (*boletos.Vouchers)[id]; ok {
-			voucher.Transactions = append(voucher.Transactions, boleto.Transactions...)
-			(*accountState.Vouchers)[id] = voucher
+		if boletos != nil {
+			if boleto, ok := (*boletos.Vouchers)[id]; ok {
+				voucher.Transactions = append(voucher.Transactions, boleto.Transactions...)
+				(*accountState.Vouchers)[id] = voucher
+			}
 		}
-		if liquidacion, ok := (*liquidaciones.Vouchers)[id]; ok {
-			voucher.Transactions = append(voucher.Transactions, liquidacion.Transactions...)
-			(*accountState.Vouchers)[id] = voucher
+		if liquidaciones != nil {
+			if liquidacion, ok := (*liquidaciones.Vouchers)[id]; ok {
+				voucher.Transactions = append(voucher.Transactions, liquidacion.Transactions...)
+				(*accountState.Vouchers)[id] = voucher
+			}
 		}
 	}
 	return accountState, nil
@@ -173,11 +181,16 @@ func (c *AccountsController) parseEstadoToAccountState(accStateData *[]esco.Esta
 		var parsedDate *time.Time
 		if voucher, exists = (*accStateRes.Vouchers)[accData.A]; !exists {
 			categoryKey = fmt.Sprintf("%s - %s", accData.A, accData.D)
+			var category string
+			var exists bool
+			if category, exists = categoryMap[categoryKey]; !exists {
+				category = "SIN CATEGORIA"
+			}
 			(*accStateRes.Vouchers)[accData.A] = schemas.Voucher{
 				ID:           accData.A,
 				Type:         accData.TI,
 				Denomination: accData.D,
-				Category:     categoryMap[categoryKey],
+				Category:     category,
 				Holdings:     make([]schemas.Holding, 0, len(*accStateData)),
 			}
 			voucher = (*accStateRes.Vouchers)[accData.A]
@@ -228,20 +241,31 @@ func (c *AccountsController) parseBoletosToAccountState(boletos *[]esco.Boleto) 
 		id := strings.Split(boleto.I, " - ")[0]
 		categoryKey = boleto.I
 		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+			var category string
+			var exists bool
+			if category, exists = categoryMap[categoryKey]; !exists {
+				category = "SIN CATEGORIA"
+			}
 			(*accStateRes.Vouchers)[id] = schemas.Voucher{
 				ID:           id,
 				Type:         boleto.T,
 				Denomination: boleto.F,
-				Category:     categoryMap[categoryKey],
+				Category:     category,
 				Transactions: make([]schemas.Transaction, 0, len(*boletos)),
 			}
 			voucher = (*accStateRes.Vouchers)[id]
 		}
 		if boleto.F != "" {
+			// Parse the date as before
 			p, err := time.Parse(utils.ShortSlashDateLayout, boleto.F)
 			if err != nil {
 				return nil, err
 			}
+
+			// Set the time to 23:00 in the UTC-3 timezone
+			loc, _ := time.LoadLocation("America/Argentina/Buenos_Aires") // UTC-3 timezone (Argentina time)
+			p = time.Date(p.Year(), p.Month(), p.Day(), 23, 0, 0, 0, loc)
+
 			parsedDate = &p
 		} else {
 			parsedDate = nil
@@ -282,20 +306,31 @@ func (c *AccountsController) parseLiquidacionesToAccountState(liquidaciones *[]e
 		id := strings.Split(liquidacion.F, " - ")[0]
 		categoryKey = fmt.Sprintf("%s / %s", liquidacion.F, id)
 		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+			var category string
+			var exists bool
+			if category, exists = categoryMap[categoryKey]; !exists {
+				category = "SIN CATEGORIA"
+			}
 			(*accStateRes.Vouchers)[id] = schemas.Voucher{
 				ID:           id,
 				Type:         "",
 				Denomination: categoryKey,
-				Category:     categoryMap[categoryKey],
+				Category:     category,
 				Transactions: make([]schemas.Transaction, 0, len(*liquidaciones)),
 			}
 			voucher = (*accStateRes.Vouchers)[id]
 		}
 		if liquidacion.FL != "" {
+			// Parse the date as before
 			p, err := time.Parse(utils.ShortSlashDateLayout, liquidacion.FL)
 			if err != nil {
 				return nil, err
 			}
+
+			// Set the time to 23:00 in the UTC-3 timezone
+			loc, _ := time.LoadLocation("America/Argentina/Buenos_Aires") // UTC-3 timezone (Argentina time)
+			p = time.Date(p.Year(), p.Month(), p.Day(), 23, 0, 0, 0, loc)
+
 			parsedDate = &p
 		} else {
 			parsedDate = nil
@@ -346,6 +381,7 @@ func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx c
 	}()
 
 	// Listen on the channels
+	breakLoop := false
 	for {
 		select {
 		case accountState, ok := <-accountsStatesChan:
@@ -354,7 +390,7 @@ func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx c
 				accountsStates = append(accountsStates, accountState)
 			} else {
 				// accountsStatesChan is closed, meaning wg is done
-				return accountsStates, nil
+				breakLoop = true
 			}
 		case err, ok := <-errChan:
 			if ok {
@@ -362,5 +398,96 @@ func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx c
 				return nil, err
 			}
 		}
+		if breakLoop {
+			break
+		}
 	}
+	return accountsStates, nil
+}
+
+func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
+	accountStates, err := c.GetMultiAccountStateWithTransactionsDateRange(ctx, token, ids, startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+
+	collapsedAccountState := collapseAccountStates(accountStates)
+
+	return groupAccountStateByCategory(&collapsedAccountState), nil
+}
+
+func groupAccountStateByCategory(state *schemas.AccountState) *schemas.AccountStateByCategory {
+	vouchersByCategory := make(map[string][]schemas.Voucher)
+
+	for _, voucher := range *state.Vouchers {
+		category := voucher.Category
+		// Group vouchers by their category
+		vouchersByCategory[category] = append(vouchersByCategory[category], voucher)
+	}
+
+	return &schemas.AccountStateByCategory{
+		VouchersByCategory: &vouchersByCategory,
+	}
+}
+
+func collapseAccountStates(states []*schemas.AccountState) schemas.AccountState {
+	collapsed := make(map[string]schemas.Voucher)
+
+	for _, state := range states {
+		if state.Vouchers == nil {
+			continue
+		}
+		for voucherID, voucher := range *state.Vouchers {
+			if _, exists := collapsed[voucherID]; !exists {
+				collapsed[voucherID] = schemas.Voucher{
+					ID:           voucher.ID,
+					Type:         voucher.Type,
+					Denomination: voucher.Denomination,
+					Category:     voucher.Category,
+					Holdings:     []schemas.Holding{},
+					Transactions: []schemas.Transaction{},
+				}
+			}
+			collapsedVoucher := collapsed[voucherID]
+
+			// Collapsing Holdings
+			holdingMap := make(map[string]*schemas.Holding)
+			for i := range collapsedVoucher.Holdings {
+				holding := &collapsedVoucher.Holdings[i]
+				key := holding.Currency + holding.DateRequested.Format("2006-01-02")
+				holdingMap[key] = holding
+			}
+			for _, holding := range voucher.Holdings {
+				key := holding.Currency + holding.DateRequested.Format("2006-01-02")
+				if existing, found := holdingMap[key]; found {
+					existing.Value += holding.Value
+				} else {
+					collapsedVoucher.Holdings = append(collapsedVoucher.Holdings, holding)
+					holdingMap[key] = &collapsedVoucher.Holdings[len(collapsedVoucher.Holdings)-1]
+				}
+			}
+
+			// Collapsing Transactions
+			transactionMap := make(map[string]*schemas.Transaction)
+			for i := range collapsedVoucher.Transactions {
+				transaction := &collapsedVoucher.Transactions[i]
+				key := transaction.Currency + transaction.Date.Format("2006-01-02")
+				transactionMap[key] = transaction
+			}
+			for _, transaction := range voucher.Transactions {
+				key := transaction.Currency + transaction.Date.Format("2006-01-02")
+				if existing, found := transactionMap[key]; found {
+					existing.Value += transaction.Value
+				} else {
+					collapsedVoucher.Transactions = append(collapsedVoucher.Transactions, transaction)
+					transactionMap[key] = &collapsedVoucher.Transactions[len(collapsedVoucher.Transactions)-1]
+				}
+			}
+
+			// Update the collapsed voucher in the map
+			collapsed[voucherID] = collapsedVoucher
+		}
+	}
+
+	return schemas.AccountState{Vouchers: &collapsed}
 }

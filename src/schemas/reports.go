@@ -4,6 +4,25 @@ import (
 	"time"
 )
 
+type AccountsReports struct {
+	VouchersByCategory       *map[string][]Voucher
+	VouchersReturnByCategory *map[string][]VoucherReturn
+}
+
+type VoucherReturn struct {
+	ID                 string
+	Type               string
+	Denomination       string
+	Category           string
+	ReturnsByDateRange []ReturnByDate
+}
+
+type ReturnByDate struct {
+	StartDate        time.Time
+	EndDate          time.Time
+	ReturnPercentage float64
+}
+
 // CreateReportScheduleRequest represents the request schema for creating a new report schedule.
 type CreateReportScheduleRequest struct {
 	SenderID                uint   `json:"sender_id" validate:"required"`

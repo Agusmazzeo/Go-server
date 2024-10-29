@@ -58,7 +58,8 @@ func (s *Server) InitRoutes() {
 	s.Router.Post("/api/token", s.Handler.PostToken)
 
 	s.Router.Route("/api/reports", func(r chi.Router) {
-		r.Get("/{ids}", s.Handler.GetReportFile)
+		r.Get("/{ids}", s.Handler.GetReportByIDs)
+		r.Get("/{ids}/file", s.Handler.GetReportFile)
 		r.Get("/schedules", s.Handler.GetAllReportSchedules)
 		r.Get("/schedule/{id}", s.Handler.GetReportScheduleByID)
 		r.Post("/schedule/", s.Handler.CreateReportSchedule)
@@ -68,7 +69,7 @@ func (s *Server) InitRoutes() {
 
 	s.Router.Route("/api/accounts", func(r chi.Router) {
 		r.Get("/", s.Handler.GetAllAccounts)
-		r.Get("/{id}", s.Handler.GetAccountState)
+		r.Get("/{ids}", s.Handler.GetAccountState)
 	})
 
 	s.Router.Route("/api/currencies", func(r chi.Router) {

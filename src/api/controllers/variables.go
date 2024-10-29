@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const MonthlyInflationID = "27"
+
 func (c *Controller) GetAllVariables(ctx context.Context) ([]schemas.Variable, error) {
 	response, err := c.BCRAClient.GetVariables(ctx)
 	if err != nil {
@@ -83,6 +85,10 @@ func (c *Controller) GetVariableWithValuationDateRangeByID(ctx context.Context, 
 
 	}
 	return variableResponse, nil
+}
+
+func (c *Controller) GetMonthlyInflationDateRange(ctx context.Context, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error) {
+	return c.GetVariableWithValuationDateRangeByID(ctx, MonthlyInflationID, startDate, endDate)
 }
 
 func (c *Controller) getVariablesMap(ctx context.Context) (map[string]string, error) {

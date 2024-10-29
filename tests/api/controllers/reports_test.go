@@ -2,11 +2,29 @@ package controllers_test
 
 import (
 	"context"
+	"server/src/api/controllers"
 	"server/src/models"
 	"server/src/schemas"
+	"server/src/utils"
 
 	"testing"
 )
+
+func TestGenerateAccountReports(t *testing.T) {
+	var accountData = schemas.AccountStateByCategory{}
+	err := utils.LoadStructFromJSONFile("../../test_files/controllers/reports/vouchers_by_category_1w.json", &accountData)
+	if err != nil {
+		panic(err)
+	}
+	accountReport, err := controllers.GenerateAccountReports(&accountData)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	err = utils.SaveStructToJSONFile(accountReport, "../../test_files/controllers/reports/vouchers_return_by_category_1w.json")
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestCreateReportSchedule(t *testing.T) {
 

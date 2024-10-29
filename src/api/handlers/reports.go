@@ -15,6 +15,70 @@ import (
 )
 
 // HandleGenerateXLSX is the HTTP handler to generate an Excel file
+func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
+
+	token := jwtauth.TokenFromHeader(r)
+	if token == "" {
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnauthorized, "auth token not detected"))
+		return
+	}
+	var err error
+	idsStr := chi.URLParam(r, "ids")
+	// Split the comma-separated ids into a slice
+	ids := strings.Split(idsStr, ",")
+
+	if len(ids) == 0 {
+		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)
+		return
+	}
+	startDateStr := r.URL.Query().Get("startDate")
+	var startDate time.Time
+
+	endDateStr := r.URL.Query().Get("endDate")
+	var endDate time.Time
+
+	intervalStr := r.URL.Query().Get("interval")
+	if intervalStr == "" {
+		// Set interval per day as default
+		intervalStr = "0m:0w:1d"
+	}
+	interval, err := utils.ParseTimeInterval(intervalStr)
+	if err != nil {
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+		return
+	}
+
+	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
+	if err != nil {
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+		return
+	}
+	endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
+	if err != nil {
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
+		return
+	}
+	//Set +26 hours since we use ARG timezone (UTC-3)
+	startDate = (startDate.Add(26 * time.Hour)).In(location)
+	endDate = (endDate.Add(26 * time.Hour)).In(location)
+	accountsStates, err := h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
+	if err != nil {
+		h.HandleErrors(w, err)
+		return
+	}
+	_ = utils.SaveStructToJSONFile(accountsStates, "vouchers_by_category_1w.json")
+	accountsReports, err := h.ReportsController.GetReport(ctx, accountsStates, nil, startDate, endDate, interval.ToDuration())
+	if err != nil {
+		h.HandleErrors(w, err)
+		return
+	}
+	h.respond(w, r, accountsReports, 200)
+}
+
+// HandleGenerateXLSX is the HTTP handler to generate an Excel file
 func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()

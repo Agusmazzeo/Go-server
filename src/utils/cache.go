@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -95,4 +97,51 @@ func ReadResponseFromFile(filePath string) ([]byte, error) {
 	}
 
 	return responseData, nil
+}
+
+func SaveStructToJSONFile(data interface{}, filename string) error {
+	// Marshal the struct into JSON
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal struct: %v", err)
+	}
+
+	// Create or open the file
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	// Write JSON data to the file
+	_, err = file.Write(jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to write data to file: %v", err)
+	}
+
+	return nil
+}
+
+// LoadStructFromJSONFile loads JSON data from a file into a struct.
+func LoadStructFromJSONFile(filename string, data interface{}) error {
+	// Open the file
+	file, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	// Read the file content
+	bytes, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("failed to read file: %v", err)
+	}
+
+	// Unmarshal the JSON data into the provided struct
+	err = json.Unmarshal(bytes, data)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal json: %v", err)
+	}
+
+	return nil
 }
