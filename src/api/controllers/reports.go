@@ -567,7 +567,7 @@ func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, err
 		var netTransactions float64
 		for _, transaction := range voucher.Transactions {
 			if transaction.Date != nil && (transaction.Date.After(startDate) && !transaction.Date.After(endDate)) {
-				netTransactions += transaction.Value
+				netTransactions -= transaction.Value
 			}
 		}
 
@@ -576,8 +576,7 @@ func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, err
 			continue
 		}
 
-		returnPercentage := ((endingValue - (startingValue - netTransactions)) / (startingValue - netTransactions)) * 100
-
+		returnPercentage := ((endingValue - (startingValue + netTransactions)) / (startingValue + netTransactions)) * 100
 		// Append the return for this date range
 		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
 			StartDate:        startDate,
@@ -610,6 +609,9 @@ func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCatego
 
 	// Iterate through each category and its associated vouchers
 	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
+		if category == "ARS" {
+			continue
+		}
 		for _, voucher := range vouchers {
 			voucherReturn, _ := CalculateVoucherReturn(voucher)
 			// if err != nil {

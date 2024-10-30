@@ -130,19 +130,30 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 	vouchers := make(map[string]schemas.Voucher)
 
 	var wg sync.WaitGroup
+	var errChan = make(chan error, numDays)
 	var voucherChan = make(chan *schemas.AccountState, numDays)
+	wg.Add(numDays)
 	for i := 0; i < numDays; i++ {
-		wg.Add(1)
 		go func(i int) {
+			defer wg.Done()
+			var retries = 3
+			var accStateData []esco.EstadoCuentaSchema
 			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
-			accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
-			if err != nil {
-				wg.Done()
-				return
+			for {
+				accStateData, err = c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
+				if err != nil {
+					retries -= 1
+				} else {
+					break
+				}
+				if retries == 0 {
+					errChan <- err
+					return
+				}
 			}
 			accountState, err := c.parseEstadoToAccountState(&accStateData, &date)
 			if err != nil {
-				wg.Done()
+				errChan <- err
 				return
 			}
 			voucherChan <- accountState
@@ -151,6 +162,7 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 
 	go func() {
 		wg.Wait()
+		close(errChan)
 		close(voucherChan)
 	}()
 
@@ -163,12 +175,11 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 				vouchers[key] = value
 			}
 		}
-		wg.Done()
 	}
 	for _, voucher := range vouchers {
 		sortHoldingsByDateRequested(&voucher)
 	}
-	return &schemas.AccountState{Vouchers: &vouchers}, nil
+	return &schemas.AccountState{Vouchers: &vouchers}, <-errChan
 }
 
 func (c *AccountsController) parseEstadoToAccountState(accStateData *[]esco.EstadoCuentaSchema, date *time.Time) (*schemas.AccountState, error) {
