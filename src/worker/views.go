@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -39,7 +40,7 @@ func (s *Server) InitRoutes() {
 	})
 }
 
-func NewHTTPServer(cfg *config.Config) (*http.Server, error) {
+func NewHTTPServer(cfg *config.Config, logger *logrus.Logger) (*http.Server, error) {
 	server, err := NewServer(cfg)
 	if err != nil {
 		return nil, err

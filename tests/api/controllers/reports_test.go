@@ -2,6 +2,8 @@ package controllers_test
 
 import (
 	"context"
+	"os"
+	"reflect"
 	"server/src/api/controllers"
 	"server/src/models"
 	"server/src/schemas"
@@ -10,20 +12,130 @@ import (
 	"testing"
 )
 
+// TestGenerateAccountReports verifies the report generation consistency.
 func TestGenerateAccountReports(t *testing.T) {
-	var accountData = schemas.AccountStateByCategory{}
-	err := utils.LoadStructFromJSONFile("../../test_files/controllers/reports/vouchers_by_category_1w.json", &accountData)
+	const inputFile = "../../test_files/controllers/reports/vouchers_by_category_1w.json"
+	const outputFile = "../../test_files/controllers/reports/vouchers_return_by_category_1w.json"
+
+	// Load the input data
+	var accountData schemas.AccountStateByCategory
+	err := utils.LoadStructFromJSONFile(inputFile, &accountData)
 	if err != nil {
-		panic(err)
+		t.Fatalf("Failed to load input data: %v", err)
 	}
-	accountReport, err := controllers.GenerateAccountReports(&accountData)
-	if err != nil {
-		t.Errorf(err.Error())
+
+	for i := 0; i < 5; i++ {
+		// Generate the report
+		accountReport, err := controllers.GenerateAccountReports(&accountData)
+		if err != nil {
+			t.Fatalf("Failed to generate account report: %v", err)
+		}
+
+		// Check if the output file already exists
+		if _, err := os.Stat(outputFile); os.IsNotExist(err) {
+			// File does not exist, so create it
+			err = utils.SaveStructToJSONFile(accountReport, outputFile)
+			if err != nil {
+				t.Fatalf("Failed to save output report: %v", err)
+			}
+			t.Logf("Output file created: %s", outputFile)
+		} else {
+			// File exists, load the saved report and compare
+			var savedReport schemas.AccountsReports
+			err = utils.LoadStructFromJSONFile(outputFile, &savedReport)
+			if err != nil {
+				t.Fatalf("Failed to load saved report: %v", err)
+			}
+
+			// Compare the newly generated report with the saved one
+			if !compareReports(t, accountReport, &savedReport) {
+				t.Errorf("Generated report does not match the saved report on iteration %d", i+1)
+			} else {
+				t.Logf("Generated report matches the saved report on iteration %d", i+1)
+			}
+		}
 	}
-	err = utils.SaveStructToJSONFile(accountReport, "../../test_files/controllers/reports/vouchers_return_by_category_1w.json")
-	if err != nil {
-		panic(err)
+}
+
+// compareReports compares two AccountsReports by checking each field and nested struct.
+func compareReports(t *testing.T, newReport, savedReport *schemas.AccountsReports) bool {
+	t.Helper()
+	if !compareVouchersByCategory(t, *newReport.VouchersByCategory, *savedReport.VouchersByCategory) {
+		return false
 	}
+
+	if !compareVouchersReturnByCategory(t, *newReport.VouchersReturnByCategory, *savedReport.VouchersReturnByCategory) {
+		return false
+	}
+
+	return true
+}
+
+func compareVouchersByCategory(t *testing.T, v1, v2 map[string][]schemas.Voucher) bool {
+	t.Helper()
+	if len(v1) != len(v2) {
+		return false
+	}
+
+	for category, vouchers1 := range v1 {
+		vouchers2, exists := v2[category]
+		if !exists || !reflect.DeepEqual(vouchers1, vouchers2) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func compareVouchersReturnByCategory(t *testing.T, v1, v2 map[string][]schemas.VoucherReturn) bool {
+	t.Helper()
+	if len(v1) != len(v2) {
+		return false
+	}
+
+	for category, voucherReturns1 := range v1 {
+		voucherReturns2, exists := v2[category]
+		if !exists || !compareVoucherReturns(t, voucherReturns1, voucherReturns2) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func compareVoucherReturns(t *testing.T, v1, v2 []schemas.VoucherReturn) bool {
+	t.Helper()
+	if len(v1) != len(v2) {
+		return false
+	}
+
+	for i := range v1 {
+		if v1[i].ID != v2[i].ID || v1[i].Type != v2[i].Type || v1[i].Denomination != v2[i].Denomination || v1[i].Category != v2[i].Category {
+			return false
+		}
+		if !compareReturnsByDateRange(t, v1[i].ReturnsByDateRange, v2[i].ReturnsByDateRange) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func compareReturnsByDateRange(t *testing.T, r1, r2 []schemas.ReturnByDate) bool {
+	t.Helper()
+	if len(r1) != len(r2) {
+		return false
+	}
+
+	for i := range r1 {
+		if !r1[i].StartDate.Equal(r2[i].StartDate) ||
+			!r1[i].EndDate.Equal(r2[i].EndDate) ||
+			r1[i].ReturnPercentage != r2[i].ReturnPercentage {
+			return false
+		}
+	}
+
+	return true
 }
 
 func TestCreateReportSchedule(t *testing.T) {

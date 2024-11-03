@@ -10,20 +10,22 @@ import (
 	"server/src/clients/esco"
 	"server/src/utils"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
+	Logger             *logrus.Logger
 	Controller         controllers.IController
 	AccountsController controllers.AccountsControllerI
 	ReportsController  controllers.ReportsControllerI
 }
 
-func NewHandler(db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
+func NewHandler(logger *logrus.Logger, db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
 	controller := controllers.NewController(db, escoClient, bcraClient)
 	accountsController := controllers.NewAccountsController(escoClient)
 	reportsController := controllers.NewReportsController(escoClient, bcraClient, nil)
-	return &Handler{Controller: controller, AccountsController: accountsController, ReportsController: reportsController}, nil
+	return &Handler{Logger: logger, Controller: controller, AccountsController: accountsController, ReportsController: reportsController}, nil
 }
 
 func (h *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {

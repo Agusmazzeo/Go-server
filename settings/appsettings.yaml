@@ -1,4 +1,7 @@
 ---
+logger:
+  file: report.log
+  level: Info
 service:
   port: 5051
   type: API

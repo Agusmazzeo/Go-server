@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth"
 	"github.com/rs/cors"
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
@@ -18,7 +19,7 @@ type Server struct {
 	Handler *handlers.Handler
 }
 
-func NewServer(cfg *config.Config) (*Server, error) {
+func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
 	// db, err := database.SetupDB(cfg)
 	// if err != nil {
 	// 	return nil, err
@@ -31,7 +32,7 @@ func NewServer(cfg *config.Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	handler, err := handlers.NewHandler(nil, escoClient, bcraClient)
+	handler, err := handlers.NewHandler(logger, nil, escoClient, bcraClient)
 	if err != nil {
 		return nil, err
 	}
@@ -85,9 +86,10 @@ func (s *Server) InitRoutes() {
 }
 
 // NewHTTPServer creates a new HTTP server with CORS middleware
-func NewHTTPServer(cfg *config.Config) (*http.Server, error) {
-	server, err := NewServer(cfg)
+func NewHTTPServer(cfg *config.Config, logger *logrus.Logger) (*http.Server, error) {
+	server, err := NewServer(cfg, logger)
 	if err != nil {
+		logger.Error(err)
 		return nil, err
 	}
 

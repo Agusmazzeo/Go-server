@@ -10,6 +10,7 @@ type Config struct {
 	Service         ServiceConfig        `mapstructure:"service"`
 	Databases       DatabasesConfig      `mapstructure:"databases"`
 	ExternalClients ExternalClientConfig `mapstructure:"externalClients"`
+	Logger          LoggerConfig         `mapstructure:"logger"`
 }
 
 type ServiceType string
@@ -51,6 +52,11 @@ type ESCOConfig struct {
 
 type BCRAConfig struct {
 	BaseURL string `mapstructure:"baseUrl"`
+}
+
+type LoggerConfig struct {
+	Level string `mapstructure:"level"`
+	File  string `mapstructure:"file"`
 }
 
 // LoadConfig loads the base appsettings file and the environment-specific settings file.

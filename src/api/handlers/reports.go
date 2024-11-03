@@ -18,6 +18,8 @@ import (
 func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
+	ctx = utils.WithLogger(ctx, h.Logger)
+
 	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
 
 	token := jwtauth.TokenFromHeader(r)
@@ -47,17 +49,20 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 	}
 	interval, err := utils.ParseTimeInterval(intervalStr)
 	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
 
 	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
 	endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
 	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
@@ -66,12 +71,13 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
 	accountsStates, err := h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
 	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
-	_ = utils.SaveStructToJSONFile(accountsStates, "vouchers_by_category_1w.json")
 	accountsReports, err := h.ReportsController.GetReport(ctx, accountsStates, nil, startDate, endDate, interval.ToDuration())
 	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}

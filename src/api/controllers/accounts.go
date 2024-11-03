@@ -78,6 +78,7 @@ func (c *AccountsController) GetAccountState(ctx context.Context, token, id stri
 
 func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
 	var err error
+	logger := utils.LoggerFromContext(ctx)
 	var wg sync.WaitGroup
 	wg.Add(3)
 
@@ -86,19 +87,52 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 	var boletos *schemas.AccountState
 	go func() {
 		accountState, err = c.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval)
+		if err != nil {
+			logger.Errorf("error while on GetAccountStateDateRange: %v", err)
+		}
 		wg.Done()
 	}()
 	go func() {
-		liquidaciones, err = c.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate)
+		retries := 3
+		for {
+			liquidaciones, err = c.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate)
+			if err != nil {
+				logger.Errorf("error while on GetLiquidacionesDateRange: %v. Retrying...", err)
+				retries--
+			} else {
+				break
+			}
+			if retries == 0 {
+				logger.Errorf("exhausted retries on GetLiquidacionesDateRange: %v. Retrying...", err)
+				break
+			}
+		}
 		wg.Done()
 	}()
 	go func() {
-		boletos, err = c.GetBoletosDateRange(ctx, token, id, startDate, endDate)
+		retries := 3
+		for {
+			boletos, err = c.GetBoletosDateRange(ctx, token, id, startDate, endDate)
+			if err != nil {
+				logger.Errorf("error while on GetBoletosDateRange: %v. Retrying...", err)
+				retries--
+			} else {
+				break
+			}
+			if retries == 0 {
+				logger.Errorf("exhausted retries on GetBoletosDateRange: %v. Retrying...", err)
+				break
+			}
+		}
 		wg.Done()
 	}()
 	wg.Wait()
 	if err != nil {
 		return nil, err
+	}
+	if accountState == nil {
+		logger.Warn("empty account state received")
+		return nil, fmt.Errorf("empty account state received")
 	}
 
 	for id := range *accountState.Vouchers {
@@ -120,8 +154,10 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 }
 
 func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+	logger := utils.LoggerFromContext(ctx)
 	account, err := c.GetAccountByID(ctx, token, id)
 	if err != nil {
+		logger.Errorf("error while on GetAccountByID: %v", err)
 		return nil, err
 	}
 	intervalHours := interval.Hours()
@@ -141,13 +177,16 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
 			for {
 				accStateData, err = c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
-				if err != nil {
+				if err != nil || accStateData == nil {
 					retries -= 1
+					logger.Warnf("error while on GetEstadoCuenta: %v. Retrying..", err)
+					time.Sleep(100 * time.Millisecond)
 				} else {
 					break
 				}
 				if retries == 0 {
 					errChan <- err
+					logger.Errorf("retries exceeded for GetEstadoCuenta: %v", err)
 					return
 				}
 			}
@@ -365,6 +404,7 @@ func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
 }
 
 func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error) {
+	logger := utils.LoggerFromContext(ctx)
 	accountsStates := make([]*schemas.AccountState, 0, len(ids))
 	accountsStatesChan := make(chan *schemas.AccountState, len(ids))
 	errChan := make(chan error, 1) // Create a buffered error channel to handle at most one error
@@ -373,10 +413,11 @@ func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx c
 	// Launch goroutines for each account ID
 	for _, id := range ids {
 		wg.Add(1)
-		go func(id string) {
+		func(id string) {
 			defer wg.Done()
 			accountState, err := c.GetAccountStateWithTransactionsDateRange(ctx, token, id, startDate, endDate, interval)
 			if err != nil {
+				logger.Error(err)
 				errChan <- err
 				return
 			}
@@ -419,21 +460,33 @@ func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx c
 func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
 	accountStates, err := c.GetMultiAccountStateWithTransactionsDateRange(ctx, token, ids, startDate, endDate, interval)
 	if err != nil {
+		logger := utils.LoggerFromContext(ctx)
+		logger.Error(err)
 		return nil, err
 	}
 
-	collapsedAccountState := collapseAccountStates(accountStates)
-
-	return groupAccountStateByCategory(&collapsedAccountState), nil
+	return c.CollapseAndGroupAccountsStates(accountStates), nil
 }
 
+func (c *AccountsController) CollapseAndGroupAccountsStates(accountsStates []*schemas.AccountState) *schemas.AccountStateByCategory {
+	collapsedAccountState := collapseAccountStates(accountsStates)
+	return groupAccountStateByCategory(&collapsedAccountState)
+}
+
+// Group vouchers by category after collapsing, with sorting for consistent ordering
 func groupAccountStateByCategory(state *schemas.AccountState) *schemas.AccountStateByCategory {
 	vouchersByCategory := make(map[string][]schemas.Voucher)
 
 	for _, voucher := range *state.Vouchers {
 		category := voucher.Category
-		// Group vouchers by their category
 		vouchersByCategory[category] = append(vouchersByCategory[category], voucher)
+	}
+
+	// Sort each category's vouchers by ID for consistent ordering
+	for category := range vouchersByCategory {
+		sort.Slice(vouchersByCategory[category], func(i, j int) bool {
+			return vouchersByCategory[category][i].ID < vouchersByCategory[category][j].ID
+		})
 	}
 
 	return &schemas.AccountStateByCategory{
@@ -441,64 +494,90 @@ func groupAccountStateByCategory(state *schemas.AccountState) *schemas.AccountSt
 	}
 }
 
+// Collapse multiple account states into one, ensuring consistent aggregation and ordering of holdings and transactions
 func collapseAccountStates(states []*schemas.AccountState) schemas.AccountState {
-	collapsed := make(map[string]schemas.Voucher)
+	holdingMapByVoucherID := make(map[string]map[string]schemas.Holding)
+	transactionMapByVoucherID := make(map[string]map[string]schemas.Transaction)
+	voucherMapByID := make(map[string]schemas.Voucher)
 
 	for _, state := range states {
 		if state.Vouchers == nil {
 			continue
 		}
+		var holdingMap map[string]schemas.Holding
+		var transactionMap map[string]schemas.Transaction
+		var found bool
 		for voucherID, voucher := range *state.Vouchers {
-			if _, exists := collapsed[voucherID]; !exists {
-				collapsed[voucherID] = schemas.Voucher{
-					ID:           voucher.ID,
-					Type:         voucher.Type,
-					Denomination: voucher.Denomination,
-					Category:     voucher.Category,
-					Holdings:     []schemas.Holding{},
-					Transactions: []schemas.Transaction{},
-				}
+			if _, found := voucherMapByID[voucherID]; !found {
+				voucherMapByID[voucherID] = voucher
 			}
-			collapsedVoucher := collapsed[voucherID]
-
-			// Collapsing Holdings
-			holdingMap := make(map[string]*schemas.Holding)
-			for i := range collapsedVoucher.Holdings {
-				holding := &collapsedVoucher.Holdings[i]
-				key := holding.Currency + holding.DateRequested.Format("2006-01-02")
-				holdingMap[key] = holding
+			if holdingMap, found = holdingMapByVoucherID[voucherID]; !found {
+				holdingMapByVoucherID[voucherID] = make(map[string]schemas.Holding)
+				holdingMap = holdingMapByVoucherID[voucherID]
+			}
+			if transactionMap, found = transactionMapByVoucherID[voucherID]; !found {
+				transactionMapByVoucherID[voucherID] = make(map[string]schemas.Transaction)
+				transactionMap = transactionMapByVoucherID[voucherID]
 			}
 			for _, holding := range voucher.Holdings {
-				key := holding.Currency + holding.DateRequested.Format("2006-01-02")
-				if existing, found := holdingMap[key]; found {
+				date := holding.DateRequested.Format("2006-01-02")
+				if existing, found := holdingMap[date]; !found {
+					holdingMap[date] = holding
+				} else {
 					existing.Value += holding.Value
-				} else {
-					collapsedVoucher.Holdings = append(collapsedVoucher.Holdings, holding)
-					holdingMap[key] = &collapsedVoucher.Holdings[len(collapsedVoucher.Holdings)-1]
+					holdingMap[date] = existing
 				}
 			}
+			holdingMapByVoucherID[voucherID] = holdingMap
 
-			// Collapsing Transactions
-			transactionMap := make(map[string]*schemas.Transaction)
-			for i := range collapsedVoucher.Transactions {
-				transaction := &collapsedVoucher.Transactions[i]
-				key := transaction.Currency + transaction.Date.Format("2006-01-02")
-				transactionMap[key] = transaction
-			}
 			for _, transaction := range voucher.Transactions {
-				key := transaction.Currency + transaction.Date.Format("2006-01-02")
-				if existing, found := transactionMap[key]; found {
-					existing.Value += transaction.Value
+				key := transaction.Date.Format("2006-01-02")
+				if existing, found := transactionMap[key]; !found {
+					transactionMap[key] = transaction
 				} else {
-					collapsedVoucher.Transactions = append(collapsedVoucher.Transactions, transaction)
-					transactionMap[key] = &collapsedVoucher.Transactions[len(collapsedVoucher.Transactions)-1]
+					existing.Value += transaction.Value
+					transactionMap[key] = existing
 				}
 			}
-
-			// Update the collapsed voucher in the map
-			collapsed[voucherID] = collapsedVoucher
+			transactionMapByVoucherID[voucherID] = transactionMap
 		}
 	}
+	collapsed := make(map[string]schemas.Voucher)
+	for voucherID, voucher := range voucherMapByID {
+		var existing schemas.Voucher
+		var ok bool
+		if existing, ok = collapsed[voucherID]; !ok {
+			collapsed[voucherID] = schemas.Voucher{
+				ID:           voucherID,
+				Type:         voucher.Type,
+				Category:     voucher.Category,
+				Denomination: voucher.Denomination,
+				Holdings:     []schemas.Holding{},
+				Transactions: []schemas.Transaction{},
+			}
+			existing = collapsed[voucherID]
+		}
+		holdings := existing.Holdings
+		for _, holding := range holdingMapByVoucherID[voucherID] {
+			holdings = append(holdings, holding)
+		}
+		existing.Holdings = holdings
+		// Sort holdings for consistent order
+		sort.SliceStable(existing.Holdings, func(i, j int) bool {
+			return existing.Holdings[i].DateRequested.Before(*existing.Holdings[j].DateRequested)
+		})
 
+		transactions := existing.Transactions
+		for _, transaction := range transactionMapByVoucherID[voucherID] {
+			transactions = append(transactions, transaction)
+		}
+		existing.Transactions = transactions
+		// Sort holdings for consistent order
+		sort.SliceStable(existing.Transactions, func(i, j int) bool {
+			return existing.Transactions[i].Date.Before(*existing.Transactions[j].Date)
+		})
+
+		collapsed[voucherID] = existing
+	}
 	return schemas.AccountState{Vouchers: &collapsed}
 }

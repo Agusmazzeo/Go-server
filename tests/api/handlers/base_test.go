@@ -8,11 +8,13 @@ import (
 	"server/src/api/handlers"
 	"server/src/config"
 	"server/src/schemas"
+	"server/src/utils"
 	bcra_test "server/tests/clients/bcra"
 	esco_test "server/tests/clients/esco"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/sirupsen/logrus"
 )
 
 var ts *httptest.Server
@@ -24,6 +26,8 @@ func TestMain(m *testing.M) {
 		log.Println(err, "Error while loading config")
 		os.Exit(1)
 	}
+	logger := utils.NewLogger(logrus.InfoLevel, false, cfg.Logger.File)
+
 	cfg.ExternalClients.ESCO.CategoryMapFile = "../../test_files/clients/esco/denominaciones.csv"
 
 	escoClient, err := esco_test.NewMockClient("../../test_files/clients/esco")
@@ -38,7 +42,7 @@ func TestMain(m *testing.M) {
 	}
 
 	r := chi.NewRouter()
-	h, err := handlers.NewHandler(nil, escoClient, bcraClient)
+	h, err := handlers.NewHandler(logger, nil, escoClient, bcraClient)
 	if err != nil {
 		log.Println(err, "Error while starting handler")
 		os.Exit(1)
