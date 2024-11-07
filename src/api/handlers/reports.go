@@ -136,8 +136,15 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	//Set +26 hours since we use ARG timezone (UTC-3)
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
-	accountsStates, err := h.AccountsController.GetMultiAccountStateWithTransactionsDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
+	accountsStates, err := h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
 	if err != nil {
+		h.Logger.Warning(err)
+		h.HandleErrors(w, err)
+		return
+	}
+	accountsReports, err := h.ReportsController.GetReport(ctx, accountsStates, nil, startDate, endDate, interval.ToDuration())
+	if err != nil {
+		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
@@ -145,7 +152,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	if format == "XLSX" {
 
-		xlsxFile, err := h.ReportsController.GetXLSXReport(ctx, accountsStates, startDate, endDate, interval.ToDuration())
+		xlsxFile, err := h.ReportsController.ParseAccountsReportToXLSX(ctx, accountsReports, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
@@ -160,7 +167,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		// Set response headers to download the file
 		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
 	} else {
-		df, err := h.ReportsController.GetDataFrameReport(ctx, accountsStates, startDate, endDate, interval.ToDuration())
+		df, err := h.ReportsController.ParseAccountsReportToDataFrame(ctx, accountsReports, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return

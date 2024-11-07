@@ -22,13 +22,15 @@ import (
 
 type ReportsControllerI interface {
 	GetReport(ctx context.Context, accountsStates *schemas.AccountStateByCategory, variablesWithValuations []*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
-	GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
-	GetDataFrameReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
 	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
 	CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
 	UpdateReportSchedule(ctx context.Context, req *schemas.UpdateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
 	DeleteReportSchedule(ctx context.Context, id uint) error
+
+	ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
+	ParseAccountsReportToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
+	ParseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 }
 
 type ReportsController struct {
@@ -51,17 +53,41 @@ func (rc *ReportsController) GetReport(
 	return GenerateAccountReports(accountsStates)
 }
 
-func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
-	reportDf, err := rc.GetDataFrameReport(ctx, accountsStates, startDate, endDate, interval)
+// GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
+func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory) (*schemas.AccountsReports, error) {
+	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
+
+	// Iterate through each category and its associated vouchers
+	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
+		if category == "ARS" {
+			continue
+		}
+		for _, voucher := range vouchers {
+			voucherReturn, _ := CalculateVoucherReturn(voucher)
+			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
+		}
+	}
+
+	return &schemas.AccountsReports{
+		VouchersByCategory:       accountStateByCategory.VouchersByCategory,
+		VouchersReturnByCategory: &voucherReturnsByCategory,
+	}, nil
+}
+
+func (rc *ReportsController) ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
+	reportDf, err := rc.ParseAccountsReportToDataFrame(ctx, accountsReport, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
-	file, err := convertReportDataframeToExcel(nil, reportDf)
+	returnsDf, err := rc.ParseAccountsReturnToDataFrame(ctx, accountsReport, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
-	variationDf := rc.GetDataFramePercentageVariation(reportDf)
-	file, err = addVariationDataFrameToExcel(file, variationDf)
+	file, err := convertReportDataframeToExcel(nil, reportDf, "Tenencia")
+	if err != nil {
+		return nil, err
+	}
+	file, err = convertReportDataframeToExcel(file, returnsDf, "Retorno")
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +98,7 @@ func (rc *ReportsController) GetXLSXReport(ctx context.Context, accountsStates [
 	return file, nil
 }
 
-// CreateDataFrameWithDatesAndVoucher creates a DataFrame with dates as rows and Voucher IDs as columns
-func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountsStates []*schemas.AccountState, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
+func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
 	dates, err := utils.GenerateDates(startDate, endDate, interval)
 	if err != nil {
 		return nil, err
@@ -89,8 +114,8 @@ func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountsState
 	)
 
 	// Iterate through the vouchers and add each as a new column
-	for _, accountState := range accountsStates {
-		for _, voucher := range *accountState.Vouchers {
+	for _, vouchers := range *accountsReport.VouchersByCategory {
+		for _, voucher := range vouchers {
 			voucherValues := make([]string, len(dates))
 
 			// Initialize all rows with empty values for this voucher
@@ -128,44 +153,112 @@ func (rc *ReportsController) GetDataFrameReport(_ context.Context, accountsState
 	return sortDataFrameColumns(&df), nil
 }
 
-func (rc *ReportsController) GetDataFramePercentageVariation(df *dataframe.DataFrame) *dataframe.DataFrame {
-	// Apply the percentage change calculation to all columns in parallel using Capply
-	result := df.Capply(func(s series.Series) series.Series {
-		// For the DateRequested column, return the same series
-		if s.Name == "DateRequested" {
-			return s
+func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
+	dates, err := utils.GenerateDates(startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+	dateStrs := make([]string, len(dates))
+	for i, date := range dates {
+		dateStrs[i] = date.Format("2006-01-02")
+	}
+
+	// Initialize an empty DataFrame with the DateRequested as the index (as the first column)
+	df := dataframe.New(
+		series.New(dateStrs, series.String, "DateRequested"),
+	)
+
+	// Iterate through the vouchers and add each as a new column
+	for _, vouchers := range *accountsReport.VouchersReturnByCategory {
+		for _, voucher := range vouchers {
+			voucherValues := make([]string, len(dates))
+
+			// Initialize all rows with empty values for this voucher
+			for i := range voucherValues {
+				voucherValues[i] = "-" // Default value if no match found
+			}
+
+			// Iterate through vouchers return and match the dates to fill the corresponding values
+			for _, returnsByDate := range voucher.ReturnsByDateRange {
+				dateStr := returnsByDate.EndDate.Format("2006-01-02")
+				// Find the index in the dates array that matches this holding's date
+				for i, date := range dateStrs {
+					if date == dateStr {
+						voucherValues[i] = fmt.Sprintf("%.2f", returnsByDate.ReturnPercentage)
+						break
+					}
+				}
+			}
+
+			// Add the new series (column) for this voucher to the DataFrame
+			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID), voucherValues)
+			if err != nil {
+				return nil, err
+			}
+			df = *updatedDf
 		}
+	}
 
-		// Create a new slice for percentage changes
-		newValues := make([]float64, s.Len())
-		newValues[0] = 0 // No percentage change for the first row
+	return sortDataFrameColumns(&df), nil
+}
 
-		// Calculate the percentage variation for each row
-		for i := 1; i < s.Len(); i++ {
-			currentValue, err1 := strconv.ParseFloat(s.Elem(i).String(), 64)
-			previousValue, err2 := strconv.ParseFloat(s.Elem(i-1).String(), 64)
+// CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
+func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, error) {
+	if len(voucher.Holdings) < 2 {
+		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
+	}
 
-			// If parsing fails or previous value is zero, set the change to 0
-			if err1 != nil || err2 != nil || previousValue == 0 {
-				newValues[i] = 0
-			} else {
-				newValues[i] = ((currentValue - previousValue) / previousValue) * 100
+	// Sort holdings by date
+	sortedHoldings := sortHoldingsByDate(voucher.Holdings)
+	var returnsByDateRange []schemas.ReturnByDate
+
+	// Iterate through each pair of consecutive holdings
+	for i := 0; i < len(sortedHoldings)-1; i++ {
+		startingHolding := sortedHoldings[i]
+		endingHolding := sortedHoldings[i+1]
+
+		startDate := *startingHolding.DateRequested
+		endDate := *endingHolding.DateRequested
+		startingValue := startingHolding.Value
+		endingValue := endingHolding.Value
+
+		// Calculate the net transactions within the date range
+		var netTransactions float64
+		for _, transaction := range voucher.Transactions {
+			if transaction.Date != nil && (transaction.Date.After(startDate) && !transaction.Date.After(endDate)) {
+				netTransactions += transaction.Value
 			}
 		}
 
-		// Return the new series with percentage changes
-		return series.Floats(newValues)
-	})
+		// Calculate return for this date range
+		if startingValue == 0 {
+			continue
+		}
 
-	return &result
+		returnPercentage := ((endingValue + netTransactions - startingValue) / (startingValue)) * 100
+		// Append the return for this date range
+		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
+			StartDate:        startDate,
+			EndDate:          endDate,
+			ReturnPercentage: returnPercentage,
+		})
+	}
+
+	// Return the result
+	return schemas.VoucherReturn{
+		ID:                 voucher.ID,
+		Type:               voucher.Type,
+		Denomination:       voucher.Denomination,
+		Category:           voucher.Category,
+		ReturnsByDateRange: returnsByDateRange,
+	}, nil
 }
 
-func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.DataFrame) (*excelize.File, error) {
+func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.DataFrame, sheetName string) (*excelize.File, error) {
 	// Create a new Excel file
 	var err error
 	var index int
 	f := file
-	sheetName := "Tenencia"
 
 	if f == nil {
 		f = excelize.NewFile()
@@ -206,7 +299,7 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 		id := parts[1]
 
 		// Set the ID in the second row (e.g., ID1, ID2, etc.)
-		cell := fmt.Sprintf("%s%d", ToAlphaString(columnIndex), idRow)
+		cell := fmt.Sprintf("%s%d", toAlphaString(columnIndex), idRow)
 		err = f.SetCellValue(sheetName, cell, id)
 		if err != nil {
 			return nil, err
@@ -224,8 +317,8 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 	// Merge cells for each category and set the category name in the first row
 	for category, startCol := range categoryStartCol {
 		endCol := categoryEndCol[category]
-		startCell := fmt.Sprintf("%s%d", ToAlphaString(startCol), categoryRow)
-		endCell := fmt.Sprintf("%s%d", ToAlphaString(endCol), categoryRow)
+		startCell := fmt.Sprintf("%s%d", toAlphaString(startCol), categoryRow)
+		endCell := fmt.Sprintf("%s%d", toAlphaString(endCol), categoryRow)
 		err = f.MergeCell(sheetName, startCell, endCell)
 		if err != nil {
 			return nil, err
@@ -239,7 +332,7 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 	// Now fill in the data for the rest of the rows starting from the third row
 	for rowIndex, row := range reportDf.Records()[1:] { // Skip the first row (headers)
 		for colIndex, cellValue := range row {
-			cell := fmt.Sprintf("%s%d", ToAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
+			cell := fmt.Sprintf("%s%d", toAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
 			err = f.SetCellValue(sheetName, cell, cellValue)
 			if err != nil {
 				return nil, err
@@ -250,98 +343,8 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 	return f, nil
 }
 
-func addVariationDataFrameToExcel(file *excelize.File, variationDf *dataframe.DataFrame) (*excelize.File, error) {
-	// Create a new Excel file
-	var err error
-	var index int
-	f := file
-	sheetName := "Variacion - Retorno"
-
-	if f == nil {
-		f = excelize.NewFile()
-		err := f.SetSheetName("Sheet1", sheetName)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		index, err = f.NewSheet(sheetName)
-		if err != nil {
-			return nil, err
-		}
-		defer f.SetActiveSheet(index)
-	}
-	// Define variables for column and row indices
-	startRow := 1
-	categoryRow := startRow
-	idRow := startRow + 1
-
-	// Extract column names from DataFrame
-	cols := variationDf.Names()
-
-	// Variables to track categories and column ranges for merging
-	categoryStartCol := make(map[string]int)
-	categoryEndCol := make(map[string]int)
-
-	// Set the DateRequested in the first column (A) for both the first and second rows
-	err = f.SetCellValue(sheetName, "A2", "Fecha")
-	if err != nil {
-		return nil, err
-	}
-
-	// Iterate over the columns in the DataFrame, starting from the second one (ignoring DateRequested)
-	columnIndex := 2               // Excel columns start from B (index 2) for data columns
-	for _, col := range cols[1:] { // Skip the first column "DateRequested"
-		parts := strings.Split(col, "-")
-		category := parts[0]
-		id := parts[1]
-
-		// Set the ID in the second row (e.g., ID1, ID2, etc.)
-		cell := fmt.Sprintf("%s%d", ToAlphaString(columnIndex), idRow)
-		err = f.SetCellValue(sheetName, cell, id)
-		if err != nil {
-			return nil, err
-		}
-
-		// Track the start and end columns for merging categories
-		if _, exists := categoryStartCol[category]; !exists {
-			categoryStartCol[category] = columnIndex
-		}
-		categoryEndCol[category] = columnIndex
-
-		columnIndex++
-	}
-
-	// Merge cells for each category and set the category name in the first row
-	for category, startCol := range categoryStartCol {
-		endCol := categoryEndCol[category]
-		startCell := fmt.Sprintf("%s%d", ToAlphaString(startCol), categoryRow)
-		endCell := fmt.Sprintf("%s%d", ToAlphaString(endCol), categoryRow)
-		err = f.MergeCell(sheetName, startCell, endCell)
-		if err != nil {
-			return nil, err
-		}
-		err = f.SetCellValue(sheetName, startCell, category)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Now fill in the data for the rest of the rows starting from the third row
-	for rowIndex, row := range variationDf.Records()[1:] { // Skip the first row (headers)
-		for colIndex, cellValue := range row {
-			cell := fmt.Sprintf("%s%d", ToAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
-			err = f.SetCellValue(sheetName, cell, cellValue)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return f, nil
-}
-
-// ToAlphaString converts a column index to an Excel column string (e.g., 1 -> A, 2 -> B, 28 -> AB)
-func ToAlphaString(column int) string {
+// toAlphaString converts a column index to an Excel column string (e.g., 1 -> A, 2 -> B, 28 -> AB)
+func toAlphaString(column int) string {
 	result := ""
 	for column > 0 {
 		column-- // Decrement to handle 1-based indexing for Excel columns
@@ -518,83 +521,6 @@ func applyStylesToAllSheets(f *excelize.File) error {
 	return nil
 }
 
-// findDateRange returns the earliest and latest DateRequested from the holdings.
-func findDateRange(holdings []schemas.Holding) (time.Time, time.Time, error) {
-	if len(holdings) == 0 {
-		return time.Time{}, time.Time{}, fmt.Errorf("no holdings found")
-	}
-
-	// Initialize with the first holding's date
-	startDate := *holdings[0].DateRequested
-	endDate := *holdings[0].DateRequested
-
-	// Loop through holdings to find the earliest and latest DateRequested
-	for _, holding := range holdings {
-		if holding.DateRequested != nil {
-			if holding.DateRequested.Before(startDate) {
-				startDate = *holding.DateRequested
-			}
-			if holding.DateRequested.After(endDate) {
-				endDate = *holding.DateRequested
-			}
-		}
-	}
-
-	return startDate, endDate, nil
-}
-
-// CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
-func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, error) {
-	if len(voucher.Holdings) < 2 {
-		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
-	}
-
-	// Sort holdings by date
-	sortedHoldings := sortHoldingsByDate(voucher.Holdings)
-	var returnsByDateRange []schemas.ReturnByDate
-
-	// Iterate through each pair of consecutive holdings
-	for i := 0; i < len(sortedHoldings)-1; i++ {
-		startingHolding := sortedHoldings[i]
-		endingHolding := sortedHoldings[i+1]
-
-		startDate := *startingHolding.DateRequested
-		endDate := *endingHolding.DateRequested
-		startingValue := startingHolding.Value
-		endingValue := endingHolding.Value
-
-		// Calculate the net transactions within the date range
-		var netTransactions float64
-		for _, transaction := range voucher.Transactions {
-			if transaction.Date != nil && (transaction.Date.After(startDate) && !transaction.Date.After(endDate)) {
-				netTransactions += transaction.Value
-			}
-		}
-
-		// Calculate return for this date range
-		if startingValue == 0 {
-			continue
-		}
-
-		returnPercentage := ((endingValue + netTransactions - startingValue) / (startingValue)) * 100
-		// Append the return for this date range
-		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
-			StartDate:        startDate,
-			EndDate:          endDate,
-			ReturnPercentage: returnPercentage,
-		})
-	}
-
-	// Return the result
-	return schemas.VoucherReturn{
-		ID:                 voucher.ID,
-		Type:               voucher.Type,
-		Denomination:       voucher.Denomination,
-		Category:           voucher.Category,
-		ReturnsByDateRange: returnsByDateRange,
-	}, nil
-}
-
 // sortHoldingsByDate sorts the holdings by DateRequested.
 func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 	sort.Slice(holdings, func(i, j int) bool {
@@ -603,30 +529,7 @@ func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 	return holdings
 }
 
-// GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
-func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory) (*schemas.AccountsReports, error) {
-	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
-
-	// Iterate through each category and its associated vouchers
-	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
-		if category == "ARS" {
-			continue
-		}
-		for _, voucher := range vouchers {
-			voucherReturn, _ := CalculateVoucherReturn(voucher)
-			// if err != nil {
-			// 	return &schemas.AccountsReports{}, err
-			// }
-			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
-		}
-	}
-
-	return &schemas.AccountsReports{
-		VouchersByCategory:       accountStateByCategory.VouchersByCategory,
-		VouchersReturnByCategory: &voucherReturnsByCategory,
-	}, nil
-}
-
+// ==================================================================//
 // GetAllReportSchedules loads all report schedules and schedules them
 func (rc *ReportsController) GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error) {
 	var reportSchedules []*models.ReportSchedule

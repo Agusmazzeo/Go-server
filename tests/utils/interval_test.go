@@ -21,13 +21,14 @@ func TestParseTimeInterval(t *testing.T) {
 		hasError bool
 	}{
 		// Valid cases
-		{"2m:1w:3d", utils.TimeInterval{Years: 0, Months: 2, Weeks: 1, Days: 3}, false},
-		{"0m:5w:4d", utils.TimeInterval{Years: 0, Months: 0, Weeks: 5, Days: 4}, false},
-		{"0m:0w:10d", utils.TimeInterval{Years: 0, Months: 0, Weeks: 0, Days: 10}, false},
-		{"", utils.TimeInterval{Years: 0, Months: 0, Weeks: 0, Days: 0}, false}, // Empty string
+		{"0w:0d", utils.TimeInterval{Years: 0, Weeks: 0, Days: 0}, false},
+		{"1w:3d", utils.TimeInterval{Years: 0, Weeks: 1, Days: 3}, false},
+		{"5w:4d", utils.TimeInterval{Years: 0, Weeks: 5, Days: 4}, false},
+		{"0w:10d", utils.TimeInterval{Years: 0, Weeks: 0, Days: 10}, false},
+		{"", utils.TimeInterval{Years: 0, Weeks: 0, Days: 0}, false}, // Empty string
 
 		// Invalid cases
-		{"1y", utils.TimeInterval{Years: 1, Months: 0, Weeks: 0, Days: 0}, true},
+		{"1y", utils.TimeInterval{Years: 1, Weeks: 0, Days: 0}, true},
 		{"invalid", utils.TimeInterval{}, true},
 		{"1y:2m:abc", utils.TimeInterval{}, true},
 		{"3x:4d", utils.TimeInterval{}, true},

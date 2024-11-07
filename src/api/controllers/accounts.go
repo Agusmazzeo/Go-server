@@ -406,54 +406,18 @@ func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
 func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error) {
 	logger := utils.LoggerFromContext(ctx)
 	accountsStates := make([]*schemas.AccountState, 0, len(ids))
-	accountsStatesChan := make(chan *schemas.AccountState, len(ids))
-	errChan := make(chan error, 1) // Create a buffered error channel to handle at most one error
-	var wg sync.WaitGroup
+	var err error
 
-	// Launch goroutines for each account ID
 	for _, id := range ids {
-		wg.Add(1)
-		func(id string) {
-			defer wg.Done()
-			accountState, err := c.GetAccountStateWithTransactionsDateRange(ctx, token, id, startDate, endDate, interval)
-			if err != nil {
-				logger.Error(err)
-				errChan <- err
-				return
-			}
-			accountsStatesChan <- accountState
-		}(id)
+		var accountState *schemas.AccountState
+		accountState, err = c.GetAccountStateWithTransactionsDateRange(ctx, token, id, startDate, endDate, interval)
+		if err != nil {
+			logger.Error(err)
+			return nil, err
+		}
+		accountsStates = append(accountsStates, accountState)
 	}
 
-	// Close the channels when all goroutines are done
-	go func() {
-		wg.Wait()
-		close(accountsStatesChan)
-		close(errChan)
-	}()
-
-	// Listen on the channels
-	breakLoop := false
-	for {
-		select {
-		case accountState, ok := <-accountsStatesChan:
-			if ok {
-				// Append account state to the result slice
-				accountsStates = append(accountsStates, accountState)
-			} else {
-				// accountsStatesChan is closed, meaning wg is done
-				breakLoop = true
-			}
-		case err, ok := <-errChan:
-			if ok {
-				// Return on the first error encountered
-				return nil, err
-			}
-		}
-		if breakLoop {
-			break
-		}
-	}
 	return accountsStates, nil
 }
 
