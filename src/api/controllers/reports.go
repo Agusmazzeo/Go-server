@@ -50,7 +50,12 @@ func (rc *ReportsController) GetReport(
 	startDate, endDate time.Time,
 	interval time.Duration,
 ) (*schemas.AccountsReports, error) {
-	return GenerateAccountReports(accountsStates)
+	accountReports, err := GenerateAccountReports(accountsStates)
+	if err != nil {
+		return nil, err
+	}
+	accountReports.ReferenceVariables = variablesWithValuations
+	return accountReports, nil
 }
 
 // GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
@@ -83,11 +88,19 @@ func (rc *ReportsController) ParseAccountsReportToXLSX(ctx context.Context, acco
 	if err != nil {
 		return nil, err
 	}
+	referenceVariablesDf, err := rc.ParseReferenceVariablesToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
 	file, err := convertReportDataframeToExcel(nil, reportDf, "Tenencia")
 	if err != nil {
 		return nil, err
 	}
 	file, err = convertReportDataframeToExcel(file, returnsDf, "Retorno")
+	if err != nil {
+		return nil, err
+	}
+	file, err = convertReportDataframeToExcel(file, referenceVariablesDf, "Referencias")
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +215,52 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 	return sortDataFrameColumns(&df), nil
 }
 
+func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
+	dates, err := utils.GenerateDates(startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+	dateStrs := make([]string, len(dates))
+	for i, date := range dates {
+		dateStrs[i] = date.Format("2006-01-02")
+	}
+
+	// Initialize an empty DataFrame with the DateRequested as the index (as the first column)
+	df := dataframe.New(
+		series.New(dateStrs, series.String, "DateRequested"),
+	)
+
+	// Iterate through the vouchers and add each as a new column
+	for _, referenceVariable := range (*accountsReport).ReferenceVariables {
+		for _, valuation := range referenceVariable.Valuations {
+			valuationValues := make([]string, len(dates))
+
+			// Initialize all rows with empty values for this voucher
+			for i := range valuationValues {
+				valuationValues[i] = "-" // Default value if no match found
+			}
+
+			dateStr := valuation.Date
+			// Find the index in the dates array that matches this holding's date
+			for i, date := range dateStrs {
+				if date == dateStr {
+					valuationValues[i] = fmt.Sprintf("%.2f", valuation.Value)
+					break
+				}
+			}
+
+			// Add the new series (column) for this voucher to the DataFrame
+			updatedDf, err := updateDataFrame(df, fmt.Sprintf("Variables de Referencia-%s", referenceVariable.Description), valuationValues)
+			if err != nil {
+				return nil, err
+			}
+			df = *updatedDf
+		}
+	}
+
+	return sortDataFrameColumns(&df), nil
+}
+
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
 func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, error) {
 	if len(voucher.Holdings) < 2 {
@@ -225,17 +284,17 @@ func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, err
 		// Calculate the net transactions within the date range
 		var netTransactions float64
 		for _, transaction := range voucher.Transactions {
-			if transaction.Date != nil && (transaction.Date.After(startDate) && !transaction.Date.After(endDate)) {
-				netTransactions += transaction.Value
+			if transaction.Date != nil && (transaction.Date.After(startDate) && (transaction.Date.Before(endDate) || transaction.Date.Equal(endDate))) {
+				netTransactions -= transaction.Value
 			}
 		}
 
 		// Calculate return for this date range
-		if startingValue == 0 {
+		if startingValue < 1 {
 			continue
 		}
 
-		returnPercentage := ((endingValue + netTransactions - startingValue) / (startingValue)) * 100
+		returnPercentage := ((endingValue - (netTransactions + startingValue)) / (netTransactions + startingValue)) * 100
 		// Append the return for this date range
 		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
 			StartDate:        startDate,

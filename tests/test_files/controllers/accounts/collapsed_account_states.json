@@ -17,6 +17,13 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
+            "Value": -0.5,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
             "Value": -82129409.78999999,
             "DateRequested": "2024-05-17T23:00:00-03:00",
             "Date": null
@@ -45,7 +52,14 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
-            "Value": -115144.72,
+            "Value": -154291.91,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -154291.91,
             "DateRequested": "2024-06-21T23:00:00-03:00",
             "Date": null
           },
@@ -54,20 +68,6 @@
             "CurrencySign": "$",
             "Value": -3752552561.44,
             "DateRequested": "2024-06-28T23:00:00-03:00",
-            "Date": null
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": -0.5,
-            "DateRequested": "2024-05-10T23:00:00-03:00",
-            "Date": null
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": -39147.19,
-            "DateRequested": "2024-06-14T23:00:00-03:00",
             "Date": null
           }
         ],
@@ -122,6 +122,13 @@
             "Value": 1503400600,
             "DateRequested": "2024-06-07T23:00:00-03:00",
             "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1599468900,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
           },
           {
             "Currency": "Dolar Estadounidense",
@@ -201,6 +208,13 @@
             "Value": 499339400,
             "DateRequested": "2024-06-07T23:00:00-03:00",
             "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 501668680,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
           },
           {
             "Currency": "Pesos",
@@ -332,6 +346,13 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
+            "Value": 471469904.14,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
             "Value": 471496477.1,
             "DateRequested": "2024-06-21T23:00:00-03:00",
             "Date": "2024-06-19T00:00:00Z"
@@ -411,7 +432,7 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
-            "Value": 78622325.48,
+            "Value": 79105122.60000001,
             "DateRequested": "2024-06-14T23:00:00-03:00",
             "Date": "2024-06-14T00:00:00Z"
           },
@@ -434,7 +455,7 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
-            "Value": 290945431.85,
+            "Value": -7493160489.95,
             "Date": "2024-04-26T23:00:00-03:00"
           },
           {
@@ -458,6 +479,12 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
+            "Value": -4460017.44,
+            "Date": "2024-05-10T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
             "Value": 616209646,
             "Date": "2024-05-20T23:00:00-03:00"
           },
@@ -476,20 +503,14 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
-            "Value": -4460017.44,
-            "Date": "2024-05-10T23:00:00-03:00"
+            "Value": 40000010,
+            "Date": "2024-06-14T23:00:00-03:00"
           },
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
             "Value": -4660601172.150001,
             "Date": "2024-06-28T23:00:00-03:00"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 40000010,
-            "Date": "2024-06-14T23:00:00-03:00"
           }
         ]
       }
@@ -563,158 +584,6 @@
     ],
     "TASA FIJA": [
       {
-        "ID": "S28F5",
-        "Type": "Letes / Pesos",
-        "Denomination": "9253 / LECAP VTO. 28FEB25",
-        "Category": "TASA FIJA",
-        "Holdings": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2421434250,
-            "DateRequested": "2024-05-10T23:00:00-03:00",
-            "Date": "2024-05-10T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2480390910,
-            "DateRequested": "2024-05-17T23:00:00-03:00",
-            "Date": "2024-05-17T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2410906275,
-            "DateRequested": "2024-05-24T23:00:00-03:00",
-            "Date": "2024-05-24T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2387323611,
-            "DateRequested": "2024-05-31T23:00:00-03:00",
-            "Date": "2024-05-31T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2269831410,
-            "DateRequested": "2024-06-07T23:00:00-03:00",
-            "Date": "2024-06-07T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2381427945,
-            "DateRequested": "2024-06-21T23:00:00-03:00",
-            "Date": "2024-06-19T00:00:00Z"
-          }
-        ],
-        "Transactions": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": -2385112736.25,
-            "Date": "2024-05-06T23:00:00-03:00"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2313838345.5,
-            "Date": "2024-06-28T23:00:00-03:00"
-          }
-        ]
-      },
-      {
-        "ID": "S31E5",
-        "Type": "Letes / Pesos",
-        "Denomination": "9251 / LECAP VTO. 31ENE25",
-        "Category": "TASA FIJA",
-        "Holdings": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2398890685,
-            "DateRequested": "2024-05-10T23:00:00-03:00",
-            "Date": "2024-05-10T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2462363279,
-            "DateRequested": "2024-05-17T23:00:00-03:00",
-            "Date": "2024-05-17T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2406918101.3,
-            "DateRequested": "2024-05-24T23:00:00-03:00",
-            "Date": "2024-05-24T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2395530371.2,
-            "DateRequested": "2024-05-31T23:00:00-03:00",
-            "Date": "2024-05-31T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2291547327.5,
-            "DateRequested": "2024-06-07T23:00:00-03:00",
-            "Date": "2024-06-07T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2389556480,
-            "DateRequested": "2024-06-21T23:00:00-03:00",
-            "Date": "2024-06-19T00:00:00Z"
-          },
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 2352219660,
-            "DateRequested": "2024-06-28T23:00:00-03:00",
-            "Date": "2024-06-28T00:00:00Z"
-          }
-        ],
-        "Transactions": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": -2385113398.42,
-            "Date": "2024-05-06T23:00:00-03:00"
-          }
-        ]
-      },
-      {
-        "ID": "S30S4",
-        "Type": "Letes / Pesos",
-        "Denomination": "9268 / LECAP VTO. 30SEP24",
-        "Category": "TASA FIJA",
-        "Holdings": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": 3752083551,
-            "DateRequested": "2024-06-28T23:00:00-03:00",
-            "Date": "2024-06-28T00:00:00Z"
-          }
-        ],
-        "Transactions": [
-          {
-            "Currency": "Pesos",
-            "CurrencySign": "$",
-            "Value": -3752552561.44,
-            "Date": "2024-06-26T23:00:00-03:00"
-          }
-        ]
-      },
-      {
         "ID": "S14O4",
         "Type": "Letes / Pesos",
         "Denomination": "9252 / LECAP VTO. 14OCT24",
@@ -765,6 +634,13 @@
           {
             "Currency": "Pesos",
             "CurrencySign": "$",
+            "Value": 227800000,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
             "Value": 227780000,
             "DateRequested": "2024-06-21T23:00:00-03:00",
             "Date": "2024-06-19T00:00:00Z"
@@ -781,6 +657,77 @@
             "Currency": "Pesos",
             "CurrencySign": "$",
             "Value": 228000000,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      {
+        "ID": "S28F5",
+        "Type": "Letes / Pesos",
+        "Denomination": "9253 / LECAP VTO. 28FEB25",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2421434250,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2480390910,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2410906275,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2387323611,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2269831410,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2384586337.5,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2381427945,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -2385112736.25,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2313838345.5,
             "Date": "2024-06-28T23:00:00-03:00"
           }
         ]
@@ -862,294 +809,27 @@
             "Date": "2024-06-28T23:00:00-03:00"
           }
         ]
-      }
-    ]
-  },
-  "VouchersReturnByCategory": {
-    "BONOS HARD DOLLAR": [
-      {
-        "ID": "AL30",
-        "Type": "Título Públicos / Dolar Estadounidense",
-        "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
-        "Category": "BONOS HARD DOLLAR",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": -3.4788279213229107
-          },
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 3.914413667274838
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": 4.772545889864325
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 4.661791590493602
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -3.8719068413391557
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 8.55542095699576
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": 11.307446154510314
-          }
-        ]
-      }
-    ],
-    "CER": [
-      {
-        "ID": "TX26",
-        "Type": "Título Públicos / Pesos",
-        "Denomination": "5925 / BONO DEL TESORO BONCER 2% 2026",
-        "Category": "CER",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 1.432748538011696
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": 2.0466993369847217
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": -1.4406779661016949
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -1.6910289481226712
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 1.2536443148688046
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": -0.4319032536711776
-          }
-        ]
-      }
-    ],
-    "MEP": [
-      {
-        "ID": "USD",
-        "Type": "Dolar Estadounidense",
-        "Denomination": "Dolar Estadounidense",
-        "Category": "MEP",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-04-26T23:00:00-03:00",
-            "EndDate": "2024-05-03T23:00:00-03:00",
-            "ReturnPercentage": 4.050499795088988
-          },
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": -3.358073081165548
-          },
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 3.182988614842449
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": 12.412659443426524
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 0.05190018117708819
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": 6.34746942743472
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-14T23:00:00-03:00",
-            "ReturnPercentage": -3.0653943071375847
-          },
-          {
-            "StartDate": "2024-06-14T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 2.2449170736007504
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": 5.966666846282748
-          }
-        ]
-      }
-    ],
-    "MONEY MARKET": [
-      {
-        "ID": "QUINQUELA A_489",
-        "Type": "Fondos / Pesos",
-        "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
-        "Category": "MONEY MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": 0.13948229930095143
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 1.6668800388672123
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": 0.5963911941177829
-          }
-        ]
       },
       {
-        "ID": "QUINQUELA P_554",
-        "Type": "Fondos / Pesos",
-        "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
-        "Category": "MONEY MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-04-26T23:00:00-03:00",
-            "EndDate": "2024-05-03T23:00:00-03:00",
-            "ReturnPercentage": 1.098360883693517
-          },
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": 5.258853869100306
-          },
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 0.8642452766568991
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": 1.1994535162718982
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 3.4013545455088856
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": 0.7411307377792844
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-14T23:00:00-03:00",
-            "ReturnPercentage": 0.4547583364975417
-          },
-          {
-            "StartDate": "2024-06-14T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 1.1104514330628452
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": 0.01473042249469584
-          }
-        ]
-      }
-    ],
-    "SIN CATEGORIA": [
-      {
-        "ID": "S26L4",
+        "ID": "S30S4",
         "Type": "Letes / Pesos",
-        "Denomination": "9261 / LECAP VTO. 26JUL24",
-        "Category": "SIN CATEGORIA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 1.7191977086360264
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": 0.2525497804855634
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-14T23:00:00-03:00",
-            "ReturnPercentage": 1.443658561109683
-          },
-          {
-            "StartDate": "2024-06-14T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 0.5348615034453115
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": 0.8920767679775017
-          }
-        ]
-      }
-    ],
-    "TASA FIJA": [
-      {
-        "ID": "S28F5",
-        "Type": "Letes / Pesos",
-        "Denomination": "9253 / LECAP VTO. 28FEB25",
+        "Denomination": "9268 / LECAP VTO. 30SEP24",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
+        "Holdings": [
           {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 2.4347826086956523
-          },
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 3752083551,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
           {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": -2.801358234295416
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": -0.9781659388646289
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -4.921502910566238
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 4.916512059369202
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -3752552561.44,
+            "Date": "2024-06-26T23:00:00-03:00"
           }
         ]
       },
@@ -1158,128 +838,73 @@
         "Type": "Letes / Pesos",
         "Denomination": "9251 / LECAP VTO. 31ENE25",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
+        "Holdings": [
           {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 2.6459143968871595
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2398890685,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
           },
           {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": -2.2517058377558676
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2462363279,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
           },
           {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": -0.47312495152409867
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2406918101.3,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
           },
           {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -4.340710723192013
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2395530371.2,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
           },
           {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 4.276985743380855
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2291547327.5,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
           },
           {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": -1.5625
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2398890685,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2389556480,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2352219660,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
           }
-        ]
-      },
-      {
-        "ID": "",
-        "Type": "",
-        "Denomination": "",
-        "Category": "",
-        "ReturnsByDateRange": null
-      },
-      {
-        "ID": "S14O4",
-        "Type": "Letes / Pesos",
-        "Denomination": "9252 / LECAP VTO. 14OCT24",
-        "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
+        ],
+        "Transactions": [
           {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": 0.9963768115942028
-          },
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 0.8080717488789237
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": -1.0684958318876165
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 1.8974820143884894
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -1.2002471096990557
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 1.732916480571684
-          }
-        ]
-      },
-      {
-        "ID": "S29N4",
-        "Type": "Letes / Pesos",
-        "Denomination": "9255 / LECAP VTO. 29NOV24",
-        "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 2.0009306654257797
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-24T23:00:00-03:00",
-            "ReturnPercentage": -1.551094890510949
-          },
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-31T23:00:00-03:00",
-            "ReturnPercentage": 1.1214087117701574
-          },
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-07T23:00:00-03:00",
-            "ReturnPercentage": -2.676198331958574
-          },
-          {
-            "StartDate": "2024-06-07T23:00:00-03:00",
-            "EndDate": "2024-06-14T23:00:00-03:00",
-            "ReturnPercentage": 2.8816272718711744
-          },
-          {
-            "StartDate": "2024-06-14T23:00:00-03:00",
-            "EndDate": "2024-06-21T23:00:00-03:00",
-            "ReturnPercentage": 0.045766590389016024
-          },
-          {
-            "StartDate": "2024-06-21T23:00:00-03:00",
-            "EndDate": "2024-06-28T23:00:00-03:00",
-            "ReturnPercentage": -0.9843958929991311
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -2385113398.42,
+            "Date": "2024-05-06T23:00:00-03:00"
           }
         ]
       }
     ]
-  },
-  "ReferenceVariables": null
+  }
 }

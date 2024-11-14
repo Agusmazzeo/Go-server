@@ -61,7 +61,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 	intervalStr := r.URL.Query().Get("interval")
 	if intervalStr == "" {
 		// Set interval per day as default
-		intervalStr = "0m:0w:1d"
+		intervalStr = "0w:1d"
 	}
 	interval, err := utils.ParseTimeInterval(intervalStr)
 	if err != nil {

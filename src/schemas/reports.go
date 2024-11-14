@@ -7,6 +7,7 @@ import (
 type AccountsReports struct {
 	VouchersByCategory       *map[string][]Voucher
 	VouchersReturnByCategory *map[string][]VoucherReturn
+	ReferenceVariables       []*VariableWithValuationResponse
 }
 
 type VoucherReturn struct {
