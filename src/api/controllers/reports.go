@@ -285,16 +285,16 @@ func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, err
 		var netTransactions float64
 		for _, transaction := range voucher.Transactions {
 			if transaction.Date != nil && (transaction.Date.After(startDate) && (transaction.Date.Before(endDate) || transaction.Date.Equal(endDate))) {
-				netTransactions -= transaction.Value
+				netTransactions += transaction.Value
 			}
 		}
-
+		netEndValue := endingValue + netTransactions
 		// Calculate return for this date range
-		if startingValue < 1 {
+		if startingValue < 1 && startingValue > -1 {
 			continue
 		}
 
-		returnPercentage := ((endingValue - (netTransactions + startingValue)) / (netTransactions + startingValue)) * 100
+		returnPercentage := ((netEndValue - startingValue) / startingValue) * 100
 		// Append the return for this date range
 		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
 			StartDate:        startDate,
