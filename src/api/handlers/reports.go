@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"server/src/schemas"
 	"server/src/utils"
@@ -179,18 +180,21 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		// Set response headers to download the file
 		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
 	} else {
-		df, err := h.ReportsController.ParseAccountsReportToDataFrame(ctx, accountsReports, startDate, endDate, interval.ToDuration())
+		pdfData, err := h.ReportsController.ParseAccountsReportToPDF(ctx, accountsReports, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
-		err = df.WriteCSV(w)
+		// Set headers for PDF download
+		w.Header().Set("Content-Type", "application/pdf")
+		w.Header().Set("Content-Disposition", "attachment; filename=report.pdf")
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfData)))
+		// Write the PDF data to the response
+		_, err = w.Write(pdfData)
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
-		// Set response headers to download the file
-		w.Header().Set("Content-Disposition", "attachment; filename=holdings.csv")
 	}
 
 }

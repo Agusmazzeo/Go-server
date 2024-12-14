@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -16,8 +17,13 @@ import (
 
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
+	"github.com/jung-kurt/gofpdf"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
+)
+
+const (
+	CriteriaLogoPath = "./assets/criteria_logo.png"
 )
 
 type ReportsControllerI interface {
@@ -29,6 +35,7 @@ type ReportsControllerI interface {
 	DeleteReportSchedule(ctx context.Context, id uint) error
 
 	ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
+	ParseAccountsReportToPDF(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) ([]byte, error)
 	ParseAccountsReportToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	ParseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 }
@@ -259,6 +266,14 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	}
 
 	return sortDataFrameColumns(&df), nil
+}
+
+func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) ([]byte, error) {
+	excelFile, err := rc.ParseAccountsReportToXLSX(ctx, accountsReport, startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+	return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", CriteriaLogoPath)
 }
 
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
@@ -586,6 +601,124 @@ func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 		return holdings[i].DateRequested.Before(*holdings[j].DateRequested)
 	})
 	return holdings
+}
+
+func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]byte, error) {
+	// Create a new PDF document with landscape orientation
+	pdf := gofpdf.New("L", "mm", "A4", "")
+	pdf.SetFont("Arial", "", 8) // Smaller font size to fit more content
+
+	// Add a cover page with the logo and title
+	pdf.AddPage()
+
+	// Add logo
+	if logoPath != "" {
+		// Set larger dimensions for the logo
+		imageWidth := 180.0
+		imageHeight := 50.0
+		pageWidth, pageHeight := pdf.GetPageSize()
+
+		// Center the image horizontally
+		imageX := (pageWidth - imageWidth) / 2
+		imageY := (pageHeight / 2) - (imageHeight / 2)
+
+		pdf.ImageOptions(logoPath, imageX, imageY, imageWidth, imageHeight, false, gofpdf.ImageOptions{ImageType: "PNG"}, 0, "")
+	}
+
+	pdf.Ln(20) // Space after the logo
+
+	pdf.SetFont("Arial", "B", 16)
+	pdf.CellFormat(0, 20, title, "", 1, "C", false, 0, "")
+	pdf.Ln(10)
+
+	// Set the page width, height, and a padding margin
+	pageWidth, _ := pdf.GetPageSize()
+	margin := 10.0
+	usableWidth := pageWidth - 2*margin
+
+	// Iterate through each sheet in the Excel file
+	sheets := excelFile.GetSheetList()
+	for _, sheet := range sheets {
+		// Add a new page for each sheet
+		pdf.AddPage()
+		pdf.SetLeftMargin(margin)
+		// Set font back to regular for sheet content
+		pdf.SetFont("Arial", "", 12)
+		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
+		pdf.Ln(4) // Smaller line spacing
+		// Set font back to regular for sheet content
+		pdf.SetFont("Arial", "", 3)
+
+		// Get all rows and columns in the current sheet
+		rows, err := excelFile.GetRows(sheet)
+		if err != nil {
+			return nil, err
+		}
+
+		// Determine the number of columns in the widest row
+		maxCols := 0
+		for _, row := range rows {
+			if len(row) > maxCols {
+				maxCols = len(row)
+			}
+		}
+
+		// Calculate dynamic cell width based on the max number of columns
+		cellWidth := usableWidth / float64(maxCols)
+
+		// Get merged cells for the sheet
+		mergedCells, err := excelFile.GetMergeCells(sheet)
+		if err != nil {
+			return nil, err
+		}
+		mergedCellWidths := map[string]float64{}
+		mergedCellsStart := map[string]int{}
+
+		// Populate merged cell widths based on the number of columns spanned
+		for _, mc := range mergedCells {
+			startCol, _, _ := excelize.CellNameToCoordinates(mc.GetStartAxis())
+			endCol, _, _ := excelize.CellNameToCoordinates(mc.GetEndAxis())
+			numCols := endCol - startCol + 1
+			mergedCellWidths[mc.GetStartAxis()] = cellWidth * float64(numCols)
+			mergedCellsStart[mc.GetStartAxis()] = numCols - 1 // Adjust by -1 to account for the cell itself
+		}
+
+		// Print each row to the PDF
+		for rowIndex, row := range rows {
+			positionWidth := margin
+			columnsToSkip := 0
+			for colIndex, cell := range row {
+				if columnsToSkip > 0 {
+					columnsToSkip--
+					continue
+				}
+				cellRef, _ := excelize.CoordinatesToCellName(colIndex+1, rowIndex+1)
+
+				// Determine width based on whether it is merged
+				cellWidthToUse := cellWidth
+				if width, ok := mergedCellWidths[cellRef]; ok {
+					cellWidthToUse = width
+				}
+				// Move to the correct position based on current column
+				pdf.SetX(positionWidth)
+
+				// Write cell to the PDF with smaller row height
+				pdf.CellFormat(cellWidthToUse, 6, cell, "1", 0, "L", false, 0, "")
+				positionWidth += cellWidthToUse
+				columnsToSkip += int(cellWidthToUse/cellWidth) - 1
+			}
+			pdf.Ln(6) // Smaller row height
+		}
+	}
+
+	// Write PDF output to an in-memory buffer
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	if err != nil {
+		return nil, fmt.Errorf("could not generate PDF: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 // ==================================================================//
