@@ -129,6 +129,7 @@ func (c *Controller) GetVariableWithValuationDateRangeByID(ctx context.Context, 
 }
 
 func (c *Controller) GetMonthlyInflationDateRange(ctx context.Context, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error) {
+	startDate = startDate.Add(-30 * 24 * time.Hour)
 	variableWithValuations, err := c.GetVariableWithValuationDateRangeByID(ctx, utils.MonthlyInflationID, startDate, endDate)
 	if err != nil {
 		return nil, err
@@ -171,6 +172,11 @@ func (c *Controller) CompleteValuations(v *schemas.VariableWithValuationResponse
 		} else {
 			// Use the last known value if date has no recorded valuation
 			value = lastKnownValue
+		}
+		if value == 0 {
+			// Move to the next day
+			currentDate = currentDate.AddDate(0, 0, 1)
+			continue
 		}
 
 		// Append the valuation for the current date
