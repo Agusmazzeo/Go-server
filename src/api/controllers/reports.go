@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/models"
@@ -20,10 +21,6 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
-)
-
-const (
-	CriteriaLogoPath = "./assets/criteria_logo.png"
 )
 
 type ReportsControllerI interface {
@@ -273,7 +270,8 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, accou
 	if err != nil {
 		return nil, err
 	}
-	return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", CriteriaLogoPath)
+	logoPath := os.Getenv("LOGO_PATH")
+	return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", logoPath)
 }
 
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.

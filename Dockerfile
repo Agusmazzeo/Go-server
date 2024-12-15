@@ -19,11 +19,13 @@ FROM alpine:3.17
 
 EXPOSE 5051
 ENV PORT 5051
+ENV LOGO_PATH /go/src/app/assets/criteria_logo.png
 
 COPY ./settings /settings
 # copy the ca-certificate.crt from the build stage
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /go/bin/app
+COPY --from=builder /go/src/app/assets /go/src/app/assets 
 
 CMD ["/go/bin/app"]
