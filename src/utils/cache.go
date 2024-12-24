@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+type CacheHandlerI interface {
+	Set(key string, value interface{}, expiration time.Duration) error
+	Get(key string, result interface{}) error
+	Delete(key string) error
+	Exists(key string) (bool, error)
+}
+
 type Cache[T any] struct {
 	value      T
 	cachedAt   time.Time

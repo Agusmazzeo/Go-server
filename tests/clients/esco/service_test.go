@@ -25,7 +25,7 @@ func TestESCOService(t *testing.T) {
 	}
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {
-		result, err := escoService.BuscarCuentas(token.AccessToken, "*")
+		result, err := escoService.BuscarCuentas(token.AccessToken, "*", false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -35,7 +35,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetCuentaDetalle with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO", false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -43,7 +43,7 @@ func TestESCOService(t *testing.T) {
 			t.Errorf("expected some results, got none")
 		}
 
-		result, err := escoService.GetCuentaDetalle(token.AccessToken, accounts[0].ID)
+		result, err := escoService.GetCuentaDetalle(token.AccessToken, accounts[0].ID, false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -54,7 +54,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetEstadoCuenta with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -63,7 +63,7 @@ func TestESCOService(t *testing.T) {
 		}
 
 		date := time.Now()
-		result, err := escoService.GetEstadoCuenta(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", date)
+		result, err := escoService.GetEstadoCuenta(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", date, false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -74,7 +74,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetBoletos with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -84,7 +84,7 @@ func TestESCOService(t *testing.T) {
 
 		startDate := time.Now()
 		endDate := startDate.AddDate(0, 0, 1)
-		result, err := escoService.GetBoletos(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate)
+		result, err := escoService.GetBoletos(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate, false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -95,7 +95,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetLiquidaciones with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -105,7 +105,7 @@ func TestESCOService(t *testing.T) {
 
 		startDate := time.Now()
 		endDate := startDate.AddDate(0, 0, 1)
-		result, err := escoService.GetLiquidaciones(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate)
+		result, err := escoService.GetLiquidaciones(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "-1", startDate, endDate, false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

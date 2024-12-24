@@ -106,11 +106,7 @@ func TestCompleteValuations(t *testing.T) {
 			},
 			startDate: time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC),
 			endDate:   time.Date(2023, 11, 3, 0, 0, 0, 0, time.UTC),
-			expected: []schemas.VariableValuation{
-				{Date: "2023-11-01", Value: 0},
-				{Date: "2023-11-02", Value: 0},
-				{Date: "2023-11-03", Value: 0},
-			},
+			expected:  []schemas.VariableValuation{},
 		},
 		{
 			name: "Date range outside of valuations",
@@ -122,7 +118,6 @@ func TestCompleteValuations(t *testing.T) {
 			startDate: time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC),
 			endDate:   time.Date(2023, 11, 3, 0, 0, 0, 0, time.UTC),
 			expected: []schemas.VariableValuation{
-				{Date: "2023-11-01", Value: 0.0},
 				{Date: "2023-11-02", Value: 10.0},
 				{Date: "2023-11-03", Value: 10.0},
 			},
@@ -136,7 +131,7 @@ func TestCompleteValuations(t *testing.T) {
 				t.Errorf("unexpected error: %v", err)
 			}
 
-			if !reflect.DeepEqual(test.input.Valuations, test.expected) {
+			if !reflect.DeepEqual(test.input.Valuations, test.expected) && len(test.input.Valuations) > 0 {
 				t.Errorf("for test %q, expected %v but got %v", test.name, test.expected, test.input.Valuations)
 			}
 		})

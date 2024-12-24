@@ -13,39 +13,42 @@ import (
 	"server/src/config"
 	"server/src/schemas"
 	"server/src/utils"
+	redis_utils "server/src/utils/redis"
 	requests "server/src/utils/requests"
 )
 
 type ESCOServiceClientI interface {
 	PostToken(_ context.Context, username, password string) (*schemas.TokenResponse, error)
-	BuscarCuentas(token, filter string) ([]CuentaSchema, error)
-	GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error)
-	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error)
-	GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Liquidacion, error)
-	GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Boleto, error)
+	BuscarCuentas(token, filter string, refreshCache bool) ([]CuentaSchema, error)
+	GetCuentaDetalle(token, cid string, refreshCache bool) (*CuentaDetalleSchema, error)
+	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time, refreshCache bool) ([]EstadoCuentaSchema, error)
+	GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Liquidacion, error)
+	GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Boleto, error)
 	GetCategoryMap() map[string]string
 }
 
 // ESCOServiceClient is a struct that uses ExternalAPIService to interact with the ESCO API
 type ESCOServiceClient struct {
-	API         *requests.ExternalAPIService
-	BaseURL     string
-	TokenURL    string
-	CategoryMap *map[string]string
+	API          *requests.ExternalAPIService
+	BaseURL      string
+	TokenURL     string
+	CategoryMap  *map[string]string
+	CacheHandler utils.CacheHandlerI
 }
 
 // NewClient creates a new instance of ESCOServiceClient
-func NewClient(cfg *config.Config) (*ESCOServiceClient, error) {
+func NewClient(cfg *config.Config, cacheHandler utils.CacheHandlerI) (*ESCOServiceClient, error) {
 	api := requests.NewExternalAPIService(nil)
 	categoryMap, err := utils.CSVToMap(cfg.ExternalClients.ESCO.CategoryMapFile)
 	if err != nil {
 		return nil, err
 	}
 	return &ESCOServiceClient{
-		API:         api,
-		BaseURL:     cfg.ExternalClients.ESCO.BaseURL,
-		TokenURL:    cfg.ExternalClients.ESCO.TokenURL,
-		CategoryMap: categoryMap,
+		API:          api,
+		BaseURL:      cfg.ExternalClients.ESCO.BaseURL,
+		TokenURL:     cfg.ExternalClients.ESCO.TokenURL,
+		CategoryMap:  categoryMap,
+		CacheHandler: cacheHandler,
 	}, nil
 }
 
@@ -96,7 +99,14 @@ func (s *ESCOServiceClient) PostToken(_ context.Context, username, password stri
 }
 
 // BuscarCuentas retrieves all accounts matching filter
-func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema, error) {
+func (s *ESCOServiceClient) BuscarCuentas(token, filter string, refreshCache bool) ([]CuentaSchema, error) {
+	var result []CuentaSchema
+	if !refreshCache {
+		err := s.GetCachedData(&result, "buscar-cuentas", filter)
+		if err == nil && result != nil {
+			return result, nil
+		}
+	}
 	body := map[string]string{
 		"Filtro": filter,
 	}
@@ -108,8 +118,6 @@ func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema,
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	var result []CuentaSchema
 
 	// Save the response and get the response bytes for further processing
 	// responseBody, err := utils.SaveResponseToFile(resp.Body, "cuentas_response.json")
@@ -123,11 +131,17 @@ func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema,
 		return nil, err
 	}
 
+	err = s.CacheData(result, "buscar-cuentas", filter)
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
 
 // GetCuentaDetalle retrieves detailed account information
-func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error) {
+func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string, refreshCache bool) (*CuentaDetalleSchema, error) {
+	var result = new(CuentaDetalleSchema)
 	body := map[string]string{
 		"CID_P": cid,
 	}
@@ -140,8 +154,6 @@ func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleS
 	}
 	defer resp.Body.Close()
 
-	var result = new(CuentaDetalleSchema)
-
 	// Save the response and get the response bytes for further processing
 	// responseBody, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("cuenta_detalle_%s_response.json", cid))
 	responseBody, err := io.ReadAll(resp.Body)
@@ -153,12 +165,18 @@ func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleS
 	if err != nil {
 		return nil, err
 	}
-
 	return result, nil
 }
 
 // GetEstadoCuenta retrieves the account status information
-func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time) ([]EstadoCuentaSchema, error) {
+func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time, refreshCache bool) ([]EstadoCuentaSchema, error) {
+	var result []EstadoCuentaSchema
+	if !refreshCache {
+		err := s.GetCachedData(&result, "estado-cuenta", nncc, tf, date.Format("2006-01-02"))
+		if err == nil && result != nil {
+			return result, nil
+		}
+	}
 	// tf is filter by concertacion (-1) or liquidacion (0)
 	headers := map[string]string{
 		"CID":   cid,
@@ -200,8 +218,6 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve account status: %s", resp.Status))
 	}
 
-	var result []EstadoCuentaSchema
-
 	// Save the response and get the response bytes for further processing
 	// body, err := utils.SaveResponseToFile(resp.Body, fmt.Sprintf("estado_cuenta_%s_date_response.json", cid))
 	body, err := io.ReadAll(resp.Body)
@@ -213,12 +229,22 @@ func (s *ESCOServiceClient) GetEstadoCuenta(token, cid, fid, nncc, tf string, da
 	if err != nil {
 		return nil, err
 	}
-
+	err = s.CacheData(result, "estado-cuenta", nncc, tf, date.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
 // GetEstadoCuenta retrieves the account status information
-func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Liquidacion, error) {
+func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Liquidacion, error) {
+	var result []Liquidacion
+	if !refreshCache {
+		err := s.GetCachedData(&result, "liquidaciones", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+		if err == nil && result != nil {
+			return result, nil
+		}
+	}
 	// tf is filter by concertacion (-1) or liquidacion (0)
 	headers := map[string]string{
 		"CID":   cid,
@@ -261,8 +287,6 @@ func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, s
 		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve liquidaciones: %s", resp.Status))
 	}
 
-	var result []Liquidacion
-
 	// Save the response and get the response bytes for further processing
 	// body, err := utils.SaveResponseToFile(resp.Body, "liquidaciones_response.json")
 	body, err := io.ReadAll(resp.Body)
@@ -274,11 +298,21 @@ func (s *ESCOServiceClient) GetLiquidaciones(token, cid, fid, nncc, tf string, s
 	if err != nil {
 		return nil, err
 	}
-
+	err = s.CacheData(result, "liquidaciones", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
-func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]Boleto, error) {
+func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Boleto, error) {
+	var result []Boleto
+	if !refreshCache {
+		err := s.GetCachedData(&result, "boletos", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+		if err == nil && result != nil {
+			return result, nil
+		}
+	}
 	// tf is filter by concertacion (-1) or liquidacion (0)
 	headers := map[string]string{
 		"CID":   cid,
@@ -321,8 +355,6 @@ func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDa
 		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve boletos: %s", resp.Status))
 	}
 
-	var result []Boleto
-
 	// Save the response and get the response bytes for further processing
 	// body, err := utils.SaveResponseToFile(resp.Body, "boletos_response.json")
 	body, err := io.ReadAll(resp.Body)
@@ -334,8 +366,35 @@ func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDa
 	if err != nil {
 		return nil, err
 	}
-
+	err = s.CacheData(result, "boletos", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
 	return result, nil
+}
+
+func (s *ESCOServiceClient) GetCachedData(target interface{}, keys ...string) error {
+	key, err := redis_utils.GenerateUUID(keys...)
+	if err != nil {
+		return err
+	}
+	err = s.CacheHandler.Get(key, target) // Unmarshal directly into the target type
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *ESCOServiceClient) CacheData(value interface{}, keys ...string) error {
+	key, err := redis_utils.GenerateUUID(keys...)
+	if err != nil {
+		return err
+	}
+	err = s.CacheHandler.Set(key, value, 0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *ESCOServiceClient) GetCategoryMap() map[string]string {

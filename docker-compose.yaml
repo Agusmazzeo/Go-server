@@ -37,8 +37,20 @@ services:
     networks:
       - local-net
 
+  redis:
+    image: redis:7.0-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - local-net
+    volumes:
+      - redis-data:/data
+
 volumes:
   esdata:
+  redis-data:
 
 networks:
   local-net:

@@ -6,6 +6,7 @@ import (
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/config"
+	redis_utils "server/src/utils/redis"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -24,7 +25,11 @@ func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
 	// if err != nil {
 	// 	return nil, err
 	// }
-	escoClient, err := esco.NewClient(cfg)
+	redis, err := redis_utils.NewRedisHandler(cfg)
+	if err != nil {
+		return nil, err
+	}
+	escoClient, err := esco.NewClient(cfg, redis)
 	if err != nil {
 		return nil, err
 	}

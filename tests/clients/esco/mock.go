@@ -48,7 +48,7 @@ func (c *ESCOServiceClientMock) PostToken(_ context.Context, _, _ string) (*sche
 }
 
 // BuscarCuentas reads saved account data from a mock file.
-func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string) ([]esco.CuentaSchema, error) {
+func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string, _ bool) ([]esco.CuentaSchema, error) {
 	var cuentas []esco.CuentaSchema
 	err := c.ReadMockResponse("cuentas_response.json", &cuentas)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string) ([]esco.CuentaSc
 }
 
 // GetCuentaDetalle reads detailed account information from a mock file.
-func (c *ESCOServiceClientMock) GetCuentaDetalle(_, cid string) (*esco.CuentaDetalleSchema, error) {
+func (c *ESCOServiceClientMock) GetCuentaDetalle(_, cid string, _ bool) (*esco.CuentaDetalleSchema, error) {
 	var cuentaDetalle esco.CuentaDetalleSchema
 	err := c.ReadMockResponse(fmt.Sprintf("cuenta_detalle_%s_response.json", cid), &cuentaDetalle)
 	if err != nil {
@@ -71,7 +71,7 @@ func (c *ESCOServiceClientMock) GetCuentaDetalle(_, cid string) (*esco.CuentaDet
 }
 
 // GetEstadoCuenta reads account status information from a mock file.
-func (c *ESCOServiceClientMock) GetEstadoCuenta(_, cid, _, _, _ string, _ time.Time) ([]esco.EstadoCuentaSchema, error) {
+func (c *ESCOServiceClientMock) GetEstadoCuenta(_, cid, _, _, _ string, _ time.Time, _ bool) ([]esco.EstadoCuentaSchema, error) {
 	var estadoCuenta []esco.EstadoCuentaSchema
 	err := c.ReadMockResponse(fmt.Sprintf("estado_cuenta_%s_date_response.json", cid), &estadoCuenta)
 	if err != nil {
@@ -81,7 +81,7 @@ func (c *ESCOServiceClientMock) GetEstadoCuenta(_, cid, _, _, _ string, _ time.T
 }
 
 // GetLiquidaciones reads account liquidaciones information from a mock file.
-func (c *ESCOServiceClientMock) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]esco.Liquidacion, error) {
+func (c *ESCOServiceClientMock) GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time, _ bool) ([]esco.Liquidacion, error) {
 	var liquidaciones []esco.Liquidacion
 	err := c.ReadMockResponse("liquidaciones_response.json", &liquidaciones)
 	if err != nil {
@@ -91,7 +91,7 @@ func (c *ESCOServiceClientMock) GetLiquidaciones(token, cid, fid, nncc, tf strin
 }
 
 // GetBoletos reads account boletos information from a mock file.
-func (c *ESCOServiceClientMock) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time) ([]esco.Boleto, error) {
+func (c *ESCOServiceClientMock) GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time, _ bool) ([]esco.Boleto, error) {
 	var boletos []esco.Boleto
 	err := c.ReadMockResponse("boletos_response.json", &boletos)
 	if err != nil {

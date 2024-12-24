@@ -5,6 +5,7 @@ BIN_NAME=Carvana.VDI.DescriptionMapperAndValuations
 COVERAGE_FILE=profile.cov
 DOCKER_COMPOSE=docker compose
 POSTGRES_DB=postgres-db
+REDIS=redis
 
 default: build
 
@@ -62,6 +63,9 @@ dc-logs:
 
 dc-postgres-up:
 	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
+
+dc-redis-up:
+	${DOCKER_COMPOSE} up -d ${REDIS}
 
 dc-down:
 	${DOCKER_COMPOSE} down

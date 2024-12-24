@@ -38,7 +38,7 @@ func (c *AccountsController) GetAllAccounts(ctx context.Context, token, filter s
 	if filter == "" {
 		filter = "*"
 	}
-	accs, err := c.ESCOClient.BuscarCuentas(token, filter)
+	accs, err := c.ESCOClient.BuscarCuentas(token, filter, false)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (c *AccountsController) GetAllAccounts(ctx context.Context, token, filter s
 }
 
 func (c *AccountsController) GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error) {
-	acc, err := c.ESCOClient.BuscarCuentas(token, id)
+	acc, err := c.ESCOClient.BuscarCuentas(token, id, false)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (c *AccountsController) GetAccountState(ctx context.Context, token, id stri
 	if err != nil {
 		return nil, err
 	}
-	accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
+	accStateData, err := c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date, false)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token
 			var accStateData []esco.EstadoCuentaSchema
 			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
 			for {
-				accStateData, err = c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date)
+				accStateData, err = c.ESCOClient.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", date, false)
 				if err != nil || accStateData == nil {
 					retries -= 1
 					logger.Warnf("error while on GetEstadoCuenta: %v. Retrying..", err)
@@ -273,7 +273,7 @@ func (c *AccountsController) GetBoletosDateRange(ctx context.Context, token, id 
 	if err != nil {
 		return nil, err
 	}
-	boletos, err := c.ESCOClient.GetBoletos(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", startDate, endDate)
+	boletos, err := c.ESCOClient.GetBoletos(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", startDate, endDate, false)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ func (c *AccountsController) GetLiquidacionesDateRange(ctx context.Context, toke
 	if err != nil {
 		return nil, err
 	}
-	liquidaciones, err := c.ESCOClient.GetLiquidaciones(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", startDate, endDate)
+	liquidaciones, err := c.ESCOClient.GetLiquidaciones(token, account.ID, account.FI, strconv.Itoa(account.N), "-1", startDate, endDate, false)
 	if err != nil {
 		return nil, err
 	}

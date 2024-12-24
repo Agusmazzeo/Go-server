@@ -26,7 +26,8 @@ type ServiceConfig struct {
 }
 
 type DatabasesConfig struct {
-	SQL SQLConfig `mapstructure:"sql"`
+	SQL   SQLConfig   `mapstructure:"sql"`
+	Redis RedisConfig `mapstructure:"redis"`
 }
 
 type SQLConfig struct {
@@ -37,6 +38,12 @@ type SQLConfig struct {
 	Driver           string `mapstructure:"driver"`
 	Database         string `mapstructure:"database"`
 	ConnectionString string `mapstructure:"connection_string"`
+}
+
+type RedisConfig struct {
+	Host     string `mapstructure:"host"`
+	Password string `mapstructure:"password"`
+	Database int    `mapstructure:"database"`
 }
 
 type ExternalClientConfig struct {
