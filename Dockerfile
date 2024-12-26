@@ -26,6 +26,6 @@ COPY ./settings /settings
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /go/bin/app
-COPY --from=builder /go/src/app/assets /go/src/app/assets 
+COPY --from=builder /go/src/app/assets /go/src/app/assets
 
 CMD ["/go/bin/app"]
