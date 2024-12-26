@@ -864,5 +864,7 @@
         ]
       }
     ]
-  }
+  },
+  "TotalHoldingsByDate": {},
+  "TotalTransactionsByDate": {}
 }

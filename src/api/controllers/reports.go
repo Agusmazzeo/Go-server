@@ -71,7 +71,7 @@ func GenerateAccountReports(
 
 	// Iterate through each category and its associated vouchers
 	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
-		if category == "ARS" {
+		if category == "ARS" || category == "MEP" {
 			continue
 		}
 		for _, voucher := range vouchers {
@@ -80,11 +80,26 @@ func GenerateAccountReports(
 		}
 	}
 
+	totalHoldingsByDate := make([]schemas.Holding, 0, len(*accountStateByCategory.TotalHoldingsByDate))
+	for _, holding := range *accountStateByCategory.TotalHoldingsByDate {
+		totalHoldingsByDate = append(totalHoldingsByDate, holding)
+	}
+	totalTransactionsByDate := make([]schemas.Transaction, 0, len(*accountStateByCategory.TotalTransactionsByDate))
+	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
+		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
+	}
+
+	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
+
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
+	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
 
 	return &schemas.AccountsReports{
 		VouchersByCategory:       &filteredVouchers,
 		VouchersReturnByCategory: &voucherReturnsByCategory,
+		TotalHoldingsByDate:      filteredTotalHoldings,
+		TotalTransactionsByDate:  totalTransactionsByDate,
+		TotalReturns:             totalReturns,
 	}, nil
 }
 
@@ -93,18 +108,7 @@ func filterVoucherHoldingsByInterval(vouchersByCategory *map[string][]schemas.Vo
 
 	for category, vouchers := range *vouchersByCategory {
 		for _, voucher := range vouchers {
-			filteredHoldings := []schemas.Holding{}
-
-			// Generate interval boundaries
-			for date := startDate; date.Before(endDate); date = date.Add(interval) {
-
-				for _, holding := range voucher.Holdings {
-					// Include holdings that fall within the exact interval
-					if date == *holding.DateRequested {
-						filteredHoldings = append(filteredHoldings, holding)
-					}
-				}
-			}
+			filteredHoldings := filterHoldingsByInterval(voucher.Holdings, startDate, endDate, interval)
 
 			if len(filteredHoldings) > 0 {
 				voucher.Holdings = filteredHoldings
@@ -114,6 +118,24 @@ func filterVoucherHoldingsByInterval(vouchersByCategory *map[string][]schemas.Vo
 	}
 
 	return filteredVouchersByCategory
+}
+
+func filterHoldingsByInterval(holdings []schemas.Holding, startDate, endDate time.Time, interval time.Duration) []schemas.Holding {
+
+	filteredHoldings := []schemas.Holding{}
+
+	// Generate interval boundaries
+	for date := startDate; date.Before(endDate); date = date.Add(interval) {
+
+		for _, holding := range holdings {
+			// Include holdings that fall within the exact interval
+			if date == *holding.DateRequested {
+				filteredHoldings = append(filteredHoldings, holding)
+			}
+		}
+	}
+
+	return filteredHoldings
 }
 
 func (rc *ReportsController) ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
@@ -199,6 +221,33 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 			df = *updatedDf
 		}
 	}
+
+	totalValues := make([]string, len(dates))
+	for _, totalHolding := range accountsReport.TotalHoldingsByDate {
+		dateStr := totalHolding.DateRequested.Format("2006-01-02")
+		// Find the index in the dates array that matches this holding's date
+		for i, date := range dateStrs {
+			if date == dateStr {
+				if totalHolding.Value >= 1.0 {
+					totalValues[i] = fmt.Sprintf("%.2f", totalHolding.Value)
+				} else {
+					totalValues[i] = "-"
+				}
+				break
+			}
+		}
+	}
+	for i, v := range totalValues {
+		if v == "" {
+			totalValues[i] = "-"
+		}
+	}
+	// Add the new series (column) for this voucher to the DataFrame
+	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
+	if err != nil {
+		return nil, err
+	}
+	df = *updatedDf
 
 	return sortDataFrameColumns(&df), nil
 }
@@ -313,8 +362,21 @@ func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (sc
 		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
 	}
 
+	returnsByInterval := CalculateHoldingsReturn(voucher.Holdings, voucher.Transactions, interval)
+
+	// Return the result
+	return schemas.VoucherReturn{
+		ID:                 voucher.ID,
+		Type:               voucher.Type,
+		Denomination:       voucher.Denomination,
+		Category:           voucher.Category,
+		ReturnsByDateRange: returnsByInterval,
+	}, nil
+}
+
+func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration) []schemas.ReturnByDate {
 	// Sort holdings by date
-	sortedHoldings := sortHoldingsByDate(voucher.Holdings)
+	sortedHoldings := sortHoldingsByDate(holdings)
 	var dailyReturns []schemas.ReturnByDate
 
 	// Iterate through each pair of consecutive holdings
@@ -329,7 +391,7 @@ func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (sc
 
 		// Calculate the net transactions within the date range
 		var netTransactions float64
-		for _, transaction := range voucher.Transactions {
+		for _, transaction := range transactions {
 			if transaction.Date != nil && (transaction.Date.After(startDate) && (transaction.Date.Before(endDate) || transaction.Date.Equal(endDate))) {
 				netTransactions += transaction.Value
 			}
@@ -349,15 +411,7 @@ func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (sc
 		})
 	}
 	// Collapse daily returns into intervals
-	returnsByInterval := CollapseReturnsByInterval(dailyReturns, interval)
-	// Return the result
-	return schemas.VoucherReturn{
-		ID:                 voucher.ID,
-		Type:               voucher.Type,
-		Denomination:       voucher.Denomination,
-		Category:           voucher.Category,
-		ReturnsByDateRange: returnsByInterval,
-	}, nil
+	return CollapseReturnsByInterval(dailyReturns, interval)
 }
 
 func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval time.Duration) []schemas.ReturnByDate {
@@ -444,9 +498,17 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 	// Iterate over the columns in the DataFrame, starting from the second one (ignoring DateRequested)
 	columnIndex := 2               // Excel columns start from B (index 2) for data columns
 	for _, col := range cols[1:] { // Skip the first column "DateRequested"
-		parts := strings.Split(col, "-")
-		category := parts[0]
-		id := parts[1]
+
+		var category, id string
+
+		if col == "TOTAL" {
+			category = "TOTAL"
+			id = "-"
+		} else {
+			parts := strings.Split(col, "-")
+			category = parts[0]
+			id = parts[1]
+		}
 
 		// Set the ID in the second row (e.g., ID1, ID2, etc.)
 		cell := fmt.Sprintf("%s%d", toAlphaString(columnIndex), idRow)

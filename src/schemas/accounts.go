@@ -37,8 +37,15 @@ type AccountState struct {
 	Vouchers *map[string]Voucher
 }
 
+type TotalHoldingsAndTransactionsByDate struct {
+	TotalHoldingsByDate     *map[string]Holding
+	TotalTransactionsByDate *map[string]Transaction
+}
+
 type AccountStateByCategory struct {
-	VouchersByCategory *map[string][]Voucher
+	VouchersByCategory      *map[string][]Voucher
+	TotalHoldingsByDate     *map[string]Holding
+	TotalTransactionsByDate *map[string]Transaction
 }
 
 func NewAccountState() *AccountState {

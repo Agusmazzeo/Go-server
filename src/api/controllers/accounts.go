@@ -434,11 +434,18 @@ func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context
 
 func (c *AccountsController) CollapseAndGroupAccountsStates(accountsStates []*schemas.AccountState) *schemas.AccountStateByCategory {
 	collapsedAccountState := collapseAccountStates(accountsStates)
-	return groupAccountStateByCategory(&collapsedAccountState)
+	vouchersByCategory := groupAccountStateByCategory(&collapsedAccountState)
+	totalsByDate := groupTotalHoldingsAndTransactionsByDate(&collapsedAccountState)
+	return &schemas.AccountStateByCategory{
+		VouchersByCategory:      vouchersByCategory,
+		TotalHoldingsByDate:     totalsByDate.TotalHoldingsByDate,
+		TotalTransactionsByDate: totalsByDate.TotalTransactionsByDate,
+	}
 }
 
 // Group vouchers by category after collapsing, with sorting for consistent ordering
-func groupAccountStateByCategory(state *schemas.AccountState) *schemas.AccountStateByCategory {
+// In addition of calculating the total holding value
+func groupAccountStateByCategory(state *schemas.AccountState) *map[string][]schemas.Voucher {
 	vouchersByCategory := make(map[string][]schemas.Voucher)
 
 	for _, voucher := range *state.Vouchers {
@@ -453,8 +460,54 @@ func groupAccountStateByCategory(state *schemas.AccountState) *schemas.AccountSt
 		})
 	}
 
-	return &schemas.AccountStateByCategory{
-		VouchersByCategory: &vouchersByCategory,
+	return &vouchersByCategory
+}
+
+func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schemas.TotalHoldingsAndTransactionsByDate {
+	totalHoldingsByDate := make(map[string]schemas.Holding)
+	totalTransactionsByDate := make(map[string]schemas.Transaction)
+
+	for _, voucher := range *state.Vouchers {
+		if voucher.Category == "MEP" {
+			continue
+		}
+		for _, holding := range voucher.Holdings {
+			date := *holding.DateRequested
+			dateStr := date.Format("2006-01-02")
+			if _, exists := totalHoldingsByDate[dateStr]; !exists {
+				totalHoldingsByDate[dateStr] = schemas.Holding{
+					Currency:      "Pesos",
+					CurrencySign:  "$",
+					Value:         0,
+					DateRequested: &date,
+					Date:          &date,
+				}
+			}
+			total := totalHoldingsByDate[dateStr]
+			total.Value += holding.Value
+			totalHoldingsByDate[dateStr] = total
+		}
+
+		for _, transaction := range voucher.Transactions {
+			date := *transaction.Date
+			dateStr := date.Format("2006-01-02")
+			if _, exists := totalTransactionsByDate[dateStr]; !exists {
+				totalTransactionsByDate[dateStr] = schemas.Transaction{
+					Currency:     "Pesos",
+					CurrencySign: "$",
+					Value:        0,
+					Date:         &date,
+				}
+			}
+			total := totalTransactionsByDate[dateStr]
+			total.Value += transaction.Value
+			totalTransactionsByDate[dateStr] = total
+		}
+	}
+
+	return &schemas.TotalHoldingsAndTransactionsByDate{
+		TotalHoldingsByDate:     &totalHoldingsByDate,
+		TotalTransactionsByDate: &totalTransactionsByDate,
 	}
 }
 

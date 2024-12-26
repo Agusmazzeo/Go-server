@@ -8,6 +8,9 @@ type AccountsReports struct {
 	VouchersByCategory       *map[string][]Voucher
 	VouchersReturnByCategory *map[string][]VoucherReturn
 	ReferenceVariables       []*VariableWithValuationResponse
+	TotalHoldingsByDate      []Holding
+	TotalTransactionsByDate  []Transaction
+	TotalReturns             []ReturnByDate
 }
 
 type VoucherReturn struct {
