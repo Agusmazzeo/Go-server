@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"os"
 	"server/src/config"
 	"time"
 
@@ -21,13 +22,17 @@ type RedisHandler struct {
 // NewRedisHandler initializes a new Redis handler.
 func NewRedisHandler(cfg *config.Config) (*RedisHandler, error) {
 	ctx := context.Background()
-	client := redis.NewClient(&redis.Options{
-		Addr:      cfg.Databases.Redis.Host + ":" + cfg.Databases.Redis.Port,
-		Username:  cfg.Databases.Redis.Username,
-		Password:  cfg.Databases.Redis.Password, // Leave empty for no password
-		DB:        cfg.Databases.Redis.Database, // Default DB index
-		TLSConfig: &tls.Config{InsecureSkipVerify: true},
-	})
+	env := os.Getenv("ENV")
+	redisOptions := &redis.Options{
+		Addr:     cfg.Databases.Redis.Host + ":" + cfg.Databases.Redis.Port,
+		Username: cfg.Databases.Redis.Username,
+		Password: cfg.Databases.Redis.Password, // Leave empty for no password
+		DB:       cfg.Databases.Redis.Database, // Default DB index
+	}
+	if env != "LOCAL" && env != "" {
+		redisOptions.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	client := redis.NewClient(redisOptions)
 
 	// Test connection
 	if err := client.Ping(ctx).Err(); err != nil {

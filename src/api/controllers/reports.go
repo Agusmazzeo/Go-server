@@ -54,7 +54,7 @@ func (rc *ReportsController) GetReport(
 	startDate, endDate time.Time,
 	interval time.Duration,
 ) (*schemas.AccountsReports, error) {
-	accountReports, err := GenerateAccountReports(accountsStates, interval)
+	accountReports, err := GenerateAccountReports(accountsStates, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,10 @@ func (rc *ReportsController) GetReport(
 }
 
 // GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
-func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory, interval time.Duration) (*schemas.AccountsReports, error) {
+func GenerateAccountReports(
+	accountStateByCategory *schemas.AccountStateByCategory,
+	startDate, endDate time.Time,
+	interval time.Duration) (*schemas.AccountsReports, error) {
 	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
 
 	// Iterate through each category and its associated vouchers
@@ -77,10 +80,40 @@ func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCatego
 		}
 	}
 
+	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
+
 	return &schemas.AccountsReports{
-		VouchersByCategory:       accountStateByCategory.VouchersByCategory,
+		VouchersByCategory:       &filteredVouchers,
 		VouchersReturnByCategory: &voucherReturnsByCategory,
 	}, nil
+}
+
+func filterVoucherHoldingsByInterval(vouchersByCategory *map[string][]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string][]schemas.Voucher {
+	filteredVouchersByCategory := make(map[string][]schemas.Voucher)
+
+	for category, vouchers := range *vouchersByCategory {
+		for _, voucher := range vouchers {
+			filteredHoldings := []schemas.Holding{}
+
+			// Generate interval boundaries
+			for date := startDate; date.Before(endDate); date = date.Add(interval) {
+
+				for _, holding := range voucher.Holdings {
+					// Include holdings that fall within the exact interval
+					if date == *holding.DateRequested {
+						filteredHoldings = append(filteredHoldings, holding)
+					}
+				}
+			}
+
+			if len(filteredHoldings) > 0 {
+				voucher.Holdings = filteredHoldings
+				filteredVouchersByCategory[category] = append(filteredVouchersByCategory[category], voucher)
+			}
+		}
+	}
+
+	return filteredVouchersByCategory
 }
 
 func (rc *ReportsController) ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {

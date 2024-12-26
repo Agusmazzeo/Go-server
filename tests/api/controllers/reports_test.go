@@ -27,7 +27,11 @@ func TestGenerateAccountReports(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// Generate the report
-		accountReport, err := controllers.GenerateAccountReports(&accountData, 24*time.Hour)
+		accountReport, err := controllers.GenerateAccountReports(
+			&accountData,
+			time.Date(2024, 5, 3, 0, 0, 0, 0, time.UTC),
+			time.Date(2024, 6, 3, 0, 0, 0, 0, time.UTC),
+			24*time.Hour)
 		if err != nil {
 			t.Fatalf("Failed to generate account report: %v", err)
 		}

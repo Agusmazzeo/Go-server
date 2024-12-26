@@ -55,8 +55,11 @@ jobs:
           sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
 
-      - name: Set up Docker Database
+      - name: Set up Docker Postgres Database
         run: make dc-postgres-up
+
+      - name: Set up Docker Redis Database
+        run: make dc-redis-up
 
       - name: Test
         run: make test
