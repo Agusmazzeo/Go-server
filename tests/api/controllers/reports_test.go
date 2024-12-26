@@ -8,6 +8,7 @@ import (
 	"server/src/models"
 	"server/src/schemas"
 	"server/src/utils"
+	"time"
 
 	"testing"
 )
@@ -26,7 +27,7 @@ func TestGenerateAccountReports(t *testing.T) {
 
 	for i := 0; i < 5; i++ {
 		// Generate the report
-		accountReport, err := controllers.GenerateAccountReports(&accountData)
+		accountReport, err := controllers.GenerateAccountReports(&accountData, 24*time.Hour)
 		if err != nil {
 			t.Fatalf("Failed to generate account report: %v", err)
 		}

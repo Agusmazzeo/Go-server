@@ -6,13 +6,12 @@ service:
   port: 5051
   type: API
 databases:
-  elasticsearch:
+  redis:
     host: 127.0.0.1
-    port: 9200
-    index: listing
-    type: listing
-    username: myusername
-    password: mypassword
+    port: 6379
+    database: 0
+    username: default
+    password: test
 
   sql:
     host: 127.0.0.1

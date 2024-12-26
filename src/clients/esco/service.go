@@ -19,8 +19,8 @@ import (
 
 type ESCOServiceClientI interface {
 	PostToken(_ context.Context, username, password string) (*schemas.TokenResponse, error)
-	BuscarCuentas(token, filter string, refreshCache bool) ([]CuentaSchema, error)
-	GetCuentaDetalle(token, cid string, refreshCache bool) (*CuentaDetalleSchema, error)
+	BuscarCuentas(token, filter string) ([]CuentaSchema, error)
+	GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error)
 	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time, refreshCache bool) ([]EstadoCuentaSchema, error)
 	GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Liquidacion, error)
 	GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Boleto, error)
@@ -99,14 +99,8 @@ func (s *ESCOServiceClient) PostToken(_ context.Context, username, password stri
 }
 
 // BuscarCuentas retrieves all accounts matching filter
-func (s *ESCOServiceClient) BuscarCuentas(token, filter string, refreshCache bool) ([]CuentaSchema, error) {
+func (s *ESCOServiceClient) BuscarCuentas(token, filter string) ([]CuentaSchema, error) {
 	var result []CuentaSchema
-	if !refreshCache {
-		err := s.GetCachedData(&result, "buscar-cuentas", filter)
-		if err == nil && result != nil {
-			return result, nil
-		}
-	}
 	body := map[string]string{
 		"Filtro": filter,
 	}
@@ -131,16 +125,11 @@ func (s *ESCOServiceClient) BuscarCuentas(token, filter string, refreshCache boo
 		return nil, err
 	}
 
-	err = s.CacheData(result, "buscar-cuentas", filter)
-	if err != nil {
-		return nil, err
-	}
-
 	return result, nil
 }
 
 // GetCuentaDetalle retrieves detailed account information
-func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string, refreshCache bool) (*CuentaDetalleSchema, error) {
+func (s *ESCOServiceClient) GetCuentaDetalle(token, cid string) (*CuentaDetalleSchema, error) {
 	var result = new(CuentaDetalleSchema)
 	body := map[string]string{
 		"CID_P": cid,

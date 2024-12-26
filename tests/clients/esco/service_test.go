@@ -25,7 +25,7 @@ func TestESCOService(t *testing.T) {
 	}
 
 	t.Run("BuscarCuentas with filter * works correctly", func(t *testing.T) {
-		result, err := escoService.BuscarCuentas(token.AccessToken, "*", false)
+		result, err := escoService.BuscarCuentas(token.AccessToken, "*")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -35,7 +35,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetCuentaDetalle with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO", false)
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "DIAGNOSTICO VETERINARIO")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -43,7 +43,7 @@ func TestESCOService(t *testing.T) {
 			t.Errorf("expected some results, got none")
 		}
 
-		result, err := escoService.GetCuentaDetalle(token.AccessToken, accounts[0].ID, false)
+		result, err := escoService.GetCuentaDetalle(token.AccessToken, accounts[0].ID)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -54,7 +54,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetEstadoCuenta with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -74,7 +74,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetBoletos with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -95,7 +95,7 @@ func TestESCOService(t *testing.T) {
 	})
 
 	t.Run("GetLiquidaciones with defined account works correctly", func(t *testing.T) {
-		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170", false)
+		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

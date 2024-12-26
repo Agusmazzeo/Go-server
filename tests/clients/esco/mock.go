@@ -48,7 +48,7 @@ func (c *ESCOServiceClientMock) PostToken(_ context.Context, _, _ string) (*sche
 }
 
 // BuscarCuentas reads saved account data from a mock file.
-func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string, _ bool) ([]esco.CuentaSchema, error) {
+func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string) ([]esco.CuentaSchema, error) {
 	var cuentas []esco.CuentaSchema
 	err := c.ReadMockResponse("cuentas_response.json", &cuentas)
 	if err != nil {
@@ -61,7 +61,7 @@ func (c *ESCOServiceClientMock) BuscarCuentas(_, filter string, _ bool) ([]esco.
 }
 
 // GetCuentaDetalle reads detailed account information from a mock file.
-func (c *ESCOServiceClientMock) GetCuentaDetalle(_, cid string, _ bool) (*esco.CuentaDetalleSchema, error) {
+func (c *ESCOServiceClientMock) GetCuentaDetalle(_, cid string) (*esco.CuentaDetalleSchema, error) {
 	var cuentaDetalle esco.CuentaDetalleSchema
 	err := c.ReadMockResponse(fmt.Sprintf("cuenta_detalle_%s_response.json", cid), &cuentaDetalle)
 	if err != nil {

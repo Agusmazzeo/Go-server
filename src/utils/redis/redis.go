@@ -2,6 +2,7 @@ package redis_utils
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"server/src/config"
@@ -21,9 +22,11 @@ type RedisHandler struct {
 func NewRedisHandler(cfg *config.Config) (*RedisHandler, error) {
 	ctx := context.Background()
 	client := redis.NewClient(&redis.Options{
-		Addr:     cfg.Databases.Redis.Host,
-		Password: cfg.Databases.Redis.Password, // Leave empty for no password
-		DB:       cfg.Databases.Redis.Database, // Default DB index
+		Addr:      cfg.Databases.Redis.Host + ":" + cfg.Databases.Redis.Port,
+		Username:  cfg.Databases.Redis.Username,
+		Password:  cfg.Databases.Redis.Password, // Leave empty for no password
+		DB:        cfg.Databases.Redis.Database, // Default DB index
+		TLSConfig: &tls.Config{InsecureSkipVerify: true},
 	})
 
 	// Test connection

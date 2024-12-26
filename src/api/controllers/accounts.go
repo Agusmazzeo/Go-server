@@ -38,7 +38,7 @@ func (c *AccountsController) GetAllAccounts(ctx context.Context, token, filter s
 	if filter == "" {
 		filter = "*"
 	}
-	accs, err := c.ESCOClient.BuscarCuentas(token, filter, false)
+	accs, err := c.ESCOClient.BuscarCuentas(token, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (c *AccountsController) GetAllAccounts(ctx context.Context, token, filter s
 }
 
 func (c *AccountsController) GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error) {
-	acc, err := c.ESCOClient.BuscarCuentas(token, id, false)
+	acc, err := c.ESCOClient.BuscarCuentas(token, id)
 	if err != nil {
 		return nil, err
 	}

@@ -54,7 +54,7 @@ func (rc *ReportsController) GetReport(
 	startDate, endDate time.Time,
 	interval time.Duration,
 ) (*schemas.AccountsReports, error) {
-	accountReports, err := GenerateAccountReports(accountsStates)
+	accountReports, err := GenerateAccountReports(accountsStates, interval)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (rc *ReportsController) GetReport(
 }
 
 // GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
-func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory) (*schemas.AccountsReports, error) {
+func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCategory, interval time.Duration) (*schemas.AccountsReports, error) {
 	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
 
 	// Iterate through each category and its associated vouchers
@@ -72,7 +72,7 @@ func GenerateAccountReports(accountStateByCategory *schemas.AccountStateByCatego
 			continue
 		}
 		for _, voucher := range vouchers {
-			voucherReturn, _ := CalculateVoucherReturn(voucher)
+			voucherReturn, _ := CalculateVoucherReturn(voucher, interval)
 			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
 		}
 	}
@@ -275,14 +275,14 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, accou
 }
 
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
-func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, error) {
+func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (schemas.VoucherReturn, error) {
 	if len(voucher.Holdings) < 2 {
 		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
 	}
 
 	// Sort holdings by date
 	sortedHoldings := sortHoldingsByDate(voucher.Holdings)
-	var returnsByDateRange []schemas.ReturnByDate
+	var dailyReturns []schemas.ReturnByDate
 
 	// Iterate through each pair of consecutive holdings
 	for i := 0; i < len(sortedHoldings)-1; i++ {
@@ -309,21 +309,66 @@ func CalculateVoucherReturn(voucher schemas.Voucher) (schemas.VoucherReturn, err
 
 		returnPercentage := ((netEndValue - startingValue) / startingValue) * 100
 		// Append the return for this date range
-		returnsByDateRange = append(returnsByDateRange, schemas.ReturnByDate{
+		dailyReturns = append(dailyReturns, schemas.ReturnByDate{
 			StartDate:        startDate,
 			EndDate:          endDate,
 			ReturnPercentage: returnPercentage,
 		})
 	}
-
+	// Collapse daily returns into intervals
+	returnsByInterval := CollapseReturnsByInterval(dailyReturns, interval)
 	// Return the result
 	return schemas.VoucherReturn{
 		ID:                 voucher.ID,
 		Type:               voucher.Type,
 		Denomination:       voucher.Denomination,
 		Category:           voucher.Category,
-		ReturnsByDateRange: returnsByDateRange,
+		ReturnsByDateRange: returnsByInterval,
 	}, nil
+}
+
+func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval time.Duration) []schemas.ReturnByDate {
+	var returnsByInterval []schemas.ReturnByDate
+	var (
+		currentIntervalStart time.Time
+		currentIntervalEnd   time.Time
+		compoundReturn       float64 = 1.0
+	)
+
+	for _, dailyReturn := range dailyReturns {
+		if currentIntervalStart.IsZero() {
+			currentIntervalStart = dailyReturn.StartDate
+			currentIntervalEnd = currentIntervalStart.Add(interval)
+		}
+
+		if dailyReturn.EndDate.Before(currentIntervalEnd) {
+			// Apply compound calculation
+			compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
+		} else {
+			// Close the current interval
+			returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
+				StartDate:        currentIntervalStart,
+				EndDate:          currentIntervalEnd,
+				ReturnPercentage: (compoundReturn - 1) * 100,
+			})
+
+			// Reset for the new interval
+			currentIntervalStart = currentIntervalEnd
+			currentIntervalEnd = currentIntervalStart.Add(interval)
+			compoundReturn = 1 + (dailyReturn.ReturnPercentage / 100)
+		}
+	}
+
+	// Append the last interval
+	if !currentIntervalStart.IsZero() {
+		returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
+			StartDate:        currentIntervalStart,
+			EndDate:          currentIntervalEnd,
+			ReturnPercentage: (compoundReturn - 1) * 100,
+		})
+	}
+
+	return returnsByInterval
 }
 
 func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.DataFrame, sheetName string) (*excelize.File, error) {
