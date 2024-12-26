@@ -682,7 +682,7 @@ func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]byte, error) {
 	// Create a new PDF document with landscape orientation
 	pdf := gofpdf.New("L", "mm", "A4", "")
-	pdf.SetFont("Arial", "", 8) // Smaller font size to fit more content
+	pdf.SetFont("Arial", "", 10) // Smaller font size to fit more content
 
 	// Add a cover page with the logo and title
 	pdf.AddPage()
@@ -723,7 +723,7 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
 		pdf.Ln(4) // Smaller line spacing
 		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 3)
+		pdf.SetFont("Arial", "", 6)
 
 		// Get all rows and columns in the current sheet
 		rows, err := excelFile.GetRows(sheet)
