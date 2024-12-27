@@ -88,18 +88,18 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
-
+	_ = utils.SaveStructToJSONFile(totalHoldingsByDate, "total_holding.json")
 	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
-
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
-
+	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
 	return &schemas.AccountsReports{
 		VouchersByCategory:       &filteredVouchers,
 		VouchersReturnByCategory: &voucherReturnsByCategory,
 		TotalHoldingsByDate:      filteredTotalHoldings,
 		TotalTransactionsByDate:  totalTransactionsByDate,
 		TotalReturns:             totalReturns,
+		FinalIntervalReturn:      finalIntervalReturn,
 	}, nil
 }
 
@@ -372,6 +372,14 @@ func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (sc
 		Category:           voucher.Category,
 		ReturnsByDateRange: returnsByInterval,
 	}, nil
+}
+
+func CalculateFinalIntervalReturn(totalReturns []schemas.ReturnByDate) float64 {
+	intervalReturn := 1.0
+	for _, totalReturn := range totalReturns {
+		intervalReturn *= 1 + (totalReturn.ReturnPercentage / 100)
+	}
+	return intervalReturn
 }
 
 func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration) []schemas.ReturnByDate {

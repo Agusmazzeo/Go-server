@@ -11,6 +11,7 @@ type AccountsReports struct {
 	TotalHoldingsByDate      []Holding
 	TotalTransactionsByDate  []Transaction
 	TotalReturns             []ReturnByDate
+	FinalIntervalReturn      float64
 }
 
 type VoucherReturn struct {

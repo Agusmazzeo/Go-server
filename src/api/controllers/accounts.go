@@ -468,7 +468,7 @@ func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schem
 	totalTransactionsByDate := make(map[string]schemas.Transaction)
 
 	for _, voucher := range *state.Vouchers {
-		if voucher.Category == "MEP" {
+		if voucher.Category == "ARS" {
 			continue
 		}
 		for _, holding := range voucher.Holdings {

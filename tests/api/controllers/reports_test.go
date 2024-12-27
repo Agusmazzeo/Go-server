@@ -143,6 +143,30 @@ func compareReturnsByDateRange(t *testing.T, r1, r2 []schemas.ReturnByDate) bool
 	return true
 }
 
+func TestCalculateHoldingsReturn(t *testing.T) {
+	// Read saved response from file
+	var totalHoldingsByDate []schemas.Holding
+	err := utils.LoadStructFromJSONFile("../../test_files/controllers/reports/total_holdings_by_date.json", &totalHoldingsByDate)
+	if err != nil {
+		t.Fatalf("error loading file")
+	}
+
+	var totalTransactionsByDate []schemas.Transaction
+	err = utils.LoadStructFromJSONFile("../../test_files/controllers/reports/total_transactions_by_date.json", &totalTransactionsByDate)
+	if err != nil {
+		t.Fatalf("error loading file")
+	}
+
+	totalReturns := controllers.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour)
+
+	for _, total := range totalReturns {
+		if total.ReturnPercentage > 50 {
+			t.Errorf("expected return to not be higher than 50 but got %2.f", total.ReturnPercentage)
+		}
+	}
+
+}
+
 func TestCreateReportSchedule(t *testing.T) {
 
 	req := &schemas.CreateReportScheduleRequest{
