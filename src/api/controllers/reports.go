@@ -88,7 +88,6 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
-	_ = utils.SaveStructToJSONFile(totalHoldingsByDate, "total_holding.json")
 	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
@@ -297,7 +296,28 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 			df = *updatedDf
 		}
 	}
-
+	totalValues := make([]string, len(dates))
+	for _, totalReturn := range accountsReport.TotalReturns {
+		dateStr := totalReturn.EndDate.Format("2006-01-02")
+		// Find the index in the dates array that matches this holding's date
+		for i, date := range dateStrs {
+			if date == dateStr {
+				totalValues[i] = fmt.Sprintf("%.2f", totalReturn.ReturnPercentage)
+				break
+			}
+		}
+	}
+	for i, v := range totalValues {
+		if v == "" {
+			totalValues[i] = "-"
+		}
+	}
+	// Add the new series (column) for this voucher to the DataFrame
+	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
+	if err != nil {
+		return nil, err
+	}
+	df = *updatedDf
 	return sortDataFrameColumns(&df), nil
 }
 
@@ -400,7 +420,7 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 		// Calculate the net transactions within the date range
 		var netTransactions float64
 		for _, transaction := range transactions {
-			if transaction.Date != nil && (transaction.Date.After(startDate) && (transaction.Date.Before(endDate) || transaction.Date.Equal(endDate))) {
+			if transaction.Date != nil && transaction.Date.Equal(endDate) {
 				netTransactions += transaction.Value
 			}
 		}
@@ -789,7 +809,7 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 		pdf.AddPage()
 		pdf.SetLeftMargin(margin)
 		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 12)
+		pdf.SetFont("Arial", "", 9)
 		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
 		pdf.Ln(4) // Smaller line spacing
 		// Set font back to regular for sheet content
