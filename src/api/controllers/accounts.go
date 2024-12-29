@@ -234,7 +234,7 @@ func (c *AccountsController) parseEstadoToAccountState(accStateData *[]esco.Esta
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
-				category = "SIN CATEGORIA"
+				category = "S / C"
 			}
 			(*accStateRes.Vouchers)[accData.A] = schemas.Voucher{
 				ID:           accData.A,
@@ -294,7 +294,7 @@ func (c *AccountsController) parseBoletosToAccountState(boletos *[]esco.Boleto) 
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
-				category = "SIN CATEGORIA"
+				category = "S / C"
 			}
 			(*accStateRes.Vouchers)[id] = schemas.Voucher{
 				ID:           id,
@@ -359,7 +359,7 @@ func (c *AccountsController) parseLiquidacionesToAccountState(liquidaciones *[]e
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
-				category = "SIN CATEGORIA"
+				category = "S / C"
 			}
 			(*accStateRes.Vouchers)[id] = schemas.Voucher{
 				ID:           id,

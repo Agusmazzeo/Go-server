@@ -71,7 +71,7 @@ func GenerateAccountReports(
 
 	// Iterate through each category and its associated vouchers
 	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
-		if category == "ARS" || category == "MEP" {
+		if category == "ARS" {
 			continue
 		}
 		for _, voucher := range vouchers {
@@ -88,10 +88,10 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
-	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
+	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, []schemas.Transaction{}, interval)
+	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
-	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
 	return &schemas.AccountsReports{
 		VouchersByCategory:       &filteredVouchers,
 		VouchersReturnByCategory: &voucherReturnsByCategory,
@@ -809,11 +809,11 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 		pdf.AddPage()
 		pdf.SetLeftMargin(margin)
 		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 9)
+		pdf.SetFont("Arial", "", 10)
 		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
 		pdf.Ln(4) // Smaller line spacing
 		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 6)
+		pdf.SetFont("Arial", "", 5)
 
 		// Get all rows and columns in the current sheet
 		rows, err := excelFile.GetRows(sheet)
@@ -869,7 +869,15 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 				pdf.SetX(positionWidth)
 
 				// Write cell to the PDF with smaller row height
-				pdf.CellFormat(cellWidthToUse, 6, cell, "1", 0, "L", false, 0, "")
+				var parsedValue string
+				if sheet == "Tenencia" {
+					parsedValue = formatMonetaryValue(cell)
+				} else if sheet == "Retorno" {
+					parsedValue = formatPercentageValue(cell)
+				} else {
+					parsedValue = cell
+				}
+				pdf.CellFormat(cellWidthToUse, 6, parsedValue, "1", 0, "L", false, 0, "")
 				positionWidth += cellWidthToUse
 				columnsToSkip += int(cellWidthToUse/cellWidth) - 1
 			}
@@ -885,6 +893,32 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 	}
 
 	return buf.Bytes(), nil
+}
+
+func formatMonetaryValue(v string) string {
+	value, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return v
+	}
+	if value >= 1_000_000_000 {
+		return fmt.Sprintf("$ %.3f MM", float64(value/1_000_000_000))
+	} else if value >= 1_000_000 {
+		return fmt.Sprintf("$ %.1f M", float64(value/1_000_000))
+	} else if value >= 1_000 {
+		return fmt.Sprintf("$ %.1f K", float64(value/1_000))
+	}
+	return fmt.Sprintf("$ %s", v)
+}
+
+func formatPercentageValue(v string) string {
+	value, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return v
+	}
+	if value == 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%.2f%%", value)
 }
 
 // ==================================================================//

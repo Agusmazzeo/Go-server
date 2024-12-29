@@ -82,7 +82,7 @@
       "ID": "AL30",
       "Type": "Título Públicos / Dolar Estadounidense",
       "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
-      "Category": "BONOS HARD DOLLAR",
+      "Category": "BONOS H. D.",
       "Holdings": [
         {
           "Currency": "Dolar Estadounidense",
@@ -238,7 +238,7 @@
       "ID": "QUINQUELA P_554",
       "Type": "Fondos / Pesos",
       "Denomination": "QUINQUELA PESOS CLASE B / QUINQUELA PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
-      "Category": "MONEY MARKET",
+      "Category": "M. MARKET",
       "Holdings": [
         {
           "Currency": "Pesos",

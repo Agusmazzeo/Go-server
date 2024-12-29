@@ -88,12 +88,12 @@
         "Transactions": []
       }
     ],
-    "BONOS HARD DOLLAR": [
+    "BONOS H. D.": [
       {
         "ID": "AL30",
         "Type": "Título Públicos / Dolar Estadounidense",
         "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
-        "Category": "BONOS HARD DOLLAR",
+        "Category": "BONOS H. D.",
         "Holdings": [
           {
             "Currency": "Dolar Estadounidense",
@@ -359,12 +359,12 @@
         "Transactions": []
       }
     ],
-    "MONEY MARKET": [
+    "M. MARKET": [
       {
         "ID": "QUINQUELA A_489",
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
-        "Category": "MONEY MARKET",
+        "Category": "M. MARKET",
         "Holdings": [
           {
             "Currency": "Pesos",
@@ -447,12 +447,12 @@
         "Transactions": []
       }
     ],
-    "SIN CATEGORIA": [
+    "S / C": [
       {
         "ID": "S26L4",
         "Type": "Letes / Pesos",
         "Denomination": "9261 / LECAP VTO. 26JUL24",
-        "Category": "SIN CATEGORIA",
+        "Category": "S / C",
         "Holdings": [
           {
             "Currency": "Pesos",
@@ -538,7 +538,7 @@
         "ID": "QUINQUELA P_554",
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
-        "Category": "SIN CATEGORIA",
+        "Category": "S / C",
         "Holdings": [
           {
             "Currency": "Pesos",
@@ -1080,12 +1080,12 @@
         ]
       }
     ],
-    "BONOS HARD DOLLAR": [
+    "BONOS H. D.": [
       {
         "ID": "AL30",
         "Type": "Título Públicos / Dolar Estadounidense",
         "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
-        "Category": "BONOS HARD DOLLAR",
+        "Category": "BONOS H. D.",
         "ReturnsByDateRange": [
           {
             "StartDate": "2024-06-18T23:00:00-03:00",
@@ -1260,12 +1260,12 @@
         ]
       }
     ],
-    "MONEY MARKET": [
+    "M. MARKET": [
       {
         "ID": "QUINQUELA A_489",
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
-        "Category": "MONEY MARKET",
+        "Category": "M. MARKET",
         "ReturnsByDateRange": [
           {
             "StartDate": "2024-06-18T23:00:00-03:00",
@@ -1320,12 +1320,12 @@
         ]
       }
     ],
-    "SIN CATEGORIA": [
+    "S / C": [
       {
         "ID": "S26L4",
         "Type": "Letes / Pesos",
         "Denomination": "9261 / LECAP VTO. 26JUL24",
-        "Category": "SIN CATEGORIA",
+        "Category": "S / C",
         "ReturnsByDateRange": [
           {
             "StartDate": "2024-06-18T23:00:00-03:00",
@@ -1383,7 +1383,7 @@
         "ID": "QUINQUELA P_554",
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
-        "Category": "SIN CATEGORIA",
+        "Category": "S / C",
         "ReturnsByDateRange": [
           {
             "StartDate": "2024-06-18T23:00:00-03:00",
