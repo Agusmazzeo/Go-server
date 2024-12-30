@@ -799,7 +799,7 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 
 	// Set the page width, height, and a padding margin
 	pageWidth, _ := pdf.GetPageSize()
-	margin := 10.0
+	margin := 5.0
 	usableWidth := pageWidth - 2*margin
 
 	// Iterate through each sheet in the Excel file
@@ -813,7 +813,7 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
 		pdf.Ln(4) // Smaller line spacing
 		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 5)
+		pdf.SetFont("Arial", "", 4)
 
 		// Get all rows and columns in the current sheet
 		rows, err := excelFile.GetRows(sheet)
