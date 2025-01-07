@@ -2,6 +2,8 @@ package schemas
 
 import (
 	"time"
+
+	"github.com/go-gota/gota/dataframe"
 )
 
 type AccountsReports struct {
@@ -57,4 +59,11 @@ type ReportScheduleResponse struct {
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`
 	Active                  bool      `json:"active"`
+}
+
+type ReportDataframes struct {
+	ReportDF             *dataframe.DataFrame
+	ReportPercentageDf   *dataframe.DataFrame
+	ReturnDF             *dataframe.DataFrame
+	ReferenceVariablesDF *dataframe.DataFrame
 }

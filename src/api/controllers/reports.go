@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-gota/gota/dataframe"
@@ -31,8 +32,9 @@ type ReportsControllerI interface {
 	UpdateReportSchedule(ctx context.Context, req *schemas.UpdateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
 	DeleteReportSchedule(ctx context.Context, id uint) error
 
-	ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
-	ParseAccountsReportToPDF(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) ([]byte, error)
+	ParseAccountsReportToDataFrames(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*schemas.ReportDataframes, error)
+	ParseAccountsReportToXLSX(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) (*excelize.File, error)
+	ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error)
 	ParseAccountsReportToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	ParseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 }
@@ -137,28 +139,81 @@ func filterHoldingsByInterval(holdings []schemas.Holding, startDate, endDate tim
 	return filteredHoldings
 }
 
-func (rc *ReportsController) ParseAccountsReportToXLSX(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
-	reportDf, err := rc.ParseAccountsReportToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+func (rc *ReportsController) ParseAccountsReportToDataFrames(
+	ctx context.Context,
+	accountsReport *schemas.AccountsReports,
+	startDate, endDate time.Time,
+	interval time.Duration,
+) (*schemas.ReportDataframes, error) {
+	var reportDf *dataframe.DataFrame
+	var reportPercentageDf *dataframe.DataFrame
+	var returnsDf *dataframe.DataFrame
+	var referenceVariablesDf *dataframe.DataFrame
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	var errChan = make(chan error, 3)
+	go func() {
+		defer wg.Done()
+		var err error
+		reportDf, err = rc.ParseAccountsReportToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		reportPercentageDf = divideByTotal(reportDf)
+	}()
+
+	go func() {
+		defer wg.Done()
+		var err error
+		returnsDf, err = rc.ParseAccountsReturnToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		var err error
+		referenceVariablesDf, err = rc.ParseReferenceVariablesToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}()
+
+	wg.Wait()
+	close(errChan)
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+	return &schemas.ReportDataframes{
+		ReportDF:             reportDf,
+		ReportPercentageDf:   reportPercentageDf,
+		ReturnDF:             returnsDf,
+		ReferenceVariablesDF: referenceVariablesDf,
+	}, nil
+}
+
+func (rc *ReportsController) ParseAccountsReportToXLSX(
+	ctx context.Context,
+	dataframesAndCharts *schemas.ReportDataframes,
+) (*excelize.File, error) {
+	file, err := convertReportDataframeToExcel(nil, dataframesAndCharts.ReportDF, "Tenencia", false)
 	if err != nil {
 		return nil, err
 	}
-	returnsDf, err := rc.ParseAccountsReturnToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReportPercentageDf, "Tenencia_Porcentaje", true)
 	if err != nil {
 		return nil, err
 	}
-	referenceVariablesDf, err := rc.ParseReferenceVariablesToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReturnDF, "Retorno", false)
 	if err != nil {
 		return nil, err
 	}
-	file, err := convertReportDataframeToExcel(nil, reportDf, "Tenencia")
-	if err != nil {
-		return nil, err
-	}
-	file, err = convertReportDataframeToExcel(file, returnsDf, "Retorno")
-	if err != nil {
-		return nil, err
-	}
-	file, err = convertReportDataframeToExcel(file, referenceVariablesDf, "Referencias")
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReferenceVariablesDF, "Referencias", false)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +246,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 
 			// Initialize all rows with empty values for this voucher
 			for i := range voucherValues {
-				voucherValues[i] = "-" // Default value if no match found
+				voucherValues[i] = "0.0" // Default value if no match found
 			}
 
 			// Iterate through holdings and match the dates to fill the corresponding values
@@ -204,7 +259,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 							if holding.Value >= 1.0 {
 								voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
 							} else {
-								voucherValues[i] = "-"
+								voucherValues[i] = "0.0"
 							}
 							break
 						}
@@ -230,7 +285,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 				if totalHolding.Value >= 1.0 {
 					totalValues[i] = fmt.Sprintf("%.2f", totalHolding.Value)
 				} else {
-					totalValues[i] = "-"
+					totalValues[i] = "0.0"
 				}
 				break
 			}
@@ -238,7 +293,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 	}
 	for i, v := range totalValues {
 		if v == "" {
-			totalValues[i] = "-"
+			totalValues[i] = "0.0"
 		}
 	}
 	// Add the new series (column) for this voucher to the DataFrame
@@ -273,7 +328,7 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 
 			// Initialize all rows with empty values for this voucher
 			for i := range voucherValues {
-				voucherValues[i] = "-" // Default value if no match found
+				voucherValues[i] = "0.0" // Default value if no match found
 			}
 
 			// Iterate through vouchers return and match the dates to fill the corresponding values
@@ -309,7 +364,7 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 	}
 	for i, v := range totalValues {
 		if v == "" {
-			totalValues[i] = "-"
+			totalValues[i] = "0.0"
 		}
 	}
 	// Add the new series (column) for this voucher to the DataFrame
@@ -343,7 +398,7 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 
 			// Initialize all rows with empty values for this voucher
 			for i := range valuationValues {
-				valuationValues[i] = "-" // Default value if no match found
+				valuationValues[i] = "0.0" // Default value if no match found
 			}
 
 			dateStr := valuation.Date
@@ -367,8 +422,8 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	return sortDataFrameColumns(&df), nil
 }
 
-func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) ([]byte, error) {
-	excelFile, err := rc.ParseAccountsReportToXLSX(ctx, accountsReport, startDate, endDate, interval)
+func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
+	excelFile, err := rc.ParseAccountsReportToXLSX(ctx, dataframesAndCharts)
 	if err != nil {
 		return nil, err
 	}
@@ -486,11 +541,10 @@ func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval tim
 	return returnsByInterval
 }
 
-func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.DataFrame, sheetName string) (*excelize.File, error) {
+func convertReportDataframeToExcel(f *excelize.File, reportDf *dataframe.DataFrame, sheetName string, percentageData bool) (*excelize.File, error) {
 	// Create a new Excel file
 	var err error
 	var index int
-	f := file
 
 	if f == nil {
 		f = excelize.NewFile()
@@ -568,16 +622,42 @@ func convertReportDataframeToExcel(file *excelize.File, reportDf *dataframe.Data
 			return nil, err
 		}
 	}
-
+	numFmt := 8
+	if percentageData {
+		numFmt = 10
+	}
+	// Format cells as currency
+	cellStyle, err := f.NewStyle(&excelize.Style{
+		NumFmt: numFmt,
+	})
+	if err != nil {
+		return nil, err
+	}
 	// Now fill in the data for the rest of the rows starting from the third row
 	for rowIndex, row := range reportDf.Records()[1:] { // Skip the first row (headers)
 		for colIndex, cellValue := range row {
 			cell := fmt.Sprintf("%s%d", toAlphaString(colIndex+1), rowIndex+3) // colIndex+1 to skip DateRequested
-			err = f.SetCellValue(sheetName, cell, cellValue)
+			numCellValue, err := strconv.ParseFloat(cellValue, 64)
 			if err != nil {
+				err = f.SetCellValue(sheetName, cell, cellValue)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				err = f.SetCellValue(sheetName, cell, numCellValue)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			if err = f.SetCellStyle(sheetName, cell, cell, cellStyle); err != nil {
 				return nil, err
 			}
 		}
+	}
+
+	if err := addBarGraphFromSheet(f, sheetName); err != nil {
+		return nil, err
 	}
 
 	return f, nil
@@ -642,7 +722,7 @@ func updateDataFrame(df dataframe.DataFrame, columnName string, newValues []stri
 			// Convert string to float for addition
 			var existingFloat float64
 			var newFloat float64
-			if existingVal == "-" {
+			if existingVal == "0.0" {
 				existingFloat = 0.0
 			} else {
 				existingFloat, err = strconv.ParseFloat(existingVal, 64)
@@ -650,7 +730,7 @@ func updateDataFrame(df dataframe.DataFrame, columnName string, newValues []stri
 					return nil, err
 				}
 			}
-			if newValues[i] == "-" {
+			if newValues[i] == "0.0" {
 				newFloat = 0.0
 			} else {
 				newFloat, err = strconv.ParseFloat(newValues[i], 64)
@@ -679,6 +759,99 @@ func updateDataFrame(df dataframe.DataFrame, columnName string, newValues []stri
 	}
 
 	return &df, nil
+}
+
+// addBarGraphFromSheet adds a line graph to a new sheet based on data from an existing sheet.
+func addBarGraphFromSheet(file *excelize.File, dataSheet string) error {
+	// Read all rows from the data sheet
+	rows, err := file.GetRows(dataSheet)
+	if err != nil {
+		return fmt.Errorf("failed to read rows from sheet %s: %v", dataSheet, err)
+	}
+
+	// Ensure the sheet has at least headers and some data
+	if len(rows) < 2 {
+		return fmt.Errorf("sheet %s does not contain enough rows for a graph", dataSheet)
+	}
+
+	// Determine the range of the chart
+	startColumn := "A"
+	startRow := 3 // Data starts from the second row
+	endRow := len(rows)
+
+	// Generate ranges for chart data
+	categories := fmt.Sprintf("%s!$%s$%d:$%s$%d", dataSheet, startColumn, startRow, startColumn, endRow)
+	series := []excelize.ChartSeries{}
+	for col := 1; col < len(rows[0])-1; col++ {
+		colName, _ := excelize.ColumnNumberToName(col + 1)
+		series = append(series, excelize.ChartSeries{
+			Name:       fmt.Sprintf("%s!$%s$2", dataSheet, colName),
+			Categories: categories,
+			Values:     fmt.Sprintf("%s!$%s$%d:$%s$%d", dataSheet, colName, startRow, colName, endRow),
+		})
+	}
+
+	titleFont := excelize.Font{
+		Bold: true,
+		Size: 35,
+	}
+
+	// Create the chart
+	chart := excelize.Chart{
+		Type:   excelize.ColStacked,
+		Series: series,
+		Title: []excelize.RichTextRun{
+			{
+				Text: dataSheet,
+				Font: &titleFont,
+			},
+		},
+		Legend: excelize.ChartLegend{
+			Position:      "right",
+			ShowLegendKey: true,
+		},
+		XAxis: excelize.ChartAxis{
+			Font: excelize.Font{
+				Size: 15,
+			},
+			MajorGridLines: true,
+		},
+		YAxis: excelize.ChartAxis{
+			Font: excelize.Font{
+				Size: 15,
+			},
+			MajorGridLines: true,
+		},
+		Dimension: excelize.ChartDimension{
+			Width:  1600, // Set chart width
+			Height: 1000, // Set chart height
+		},
+		PlotArea: excelize.ChartPlotArea{
+			ShowVal: true,
+			Fill: excelize.Fill{ // Set plot area background fill
+				Type:  "solid",
+				Color: []string{"#E6F7FF"}, // Light blue background
+			},
+		},
+		Format: excelize.GraphicOptions{
+			OffsetX: 15,
+			OffsetY: 10,
+		},
+	}
+
+	// Add a new sheet for the graph
+	graphSheetName := fmt.Sprintf("%s - Barras", dataSheet)
+	graphSheetIndex, _ := file.NewSheet(graphSheetName)
+
+	// Add the chart to the new sheet
+	if err := file.AddChart(graphSheetName, "A1", &chart); err != nil {
+		return fmt.Errorf("failed to add chart to sheet %s: %v", graphSheetName, err)
+	}
+
+	// Set the new sheet as active
+	file.SetActiveSheet(graphSheetIndex)
+
+	return nil
 }
 
 func applyStylesToAllSheets(f *excelize.File) error {
@@ -882,6 +1055,7 @@ func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]
 				columnsToSkip += int(cellWidthToUse/cellWidth) - 1
 			}
 			pdf.Ln(6) // Smaller row height
+
 		}
 	}
 
@@ -916,9 +1090,38 @@ func formatPercentageValue(v string) string {
 		return v
 	}
 	if value == 0 {
-		return "-"
+		return "0.0%"
 	}
 	return fmt.Sprintf("%.2f%%", value)
+}
+
+// divideByTotal divides each column value in a dataframe by the "TOTAL" column value for that row.
+// Returns a new dataframe with percentages.
+func divideByTotal(df *dataframe.DataFrame) *dataframe.DataFrame {
+	// Apply the transformation row-wise
+	newDF := df.Rapply(func(row series.Series) series.Series {
+		// Get the total value for the current row (last column)
+		total := row.Elem(df.Ncol() - 1).Float()
+		if total == 0 {
+			return row
+		}
+		// Create a new series to store the modified row
+		newRow := make([]interface{}, row.Len())
+		newRow[0] = row.Elem(0)
+		// Divide all columns (except TOTAL) by the total value
+		for i := 1; i < df.Ncol()-1; i++ {
+			newRow[i] = (row.Elem(i).Float() / total)
+		}
+
+		// Keep the TOTAL column unchanged
+		newRow[df.Ncol()-1] = total
+
+		return series.New(newRow, series.String, row.Name)
+	})
+
+	_ = newDF.SetNames(df.Names()...)
+
+	return &newDF
 }
 
 // ==================================================================//

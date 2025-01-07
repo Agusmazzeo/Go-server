@@ -16,7 +16,7 @@
           {
             "StartDate": "2024-05-04T23:00:00-03:00",
             "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": -5.023742185166602
+            "ReturnPercentage": 39.385303010038065
           },
           {
             "StartDate": "2024-05-05T23:00:00-03:00",
@@ -96,6 +96,94 @@
         ]
       }
     ],
+    "M. MARKET": [
+      {
+        "ID": "QUINQUELA A_489",
+        "Type": "Fondos / Pesos",
+        "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
+        "Category": "M. MARKET",
+        "ReturnsByDateRange": [
+          {
+            "StartDate": "2024-05-31T23:00:00-03:00",
+            "EndDate": "2024-06-01T23:00:00-03:00",
+            "ReturnPercentage": 0
+          },
+          {
+            "StartDate": "2024-06-01T23:00:00-03:00",
+            "EndDate": "2024-06-02T23:00:00-03:00",
+            "ReturnPercentage": 0.13948229930094147
+          },
+          {
+            "StartDate": "2024-06-02T23:00:00-03:00",
+            "EndDate": "2024-06-03T23:00:00-03:00",
+            "ReturnPercentage": 1.6668800388672134
+          },
+          {
+            "StartDate": "2024-06-03T23:00:00-03:00",
+            "EndDate": "2024-06-04T23:00:00-03:00",
+            "ReturnPercentage": 0.5963911941177846
+          }
+        ]
+      },
+      {
+        "ID": "QUINQUELA P_554",
+        "Type": "Fondos / Pesos",
+        "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
+        "Category": "M. MARKET",
+        "ReturnsByDateRange": [
+          {
+            "StartDate": "2024-04-26T23:00:00-03:00",
+            "EndDate": "2024-04-27T23:00:00-03:00",
+            "ReturnPercentage": 0
+          },
+          {
+            "StartDate": "2024-04-27T23:00:00-03:00",
+            "EndDate": "2024-04-28T23:00:00-03:00",
+            "ReturnPercentage": 1.072710103347685
+          },
+          {
+            "StartDate": "2024-04-28T23:00:00-03:00",
+            "EndDate": "2024-04-29T23:00:00-03:00",
+            "ReturnPercentage": -86.64268489842462
+          },
+          {
+            "StartDate": "2024-04-29T23:00:00-03:00",
+            "EndDate": "2024-04-30T23:00:00-03:00",
+            "ReturnPercentage": 0.8642452766568942
+          },
+          {
+            "StartDate": "2024-04-30T23:00:00-03:00",
+            "EndDate": "2024-05-01T23:00:00-03:00",
+            "ReturnPercentage": -54.39989737038249
+          },
+          {
+            "StartDate": "2024-05-01T23:00:00-03:00",
+            "EndDate": "2024-05-02T23:00:00-03:00",
+            "ReturnPercentage": -79.58833966728353
+          },
+          {
+            "StartDate": "2024-05-02T23:00:00-03:00",
+            "EndDate": "2024-05-03T23:00:00-03:00",
+            "ReturnPercentage": 0.7411307377792831
+          },
+          {
+            "StartDate": "2024-05-03T23:00:00-03:00",
+            "EndDate": "2024-05-04T23:00:00-03:00",
+            "ReturnPercentage": 0.30095018738316437
+          },
+          {
+            "StartDate": "2024-05-04T23:00:00-03:00",
+            "EndDate": "2024-05-05T23:00:00-03:00",
+            "ReturnPercentage": 1.1104514330628534
+          },
+          {
+            "StartDate": "2024-05-05T23:00:00-03:00",
+            "EndDate": "2024-05-06T23:00:00-03:00",
+            "ReturnPercentage": 0.8783355432732565
+          }
+        ]
+      }
+    ],
     "MEP": [
       {
         "ID": "USD",
@@ -152,94 +240,6 @@
             "StartDate": "2024-05-05T23:00:00-03:00",
             "EndDate": "2024-05-06T23:00:00-03:00",
             "ReturnPercentage": 5.966666846282753
-          }
-        ]
-      }
-    ],
-    "M. MARKET": [
-      {
-        "ID": "QUINQUELA A_489",
-        "Type": "Fondos / Pesos",
-        "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
-        "Category": "M. MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-01T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-06-01T23:00:00-03:00",
-            "EndDate": "2024-06-02T23:00:00-03:00",
-            "ReturnPercentage": 0.13948229930094147
-          },
-          {
-            "StartDate": "2024-06-02T23:00:00-03:00",
-            "EndDate": "2024-06-03T23:00:00-03:00",
-            "ReturnPercentage": 1.6668800388672134
-          },
-          {
-            "StartDate": "2024-06-03T23:00:00-03:00",
-            "EndDate": "2024-06-04T23:00:00-03:00",
-            "ReturnPercentage": 0.5963911941177846
-          }
-        ]
-      },
-      {
-        "ID": "QUINQUELA P_554",
-        "Type": "Fondos / Pesos",
-        "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
-        "Category": "M. MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-04-26T23:00:00-03:00",
-            "EndDate": "2024-04-27T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-04-27T23:00:00-03:00",
-            "EndDate": "2024-04-28T23:00:00-03:00",
-            "ReturnPercentage": 1.072710103347685
-          },
-          {
-            "StartDate": "2024-04-28T23:00:00-03:00",
-            "EndDate": "2024-04-29T23:00:00-03:00",
-            "ReturnPercentage": 0.6697356128081422
-          },
-          {
-            "StartDate": "2024-04-29T23:00:00-03:00",
-            "EndDate": "2024-04-30T23:00:00-03:00",
-            "ReturnPercentage": 0.8642452766568942
-          },
-          {
-            "StartDate": "2024-04-30T23:00:00-03:00",
-            "EndDate": "2024-05-01T23:00:00-03:00",
-            "ReturnPercentage": 0.5404693557229612
-          },
-          {
-            "StartDate": "2024-05-01T23:00:00-03:00",
-            "EndDate": "2024-05-02T23:00:00-03:00",
-            "ReturnPercentage": 0.6714350499490873
-          },
-          {
-            "StartDate": "2024-05-02T23:00:00-03:00",
-            "EndDate": "2024-05-03T23:00:00-03:00",
-            "ReturnPercentage": 0.7411307377792831
-          },
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-04T23:00:00-03:00",
-            "ReturnPercentage": 0.30095018738316437
-          },
-          {
-            "StartDate": "2024-05-04T23:00:00-03:00",
-            "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": 1.1104514330628534
-          },
-          {
-            "StartDate": "2024-05-05T23:00:00-03:00",
-            "EndDate": "2024-05-06T23:00:00-03:00",
-            "ReturnPercentage": 0.8783355432732565
           }
         ]
       }
@@ -466,5 +466,9 @@
       }
     ]
   },
-  "ReferenceVariables": null
+  "ReferenceVariables": null,
+  "TotalHoldingsByDate": [],
+  "TotalTransactionsByDate": [],
+  "TotalReturns": null,
+  "FinalIntervalReturn": 1
 }

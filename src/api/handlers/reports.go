@@ -166,10 +166,16 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dataframes, err := h.ReportsController.ParseAccountsReportToDataFrames(ctx, accountsReports, startDate, endDate, interval.ToDuration())
+	if err != nil {
+		h.Logger.Warning(err)
+		h.HandleErrors(w, err)
+		return
+	}
 	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 	if format == "XLSX" {
 
-		xlsxFile, err := h.ReportsController.ParseAccountsReportToXLSX(ctx, accountsReports, startDate, endDate, interval.ToDuration())
+		xlsxFile, err := h.ReportsController.ParseAccountsReportToXLSX(ctx, dataframes)
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
@@ -184,7 +190,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		// Set response headers to download the file
 		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
 	} else {
-		pdfData, err := h.ReportsController.ParseAccountsReportToPDF(ctx, accountsReports, startDate, endDate, interval.ToDuration())
+		pdfData, err := h.ReportsController.ParseAccountsReportToPDF(ctx, dataframes)
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
