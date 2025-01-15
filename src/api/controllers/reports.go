@@ -3,12 +3,10 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
-	"server/src/models"
 	"server/src/schemas"
 	"server/src/utils"
 	"sort"
@@ -201,19 +199,19 @@ func (rc *ReportsController) ParseAccountsReportToXLSX(
 	ctx context.Context,
 	dataframesAndCharts *schemas.ReportDataframes,
 ) (*excelize.File, error) {
-	file, err := convertReportDataframeToExcel(nil, dataframesAndCharts.ReportDF, "Tenencia", false)
+	file, err := convertReportDataframeToExcel(nil, dataframesAndCharts.ReportDF, "Tenencia", false, true, true)
 	if err != nil {
 		return nil, err
 	}
-	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReportPercentageDf, "Tenencia_Porcentaje", true)
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReportPercentageDf, "Tenencia_Porcentaje", true, true, false)
 	if err != nil {
 		return nil, err
 	}
-	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReturnDF, "Retorno", false)
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReturnDF, "Retorno", false, true, false)
 	if err != nil {
 		return nil, err
 	}
-	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReferenceVariablesDF, "Referencias", false)
+	file, err = convertReportDataframeToExcel(file, dataframesAndCharts.ReferenceVariablesDF, "Referencias", false, true, false)
 	if err != nil {
 		return nil, err
 	}
@@ -469,6 +467,9 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 
 		startDate := *startingHolding.DateRequested
 		endDate := *endingHolding.DateRequested
+		if endDate.Sub(startDate) > 24*time.Hour {
+			continue
+		}
 		startingValue := startingHolding.Value
 		endingValue := endingHolding.Value
 
@@ -541,7 +542,14 @@ func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval tim
 	return returnsByInterval
 }
 
-func convertReportDataframeToExcel(f *excelize.File, reportDf *dataframe.DataFrame, sheetName string, percentageData bool) (*excelize.File, error) {
+func convertReportDataframeToExcel(
+	f *excelize.File,
+	reportDf *dataframe.DataFrame,
+	sheetName string,
+	percentageData bool,
+	includeBarGraph bool,
+	includePieGraph bool,
+) (*excelize.File, error) {
 	// Create a new Excel file
 	var err error
 	var index int
@@ -655,9 +663,16 @@ func convertReportDataframeToExcel(f *excelize.File, reportDf *dataframe.DataFra
 			}
 		}
 	}
+	if includeBarGraph {
+		if err := addBarGraphFromSheet(f, sheetName); err != nil {
+			return nil, err
+		}
+	}
 
-	if err := addBarGraphFromSheet(f, sheetName); err != nil {
-		return nil, err
+	if includePieGraph {
+		if err := addPieChartFromLastRow(f, sheetName); err != nil {
+			return nil, err
+		}
 	}
 
 	return f, nil
@@ -759,99 +774,6 @@ func updateDataFrame(df dataframe.DataFrame, columnName string, newValues []stri
 	}
 
 	return &df, nil
-}
-
-// addBarGraphFromSheet adds a line graph to a new sheet based on data from an existing sheet.
-func addBarGraphFromSheet(file *excelize.File, dataSheet string) error {
-	// Read all rows from the data sheet
-	rows, err := file.GetRows(dataSheet)
-	if err != nil {
-		return fmt.Errorf("failed to read rows from sheet %s: %v", dataSheet, err)
-	}
-
-	// Ensure the sheet has at least headers and some data
-	if len(rows) < 2 {
-		return fmt.Errorf("sheet %s does not contain enough rows for a graph", dataSheet)
-	}
-
-	// Determine the range of the chart
-	startColumn := "A"
-	startRow := 3 // Data starts from the second row
-	endRow := len(rows)
-
-	// Generate ranges for chart data
-	categories := fmt.Sprintf("%s!$%s$%d:$%s$%d", dataSheet, startColumn, startRow, startColumn, endRow)
-	series := []excelize.ChartSeries{}
-	for col := 1; col < len(rows[0])-1; col++ {
-		colName, _ := excelize.ColumnNumberToName(col + 1)
-		series = append(series, excelize.ChartSeries{
-			Name:       fmt.Sprintf("%s!$%s$2", dataSheet, colName),
-			Categories: categories,
-			Values:     fmt.Sprintf("%s!$%s$%d:$%s$%d", dataSheet, colName, startRow, colName, endRow),
-		})
-	}
-
-	titleFont := excelize.Font{
-		Bold: true,
-		Size: 35,
-	}
-
-	// Create the chart
-	chart := excelize.Chart{
-		Type:   excelize.ColStacked,
-		Series: series,
-		Title: []excelize.RichTextRun{
-			{
-				Text: dataSheet,
-				Font: &titleFont,
-			},
-		},
-		Legend: excelize.ChartLegend{
-			Position:      "right",
-			ShowLegendKey: true,
-		},
-		XAxis: excelize.ChartAxis{
-			Font: excelize.Font{
-				Size: 15,
-			},
-			MajorGridLines: true,
-		},
-		YAxis: excelize.ChartAxis{
-			Font: excelize.Font{
-				Size: 15,
-			},
-			MajorGridLines: true,
-		},
-		Dimension: excelize.ChartDimension{
-			Width:  1600, // Set chart width
-			Height: 1000, // Set chart height
-		},
-		PlotArea: excelize.ChartPlotArea{
-			ShowVal: true,
-			Fill: excelize.Fill{ // Set plot area background fill
-				Type:  "solid",
-				Color: []string{"#E6F7FF"}, // Light blue background
-			},
-		},
-		Format: excelize.GraphicOptions{
-			OffsetX: 15,
-			OffsetY: 10,
-		},
-	}
-
-	// Add a new sheet for the graph
-	graphSheetName := fmt.Sprintf("%s - Barras", dataSheet)
-	graphSheetIndex, _ := file.NewSheet(graphSheetName)
-
-	// Add the chart to the new sheet
-	if err := file.AddChart(graphSheetName, "A1", &chart); err != nil {
-		return fmt.Errorf("failed to add chart to sheet %s: %v", graphSheetName, err)
-	}
-
-	// Set the new sheet as active
-	file.SetActiveSheet(graphSheetIndex)
-
-	return nil
 }
 
 func applyStylesToAllSheets(f *excelize.File) error {
@@ -1122,131 +1044,4 @@ func divideByTotal(df *dataframe.DataFrame) *dataframe.DataFrame {
 	_ = newDF.SetNames(df.Names()...)
 
 	return &newDF
-}
-
-// ==================================================================//
-// GetAllReportSchedules loads all report schedules and schedules them
-func (rc *ReportsController) GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error) {
-	var reportSchedules []*models.ReportSchedule
-	if err := rc.DB.WithContext(ctx).Find(&reportSchedules).Error; err != nil {
-		return nil, err
-	}
-
-	var responses []*schemas.ReportScheduleResponse
-	for _, rs := range reportSchedules {
-		responses = append(responses, &schemas.ReportScheduleResponse{
-			ID:                      rs.ID,
-			SenderID:                rs.SenderID,
-			RecipientOrganizationID: rs.RecipientOrganizationID,
-			ReportTemplateID:        rs.ReportTemplateID,
-			CronTime:                rs.CronTime,
-			LastSentAt:              rs.LastSentAt,
-			CreatedAt:               rs.CreatedAt,
-			UpdatedAt:               rs.UpdatedAt,
-			Active:                  rs.Active,
-		})
-	}
-
-	return responses, nil
-}
-
-// GetReportScheduleByID loads a report schedule by ID and schedules it
-func (rc *ReportsController) GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error) {
-	var reportSchedule models.ReportSchedule
-	if err := rc.DB.WithContext(ctx).First(&reportSchedule, "id = ?", ID).Error; err != nil {
-		return nil, err
-	}
-
-	response := &schemas.ReportScheduleResponse{
-		ID:                      reportSchedule.ID,
-		SenderID:                reportSchedule.SenderID,
-		RecipientOrganizationID: reportSchedule.RecipientOrganizationID,
-		ReportTemplateID:        reportSchedule.ReportTemplateID,
-		CronTime:                reportSchedule.CronTime,
-		LastSentAt:              reportSchedule.LastSentAt,
-		CreatedAt:               reportSchedule.CreatedAt,
-		UpdatedAt:               reportSchedule.UpdatedAt,
-		Active:                  reportSchedule.Active,
-	}
-
-	return response, nil
-}
-
-func (rc *ReportsController) CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error) {
-	reportSchedule := models.ReportSchedule{
-		SenderID:                req.SenderID,
-		RecipientOrganizationID: req.RecipientOrganizationID,
-		ReportTemplateID:        req.ReportTemplateID,
-		CronTime:                req.CronTime,
-	}
-
-	if err := rc.DB.WithContext(ctx).Create(&reportSchedule).Error; err != nil {
-		return nil, err
-	}
-
-	response := &schemas.ReportScheduleResponse{
-		ID:                      reportSchedule.ID,
-		SenderID:                reportSchedule.SenderID,
-		RecipientOrganizationID: reportSchedule.RecipientOrganizationID,
-		ReportTemplateID:        reportSchedule.ReportTemplateID,
-		CronTime:                reportSchedule.CronTime,
-		LastSentAt:              reportSchedule.LastSentAt,
-		CreatedAt:               reportSchedule.CreatedAt,
-		UpdatedAt:               reportSchedule.UpdatedAt,
-		Active:                  reportSchedule.Active,
-	}
-
-	return response, nil
-}
-
-func (rc *ReportsController) UpdateReportSchedule(ctx context.Context, req *schemas.UpdateReportScheduleRequest) (*schemas.ReportScheduleResponse, error) {
-	var reportSchedule models.ReportSchedule
-	if err := rc.DB.WithContext(ctx).First(&reportSchedule, "id = ?", req.ID).Error; err != nil {
-		return nil, err
-	}
-
-	// Update fields only if they are provided
-	if req.SenderID != nil {
-		reportSchedule.SenderID = *req.SenderID
-	}
-	if req.RecipientOrganizationID != nil {
-		reportSchedule.RecipientOrganizationID = *req.RecipientOrganizationID
-	}
-	if req.ReportTemplateID != nil {
-		reportSchedule.ReportTemplateID = *req.ReportTemplateID
-	}
-	if req.CronTime != nil {
-		reportSchedule.CronTime = *req.CronTime
-	}
-	if req.Active != nil {
-		reportSchedule.Active = *req.Active
-	}
-
-	if err := rc.DB.WithContext(ctx).Save(&reportSchedule).Error; err != nil {
-		return nil, err
-	}
-
-	response := &schemas.ReportScheduleResponse{
-		ID:                      reportSchedule.ID,
-		SenderID:                reportSchedule.SenderID,
-		RecipientOrganizationID: reportSchedule.RecipientOrganizationID,
-		ReportTemplateID:        reportSchedule.ReportTemplateID,
-		CronTime:                reportSchedule.CronTime,
-		LastSentAt:              reportSchedule.LastSentAt,
-		CreatedAt:               reportSchedule.CreatedAt,
-		UpdatedAt:               reportSchedule.UpdatedAt,
-		Active:                  reportSchedule.Active,
-	}
-
-	return response, nil
-}
-
-func (rc *ReportsController) DeleteReportSchedule(ctx context.Context, id uint) error {
-	if err := rc.DB.WithContext(ctx).Delete(&models.ReportSchedule{}, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return gorm.ErrRecordNotFound
-		}
-		return err
-	}
-	return nil
 }
