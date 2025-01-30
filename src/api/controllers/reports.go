@@ -3,9 +3,7 @@ package controllers
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
-	"log"
 	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
@@ -21,7 +19,6 @@ import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
-	"github.com/go-echarts/snapshot-chromedp/render"
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
 	"github.com/jung-kurt/gofpdf"
@@ -494,12 +491,6 @@ func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.Dat
 		bar.AddSeries(asset, data)
 	}
 
-	// Save the chart as an image
-	imagePath := fmt.Sprintf("%s_bar.png", name)
-	err := render.MakeChartSnapshot(bar.RenderContent(), imagePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to save bar graph image: %w", err)
-	}
 	baseDir, _ := os.Getwd()
 	// Load HTML template
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
@@ -510,8 +501,8 @@ func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.Dat
 	// Render HTML embedding the chart image
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-		"Title":       fmt.Sprintf("Bar Graph: %s", name),
-		"ImageBase64": encodeImageToBase64(imagePath),
+		"Title": fmt.Sprintf("Bar Graph: %s", name),
+		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
@@ -551,12 +542,6 @@ func (rc *ReportsController) generatePieChartHTMLForDataframes(dataframesAndChar
 		)
 		pie.AddSeries("Data", items)
 
-		// Save the pie chart as an image
-		imagePath := fmt.Sprintf("%s_pie.png", name)
-		err := render.MakeChartSnapshot(pie.RenderContent(), imagePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save pie chart for %s: %w", name, err)
-		}
 		baseDir, _ := os.Getwd()
 		// Load HTML template
 		tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
@@ -566,8 +551,8 @@ func (rc *ReportsController) generatePieChartHTMLForDataframes(dataframesAndChar
 
 		var htmlBuffer bytes.Buffer
 		err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-			"Title":       fmt.Sprintf("Pie Chart: %s", name),
-			"ImageBase64": encodeImageToBase64(imagePath),
+			"Title": fmt.Sprintf("Pie Chart: %s", name),
+			"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to render pie chart HTML for %s: %w", name, err)
@@ -577,14 +562,6 @@ func (rc *ReportsController) generatePieChartHTMLForDataframes(dataframesAndChar
 	}
 
 	return htmlContents, nil
-}
-
-func encodeImageToBase64(filePath string) string {
-	imageData, err := os.ReadFile(filePath)
-	if err != nil {
-		log.Fatalf("Failed to read image file: %v", err)
-	}
-	return base64.StdEncoding.EncodeToString(imageData)
 }
 
 func generatePDF(htmlContents []string) (*bytes.Buffer, error) {
