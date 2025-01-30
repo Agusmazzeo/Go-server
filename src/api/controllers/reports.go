@@ -3,7 +3,9 @@ package controllers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"log"
 	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
@@ -13,8 +15,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/go-echarts/snapshot-chromedp/render"
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
 	"github.com/jung-kurt/gofpdf"
@@ -420,13 +427,226 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	return sortDataFrameColumns(&df), nil
 }
 
+//	func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
+//		excelFile, err := rc.ParseAccountsReportToXLSX(ctx, dataframesAndCharts)
+//		if err != nil {
+//			return nil, err
+//		}
+//		logoPath := os.Getenv("LOGO_PATH")
+//		return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", logoPath)
+//	}
+//
+// ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
 func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
-	excelFile, err := rc.ParseAccountsReportToXLSX(ctx, dataframesAndCharts)
+	var htmlContents []string
+
+	// Generate bar graphs for each dataframe
+	for name, df := range map[string]*dataframe.DataFrame{
+		"ReportDF":             dataframesAndCharts.ReportDF,
+		"ReportPercentageDf":   dataframesAndCharts.ReportPercentageDf,
+		"ReturnDF":             dataframesAndCharts.ReturnDF,
+		"ReferenceVariablesDF": dataframesAndCharts.ReferenceVariablesDF,
+	} {
+		if df == nil {
+			continue
+		}
+
+		// Generate bar graph and embed in HTML
+		htmlContent, err := rc.generateBarGraphHTML(name, df)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate bar graph for %s: %w", name, err)
+		}
+		htmlContents = append(htmlContents, htmlContent)
+	}
+
+	// Generate a pie chart for the last date range
+	pieChartHTMLs, err := rc.generatePieChartHTMLForDataframes(dataframesAndCharts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate pie chart: %w", err)
+	}
+	htmlContents = append(htmlContents, pieChartHTMLs...)
+
+	// Convert all HTML content into a PDF
+	pdfBuffer, err := generatePDF(htmlContents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	return pdfBuffer.Bytes(), nil
+}
+
+func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.DataFrame) (string, error) {
+	// Create a bar chart
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithAnimation(false),
+	)
+
+	// Extract labels (dates) and data
+	labels := df.Col("DateRequested").Records()
+	bar.SetXAxis(labels)
+
+	for _, asset := range df.Names()[1:] { // Skip "Date"
+		data := make([]opts.BarData, 0)
+		for _, value := range df.Col(asset).Records() {
+			data = append(data, opts.BarData{Value: value})
+		}
+		bar.AddSeries(asset, data)
+	}
+
+	// Save the chart as an image
+	imagePath := fmt.Sprintf("%s_bar.png", name)
+	err := render.MakeChartSnapshot(bar.RenderContent(), imagePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to save bar graph image: %w", err)
+	}
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load bar graph template: %w", err)
+	}
+
+	// Render HTML embedding the chart image
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title":       fmt.Sprintf("Bar Graph: %s", name),
+		"ImageBase64": encodeImageToBase64(imagePath),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func (rc *ReportsController) generatePieChartHTMLForDataframes(dataframesAndCharts *schemas.ReportDataframes) ([]string, error) {
+	var htmlContents []string
+
+	for name, df := range map[string]*dataframe.DataFrame{
+		"ReportDF":             dataframesAndCharts.ReportDF,
+		"ReportPercentageDf":   dataframesAndCharts.ReportPercentageDf,
+		"ReturnDF":             dataframesAndCharts.ReturnDF,
+		"ReferenceVariablesDF": dataframesAndCharts.ReferenceVariablesDF,
+	} {
+		if df == nil || df.Nrow() == 0 {
+			continue
+		}
+
+		// Extract the last row for the pie chart
+		lastRowIndex := df.Nrow() - 1
+		items := []opts.PieData{}
+		for colIndex, colName := range df.Names() { // Skip the "Date" column
+			if colIndex == 0 {
+				continue
+			}
+			value := df.Elem(lastRowIndex, colIndex).Float()
+			items = append(items, opts.PieData{Name: colName, Value: value})
+		}
+
+		// Create the pie chart
+		pie := charts.NewPie()
+		pie.SetGlobalOptions(
+			charts.WithAnimation(false),
+		)
+		pie.AddSeries("Data", items)
+
+		// Save the pie chart as an image
+		imagePath := fmt.Sprintf("%s_pie.png", name)
+		err := render.MakeChartSnapshot(pie.RenderContent(), imagePath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save pie chart for %s: %w", name, err)
+		}
+		baseDir, _ := os.Getwd()
+		// Load HTML template
+		tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load pie chart template: %w", err)
+		}
+
+		var htmlBuffer bytes.Buffer
+		err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+			"Title":       fmt.Sprintf("Pie Chart: %s", name),
+			"ImageBase64": encodeImageToBase64(imagePath),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to render pie chart HTML for %s: %w", name, err)
+		}
+
+		htmlContents = append(htmlContents, htmlBuffer.String())
+	}
+
+	return htmlContents, nil
+}
+
+func encodeImageToBase64(filePath string) string {
+	imageData, err := os.ReadFile(filePath)
+	if err != nil {
+		log.Fatalf("Failed to read image file: %v", err)
+	}
+	return base64.StdEncoding.EncodeToString(imageData)
+}
+
+func generatePDF(htmlContents []string) (*bytes.Buffer, error) {
+	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
 		return nil, err
 	}
-	logoPath := os.Getenv("LOGO_PATH")
-	return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", logoPath)
+	html := joinHTMLPages(htmlContents)
+	saveHTMLToFile(html, "test.html")
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
+	pdfg.AddPage(page)
+
+	pdfg.Dpi.Set(300)
+	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+
+	err = pdfg.Create()
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewBuffer(pdfg.Bytes()), nil
+}
+
+func saveHTMLToFile(htmlContent, filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create HTML file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(htmlContent)
+	if err != nil {
+		return fmt.Errorf("failed to write HTML content to file: %w", err)
+	}
+
+	return nil
+}
+
+func joinHTMLPages(htmlContents []string) string {
+	// Define the CSS to enforce page breaks between sections
+	pageBreakCSS := `<style>
+		.page-break { page-break-before: always; }
+	</style>`
+
+	// Start building the final HTML document
+	var htmlBuilder bytes.Buffer
+	htmlBuilder.WriteString("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Report</title>")
+	htmlBuilder.WriteString(pageBreakCSS) // Add CSS styling for page breaks
+	htmlBuilder.WriteString("</head><body>")
+
+	// Append each HTML content with a page break
+	for i, html := range htmlContents {
+		htmlBuilder.WriteString(html)
+		if i < len(htmlContents)-1 {
+			htmlBuilder.WriteString("<div class='page-break'></div>") // Add page break between sections
+		}
+	}
+
+	htmlBuilder.WriteString("</body></html>")
+
+	return htmlBuilder.String()
 }
 
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
