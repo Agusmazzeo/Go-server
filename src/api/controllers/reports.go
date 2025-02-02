@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/schemas"
@@ -19,9 +20,9 @@ import (
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/go-echarts/go-echarts/v2/types"
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
-	"github.com/jung-kurt/gofpdf"
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
 )
@@ -424,44 +425,46 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	return sortDataFrameColumns(&df), nil
 }
 
-//	func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
-//		excelFile, err := rc.ParseAccountsReportToXLSX(ctx, dataframesAndCharts)
-//		if err != nil {
-//			return nil, err
-//		}
-//		logoPath := os.Getenv("LOGO_PATH")
-//		return ParseExcelToPDFBuffer(excelFile, "Reporte Tenencia y Rendimientos", logoPath)
-//	}
-//
+type ReportConfig struct {
+	df        *dataframe.DataFrame
+	graphType string
+	onlyTotal bool
+}
+
 // ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
 func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
 	var htmlContents []string
 
 	// Generate bar graphs for each dataframe
-	for name, df := range map[string]*dataframe.DataFrame{
-		"ReportDF":             dataframesAndCharts.ReportDF,
-		"ReportPercentageDf":   dataframesAndCharts.ReportPercentageDf,
-		"ReturnDF":             dataframesAndCharts.ReturnDF,
-		"ReferenceVariablesDF": dataframesAndCharts.ReferenceVariablesDF,
+	for name, report := range map[string]*ReportConfig{
+		"Tenencia":                {df: dataframesAndCharts.ReportDF, onlyTotal: false, graphType: "line"},
+		"Tenencia Total":          {df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line"},
+		"Porcentaje Tenencia":     {df: dataframesAndCharts.ReportPercentageDf, graphType: "pie"},
+		"Retorno":                 {df: dataframesAndCharts.ReturnDF, onlyTotal: true, graphType: "line"},
+		"Variables de Referencia": {df: dataframesAndCharts.ReferenceVariablesDF, graphType: "line"},
 	} {
-		if df == nil {
+		if report.df == nil {
 			continue
 		}
+		var htmlContent string
+		var err error
 
-		// Generate bar graph and embed in HTML
-		htmlContent, err := rc.generateBarGraphHTML(name, df)
+		htmlContent, err = getTableHTML(report.df)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate bar graph for %s: %w", name, err)
+			return nil, fmt.Errorf("failed to generate table for %s: %w", name, err)
+		}
+		htmlContents = append(htmlContents, htmlContent)
+		// Generate bar graph and embed in HTML
+		if report.graphType == "line" {
+			htmlContent, err = rc.generateLineGraphHTML(name, report)
+		} else if report.graphType == "pie" {
+			htmlContent, err = rc.generatePieChartHTML(name, report)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate graph for %s: %w", name, err)
 		}
 		htmlContents = append(htmlContents, htmlContent)
 	}
-
-	// Generate a pie chart for the last date range
-	pieChartHTMLs, err := rc.generatePieChartHTMLForDataframes(dataframesAndCharts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate pie chart: %w", err)
-	}
-	htmlContents = append(htmlContents, pieChartHTMLs...)
 
 	// Convert all HTML content into a PDF
 	pdfBuffer, err := generatePDF(htmlContents)
@@ -472,25 +475,48 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 	return pdfBuffer.Bytes(), nil
 }
 
-func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.DataFrame) (string, error) {
+func (rc *ReportsController) generateLineGraphHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
 	// Create a bar chart
-	bar := charts.NewBar()
-	bar.SetGlobalOptions(
+	line := charts.NewLine()
+	line.SetGlobalOptions(
 		charts.WithAnimation(false),
+		charts.WithYAxisOpts(opts.YAxis{
+			SplitLine: &opts.SplitLine{
+				Show: opts.Bool(true),
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
 	)
 
 	// Extract labels (dates) and data
 	labels := df.Col("DateRequested").Records()
-	bar.SetXAxis(labels)
+	line.SetXAxis(labels)
 
-	for _, asset := range df.Names()[1:] { // Skip "Date"
-		data := make([]opts.BarData, 0)
-		for _, value := range df.Col(asset).Records() {
-			data = append(data, opts.BarData{Value: value})
+	for _, asset := range df.Names()[1:] {
+		if report.onlyTotal && asset != "TOTAL" || !report.onlyTotal && asset == "TOTAL" {
+			continue
 		}
-		bar.AddSeries(asset, data)
+		data := make([]opts.LineData, 0)
+		for _, value := range df.Col(asset).Records() {
+			v, _ := strconv.ParseFloat(value, 32)
+			data = append(data, opts.LineData{Value: int(v)})
+		}
+		line.AddSeries(asset, data,
+			charts.WithLabelOpts(opts.Label{
+				Show: opts.Bool(true),
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Opacity: 0.2,
+			}),
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+		)
 	}
-
 	baseDir, _ := os.Getwd()
 	// Load HTML template
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
@@ -501,8 +527,8 @@ func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.Dat
 	// Render HTML embedding the chart image
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-		"Title": fmt.Sprintf("Bar Graph: %s", name),
-		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(line.RenderContent()), "let ", "var "),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
@@ -511,57 +537,139 @@ func (rc *ReportsController) generateBarGraphHTML(name string, df *dataframe.Dat
 	return htmlBuffer.String(), nil
 }
 
-func (rc *ReportsController) generatePieChartHTMLForDataframes(dataframesAndCharts *schemas.ReportDataframes) ([]string, error) {
-	var htmlContents []string
+func (rc *ReportsController) generatePieChartHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
 
-	for name, df := range map[string]*dataframe.DataFrame{
-		"ReportDF":             dataframesAndCharts.ReportDF,
-		"ReportPercentageDf":   dataframesAndCharts.ReportPercentageDf,
-		"ReturnDF":             dataframesAndCharts.ReturnDF,
-		"ReferenceVariablesDF": dataframesAndCharts.ReferenceVariablesDF,
-	} {
-		if df == nil || df.Nrow() == 0 {
+	// Create the pie chart
+	pie := charts.NewPie()
+	show := true
+	pie.SetGlobalOptions(
+		charts.WithAnimation(false),
+		charts.WithLegendOpts(opts.Legend{Show: types.Bool(&show), Left: "center"}),
+		charts.WithTooltipOpts(opts.Tooltip{Show: types.Bool(&show)}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
+	)
+
+	// Extract the last row for the pie chart
+	lastRowIndex := df.Nrow() - 1
+	items := []opts.PieData{}
+	for colIndex, colName := range df.Names() {
+		if colName == "DateRequested" || colName == "TOTAL" {
+			// Skip Date Column
 			continue
 		}
-
-		// Extract the last row for the pie chart
-		lastRowIndex := df.Nrow() - 1
-		items := []opts.PieData{}
-		for colIndex, colName := range df.Names() { // Skip the "Date" column
-			if colIndex == 0 {
-				continue
-			}
-			value := df.Elem(lastRowIndex, colIndex).Float()
-			items = append(items, opts.PieData{Name: colName, Value: value})
-		}
-
-		// Create the pie chart
-		pie := charts.NewPie()
-		pie.SetGlobalOptions(
-			charts.WithAnimation(false),
-		)
-		pie.AddSeries("Data", items)
-
-		baseDir, _ := os.Getwd()
-		// Load HTML template
-		tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
-		if err != nil {
-			return nil, fmt.Errorf("failed to load pie chart template: %w", err)
-		}
-
-		var htmlBuffer bytes.Buffer
-		err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-			"Title": fmt.Sprintf("Pie Chart: %s", name),
-			"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to render pie chart HTML for %s: %w", name, err)
-		}
-
-		htmlContents = append(htmlContents, htmlBuffer.String())
+		value := df.Elem(lastRowIndex, colIndex).Float()
+		items = append(items, opts.PieData{Name: colName, Value: value})
 	}
 
-	return htmlContents, nil
+	pie.AddSeries("Data", items).SetSeriesOptions(
+		charts.WithLabelOpts(opts.Label{
+			Position: "top",
+		}),
+	)
+
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load pie chart template: %w", err)
+	}
+
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render pie chart HTML for %s: %w", name, err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+// getReportCoverHTML reads the cover template and injects the title, subtitle, and image path
+func getReportCoverHTML(title, subtitle, imagePath string) (string, error) {
+	// Get the working directory
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Define the template path
+	templatePath := filepath.Join(baseDir, "templates", "cover.html")
+
+	// Read and parse the template file
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load cover page template: %w", err)
+	}
+
+	// Define template data
+	data := map[string]string{
+		"Title":     title,
+		"Subtitle":  subtitle,
+		"ImagePath": imagePath,
+	}
+
+	// Execute the template with provided data
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to render cover page HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func getTableHTML(df *dataframe.DataFrame) (string, error) {
+	if df == nil || df.Nrow() == 0 {
+		return "", fmt.Errorf("dataframe is empty or nil")
+	}
+
+	// Get the working directory
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Define the template path
+	templatePath := filepath.Join(baseDir, "templates", "table.html")
+
+	// Parse the HTML template file
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load table template: %w", err)
+	}
+
+	// Extract headers and rows from dataframe
+	headers := df.Names()
+	rows := make([][]interface{}, df.Nrow())
+
+	for i := 0; i < df.Nrow(); i++ {
+		row := make([]interface{}, len(headers))
+		for j, _ := range headers {
+			row[j] = df.Elem(i, j).String()
+		}
+		rows[i] = row
+	}
+
+	// Define the template data
+	data := map[string]interface{}{
+		"Headers": headers,
+		"Rows":    rows,
+	}
+
+	// Execute the template with the data
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to render table HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
 }
 
 func generatePDF(htmlContents []string) (*bytes.Buffer, error) {
@@ -569,12 +677,23 @@ func generatePDF(htmlContents []string) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	html := joinHTMLPages(htmlContents)
-	saveHTMLToFile(html, "test.html")
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Define the template path
+	imagePath := filepath.Join(baseDir, "assets", "criteria_logo.png")
+	cover, err := getReportCoverHTML("Reporte de Rendimientos", "Criteria 2025", imagePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cover: %w", err)
+	}
+	html := joinHTMLPages(append([]string{cover}, htmlContents...))
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
+	page.EnableLocalFileAccess.Set(true)
+
 	pdfg.AddPage(page)
 
-	pdfg.Dpi.Set(300)
 	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
 	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
 
@@ -1059,133 +1178,6 @@ func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 		return holdings[i].DateRequested.Before(*holdings[j].DateRequested)
 	})
 	return holdings
-}
-
-func ParseExcelToPDFBuffer(excelFile *excelize.File, title, logoPath string) ([]byte, error) {
-	// Create a new PDF document with landscape orientation
-	pdf := gofpdf.New("L", "mm", "A4", "")
-	pdf.SetFont("Arial", "", 10) // Smaller font size to fit more content
-
-	// Add a cover page with the logo and title
-	pdf.AddPage()
-
-	// Add logo
-	if logoPath != "" {
-		// Set larger dimensions for the logo
-		imageWidth := 180.0
-		imageHeight := 50.0
-		pageWidth, pageHeight := pdf.GetPageSize()
-
-		// Center the image horizontally
-		imageX := (pageWidth - imageWidth) / 2
-		imageY := (pageHeight / 2) - (imageHeight / 2)
-
-		pdf.ImageOptions(logoPath, imageX, imageY, imageWidth, imageHeight, false, gofpdf.ImageOptions{ImageType: "PNG"}, 0, "")
-	}
-
-	pdf.Ln(20) // Space after the logo
-
-	pdf.SetFont("Arial", "B", 16)
-	pdf.CellFormat(0, 20, title, "", 1, "C", false, 0, "")
-	pdf.Ln(10)
-
-	// Set the page width, height, and a padding margin
-	pageWidth, _ := pdf.GetPageSize()
-	margin := 5.0
-	usableWidth := pageWidth - 2*margin
-
-	// Iterate through each sheet in the Excel file
-	sheets := excelFile.GetSheetList()
-	for _, sheet := range sheets {
-		// Add a new page for each sheet
-		pdf.AddPage()
-		pdf.SetLeftMargin(margin)
-		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 10)
-		pdf.CellFormat(0, 15, sheet, "", 1, "C", false, 0, "")
-		pdf.Ln(4) // Smaller line spacing
-		// Set font back to regular for sheet content
-		pdf.SetFont("Arial", "", 4)
-
-		// Get all rows and columns in the current sheet
-		rows, err := excelFile.GetRows(sheet)
-		if err != nil {
-			return nil, err
-		}
-
-		// Determine the number of columns in the widest row
-		maxCols := 0
-		for _, row := range rows {
-			if len(row) > maxCols {
-				maxCols = len(row)
-			}
-		}
-
-		// Calculate dynamic cell width based on the max number of columns
-		cellWidth := usableWidth / float64(maxCols)
-
-		// Get merged cells for the sheet
-		mergedCells, err := excelFile.GetMergeCells(sheet)
-		if err != nil {
-			return nil, err
-		}
-		mergedCellWidths := map[string]float64{}
-		mergedCellsStart := map[string]int{}
-
-		// Populate merged cell widths based on the number of columns spanned
-		for _, mc := range mergedCells {
-			startCol, _, _ := excelize.CellNameToCoordinates(mc.GetStartAxis())
-			endCol, _, _ := excelize.CellNameToCoordinates(mc.GetEndAxis())
-			numCols := endCol - startCol + 1
-			mergedCellWidths[mc.GetStartAxis()] = cellWidth * float64(numCols)
-			mergedCellsStart[mc.GetStartAxis()] = numCols - 1 // Adjust by -1 to account for the cell itself
-		}
-
-		// Print each row to the PDF
-		for rowIndex, row := range rows {
-			positionWidth := margin
-			columnsToSkip := 0
-			for colIndex, cell := range row {
-				if columnsToSkip > 0 {
-					columnsToSkip--
-					continue
-				}
-				cellRef, _ := excelize.CoordinatesToCellName(colIndex+1, rowIndex+1)
-
-				// Determine width based on whether it is merged
-				cellWidthToUse := cellWidth
-				if width, ok := mergedCellWidths[cellRef]; ok {
-					cellWidthToUse = width
-				}
-				// Move to the correct position based on current column
-				pdf.SetX(positionWidth)
-
-				// Write cell to the PDF with smaller row height
-				var parsedValue string
-				if sheet == "Tenencia" {
-					parsedValue = formatMonetaryValue(cell)
-				} else if sheet == "Retorno" {
-					parsedValue = formatPercentageValue(cell)
-				} else {
-					parsedValue = cell
-				}
-				pdf.CellFormat(cellWidthToUse, 6, parsedValue, "1", 0, "L", false, 0, "")
-				positionWidth += cellWidthToUse
-				columnsToSkip += int(cellWidthToUse/cellWidth) - 1
-			}
-			pdf.Ln(6) // Smaller row height
-
-		}
-	}
-
-	// Write PDF output to an in-memory buffer
-	var buf bytes.Buffer
-	err := pdf.Output(&buf)
-	if err != nil {
-		return nil, fmt.Errorf("could not generate PDF: %w", err)
-	}
-
-	return buf.Bytes(), nil
 }
 
 func formatMonetaryValue(v string) string {

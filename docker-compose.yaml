@@ -6,6 +6,9 @@ services:
     restart: always
     environment:
       - SERVICE_TYPE=API
+    volumes:
+      - ./settings:/settings
+      - ./templates:/templates
     ports:
       - 5051:5051
     networks:
