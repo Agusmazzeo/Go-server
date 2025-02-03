@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reporte de Rendimientos</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 36px;
+        margin-bottom: 10px;
+      }
+
+      h2 {
+        font-size: 24px;
+        font-weight: normal;
+        color: gray;
+        margin-bottom: 40px;
+      }
+
+      .cover-image {
+        max-width: 60%;
+        height: auto;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>{{.Title}}</h1>
+    <h2>{{.Subtitle}}</h2>
+
+    <img src="{{.ImagePath}}" alt="Cover Image" class="cover-image" />
+  </body>
+</html>

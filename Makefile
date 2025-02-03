@@ -6,6 +6,7 @@ COVERAGE_FILE=profile.cov
 DOCKER_COMPOSE=docker compose
 POSTGRES_DB=postgres-db
 REDIS=redis
+API=api
 
 default: build
 
@@ -60,6 +61,9 @@ generate:
 
 dc-logs:
 	${DOCKER_COMPOSE} logs -f
+
+dc-api-up:
+	${DOCKER_COMPOSE} up -d ${API}
 
 dc-postgres-up:
 	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
