@@ -5,11 +5,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/schemas"
 	"server/src/utils"
+	"server/src/utils/render"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,7 +17,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
@@ -93,7 +92,7 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
-	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, []schemas.Transaction{}, interval)
+	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
 	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
@@ -129,7 +128,7 @@ func filterHoldingsByInterval(holdings []schemas.Holding, startDate, endDate tim
 	filteredHoldings := []schemas.Holding{}
 
 	// Generate interval boundaries
-	for date := startDate; date.Before(endDate); date = date.Add(interval) {
+	for date := startDate; !date.After(endDate); date = date.Add(interval) {
 
 		for _, holding := range holdings {
 			// Include holdings that fall within the exact interval
@@ -259,7 +258,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 					// Find the index in the dates array that matches this holding's date
 					for i, date := range dateStrs {
 						if date == dateStr {
-							if holding.Value >= 1.0 {
+							if holding.Value >= 1.0 || holding.Value <= -1.0 {
 								voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
 							} else {
 								voucherValues[i] = "0.0"
@@ -426,9 +425,12 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 }
 
 type ReportConfig struct {
-	df        *dataframe.DataFrame
-	graphType string
-	onlyTotal bool
+	name         string
+	df           *dataframe.DataFrame
+	graphType    string
+	onlyTotal    bool
+	isPercentage bool
+	includeTable bool
 }
 
 // ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
@@ -436,38 +438,48 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 	var htmlContents []string
 
 	// Generate bar graphs for each dataframe
-	for name, report := range map[string]*ReportConfig{
-		"Tenencia":                {df: dataframesAndCharts.ReportDF, onlyTotal: false, graphType: "line"},
-		"Tenencia Total":          {df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line"},
-		"Porcentaje Tenencia":     {df: dataframesAndCharts.ReportPercentageDf, graphType: "pie"},
-		"Retorno":                 {df: dataframesAndCharts.ReturnDF, onlyTotal: true, graphType: "line"},
-		"Variables de Referencia": {df: dataframesAndCharts.ReferenceVariablesDF, graphType: "line"},
+	for _, report := range []*ReportConfig{
+		{name: "TENENCIA", df: dataframesAndCharts.ReportDF, onlyTotal: false, graphType: "line"},
+		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line", includeTable: true},
+		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
+		{name: "RETORNO", df: dataframesAndCharts.ReturnDF, onlyTotal: true, graphType: "line", isPercentage: true, includeTable: true},
+		{name: "VARIABLES DE REFERENCIA", df: dataframesAndCharts.ReferenceVariablesDF, graphType: "line", includeTable: true},
 	} {
 		if report.df == nil {
 			continue
 		}
 		var htmlContent string
 		var err error
+		// htmlContent, err = render.GetSeparatorPageHTML(report.name)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("failed to generate separator for %s: %w", report.name, err)
+		// }
+		// htmlContents = append(htmlContents, htmlContent)
 
-		htmlContent, err = getTableHTML(report.df)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate table for %s: %w", name, err)
-		}
-		htmlContents = append(htmlContents, htmlContent)
 		// Generate bar graph and embed in HTML
 		if report.graphType == "line" {
-			htmlContent, err = rc.generateLineGraphHTML(name, report)
+			htmlContent, err = rc.generateLineGraphHTML(report.name, report)
 		} else if report.graphType == "pie" {
-			htmlContent, err = rc.generatePieChartHTML(name, report)
+			htmlContent, err = rc.generatePieChartHTML(report.name, report)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate graph for %s: %w", name, err)
+			return nil, fmt.Errorf("failed to generate graph for %s: %w", report.name, err)
+		}
+		htmlContents = append(htmlContents, htmlContent)
+
+		if !report.includeTable {
+			continue
+		}
+
+		htmlContent, err = render.GetTableHTML(report.df)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate table for %s: %w", report.name, err)
 		}
 		htmlContents = append(htmlContents, htmlContent)
 	}
 
 	// Convert all HTML content into a PDF
-	pdfBuffer, err := generatePDF(htmlContents)
+	pdfBuffer, err := render.GeneratePDF(htmlContents)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate PDF: %w", err)
 	}
@@ -503,11 +515,18 @@ func (rc *ReportsController) generateLineGraphHTML(name string, report *ReportCo
 		data := make([]opts.LineData, 0)
 		for _, value := range df.Col(asset).Records() {
 			v, _ := strconv.ParseFloat(value, 32)
-			data = append(data, opts.LineData{Value: int(v)})
+			var label string
+			if report.isPercentage {
+				label = render.FormatPercentageValue(value)
+			} else {
+				label = render.FormatMonetaryValue(value)
+			}
+			data = append(data, opts.LineData{Name: label, Value: int(v)})
 		}
 		line.AddSeries(asset, data,
 			charts.WithLabelOpts(opts.Label{
-				Show: opts.Bool(true),
+				Show:      opts.Bool(true),
+				Formatter: "{b}",
 			}),
 			charts.WithAreaStyleOpts(opts.AreaStyle{
 				Opacity: 0.2,
@@ -561,13 +580,25 @@ func (rc *ReportsController) generatePieChartHTML(name string, report *ReportCon
 			// Skip Date Column
 			continue
 		}
-		value := df.Elem(lastRowIndex, colIndex).Float()
+		value := df.Elem(lastRowIndex, colIndex).String()
+
 		items = append(items, opts.PieData{Name: colName, Value: value})
+	}
+
+	var formatter string
+	if report.isPercentage {
+		formatter = "{b}: {d} %"
+	} else {
+		formatter = "{b}: US$ {c}"
 	}
 
 	pie.AddSeries("Data", items).SetSeriesOptions(
 		charts.WithLabelOpts(opts.Label{
-			Position: "top",
+			Show:      opts.Bool(true),
+			Formatter: formatter,
+		}),
+		charts.WithPieChartOpts(opts.PieChart{
+			Radius: []string{"40%", "75%"},
 		}),
 	)
 
@@ -588,161 +619,6 @@ func (rc *ReportsController) generatePieChartHTML(name string, report *ReportCon
 	}
 
 	return htmlBuffer.String(), nil
-}
-
-// getReportCoverHTML reads the cover template and injects the title, subtitle, and image path
-func getReportCoverHTML(title, subtitle, imagePath string) (string, error) {
-	// Get the working directory
-	baseDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Define the template path
-	templatePath := filepath.Join(baseDir, "templates", "cover.html")
-
-	// Read and parse the template file
-	tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to load cover page template: %w", err)
-	}
-
-	// Define template data
-	data := map[string]string{
-		"Title":     title,
-		"Subtitle":  subtitle,
-		"ImagePath": imagePath,
-	}
-
-	// Execute the template with provided data
-	var htmlBuffer bytes.Buffer
-	err = tmpl.Execute(&htmlBuffer, data)
-	if err != nil {
-		return "", fmt.Errorf("failed to render cover page HTML: %w", err)
-	}
-
-	return htmlBuffer.String(), nil
-}
-
-func getTableHTML(df *dataframe.DataFrame) (string, error) {
-	if df == nil || df.Nrow() == 0 {
-		return "", fmt.Errorf("dataframe is empty or nil")
-	}
-
-	// Get the working directory
-	baseDir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Define the template path
-	templatePath := filepath.Join(baseDir, "templates", "table.html")
-
-	// Parse the HTML template file
-	tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to load table template: %w", err)
-	}
-
-	// Extract headers and rows from dataframe
-	headers := df.Names()
-	rows := make([][]interface{}, df.Nrow())
-
-	for i := 0; i < df.Nrow(); i++ {
-		row := make([]interface{}, len(headers))
-		for j, _ := range headers {
-			row[j] = df.Elem(i, j).String()
-		}
-		rows[i] = row
-	}
-
-	// Define the template data
-	data := map[string]interface{}{
-		"Headers": headers,
-		"Rows":    rows,
-	}
-
-	// Execute the template with the data
-	var htmlBuffer bytes.Buffer
-	err = tmpl.Execute(&htmlBuffer, data)
-	if err != nil {
-		return "", fmt.Errorf("failed to render table HTML: %w", err)
-	}
-
-	return htmlBuffer.String(), nil
-}
-
-func generatePDF(htmlContents []string) (*bytes.Buffer, error) {
-	pdfg, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		return nil, err
-	}
-	baseDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Define the template path
-	imagePath := filepath.Join(baseDir, "assets", "criteria_logo.png")
-	cover, err := getReportCoverHTML("Reporte de Rendimientos", "Criteria 2025", imagePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cover: %w", err)
-	}
-	html := joinHTMLPages(append([]string{cover}, htmlContents...))
-	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
-	page.EnableLocalFileAccess.Set(true)
-
-	pdfg.AddPage(page)
-
-	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
-	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
-
-	err = pdfg.Create()
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes.NewBuffer(pdfg.Bytes()), nil
-}
-
-func saveHTMLToFile(htmlContent, filePath string) error {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create HTML file: %w", err)
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(htmlContent)
-	if err != nil {
-		return fmt.Errorf("failed to write HTML content to file: %w", err)
-	}
-
-	return nil
-}
-
-func joinHTMLPages(htmlContents []string) string {
-	// Define the CSS to enforce page breaks between sections
-	pageBreakCSS := `<style>
-		.page-break { page-break-before: always; }
-	</style>`
-
-	// Start building the final HTML document
-	var htmlBuilder bytes.Buffer
-	htmlBuilder.WriteString("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Report</title>")
-	htmlBuilder.WriteString(pageBreakCSS) // Add CSS styling for page breaks
-	htmlBuilder.WriteString("</head><body>")
-
-	// Append each HTML content with a page break
-	for i, html := range htmlContents {
-		htmlBuilder.WriteString(html)
-		if i < len(htmlContents)-1 {
-			htmlBuilder.WriteString("<div class='page-break'></div>") // Add page break between sections
-		}
-	}
-
-	htmlBuilder.WriteString("</body></html>")
-
-	return htmlBuilder.String()
 }
 
 // CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
@@ -790,19 +666,27 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 		endingValue := endingHolding.Value
 
 		// Calculate the net transactions within the date range
-		var netTransactions float64
+		var netStartDateTransactions, netEndDateTransactions float64
+
 		for _, transaction := range transactions {
-			if transaction.Date != nil && transaction.Date.Equal(endDate) {
-				netTransactions += transaction.Value
+			if transaction.Date == nil {
+				continue
+			}
+			if transaction.Date.Equal(startDate) {
+				netStartDateTransactions += transaction.Value
+			} else if transaction.Date.Equal(endDate) {
+				netEndDateTransactions += transaction.Value
 			}
 		}
-		netEndValue := endingValue + netTransactions
+		// netStartValue := startingValue + netStartDateTransactions
+		netStartValue := startingValue
+		netEndValue := endingValue + netEndDateTransactions
 		// Calculate return for this date range
 		if startingValue < 1 && startingValue > -1 {
 			continue
 		}
 
-		returnPercentage := ((netEndValue - startingValue) / startingValue) * 100
+		returnPercentage := ((netEndValue - netStartValue) / netStartValue) * 100
 		// Append the return for this date range
 		dailyReturns = append(dailyReturns, schemas.ReturnByDate{
 			StartDate:        startDate,
@@ -1178,32 +1062,6 @@ func sortHoldingsByDate(holdings []schemas.Holding) []schemas.Holding {
 		return holdings[i].DateRequested.Before(*holdings[j].DateRequested)
 	})
 	return holdings
-}
-
-func formatMonetaryValue(v string) string {
-	value, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		return v
-	}
-	if value >= 1_000_000_000 {
-		return fmt.Sprintf("$ %.3f MM", float64(value/1_000_000_000))
-	} else if value >= 1_000_000 {
-		return fmt.Sprintf("$ %.1f M", float64(value/1_000_000))
-	} else if value >= 1_000 {
-		return fmt.Sprintf("$ %.1f K", float64(value/1_000))
-	}
-	return fmt.Sprintf("$ %s", v)
-}
-
-func formatPercentageValue(v string) string {
-	value, err := strconv.ParseFloat(v, 64)
-	if err != nil {
-		return v
-	}
-	if value == 0 {
-		return "0.0%"
-	}
-	return fmt.Sprintf("%.2f%%", value)
 }
 
 // divideByTotal divides each column value in a dataframe by the "TOTAL" column value for that row.

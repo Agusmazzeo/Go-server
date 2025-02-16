@@ -2,152 +2,219 @@ package render
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"html/template"
 	"os"
+	"path/filepath"
+	"strconv"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/go-gota/gota/dataframe"
 )
 
-func RenderHTMLWithCSS(templatePath string, cssPath string) (string, error) {
-	// Read the HTML template
-	tpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", err
-	}
-
-	// Read the CSS content
-	css, err := os.ReadFile(cssPath)
-	if err != nil {
-		return "", err
-	}
-
-	// Render the HTML template with CSS
-	var output bytes.Buffer
-	err = tpl.Execute(&output, map[string]string{"CSS": string(css)})
-	if err != nil {
-		return "", err
-	}
-
-	return output.String(), nil
-}
-
-func RenderPieGraph(templatePath string, cssPath string, data map[string]float64) (string, error) {
-	// Generate the pie chart
-	pie := charts.NewPie()
-	pie.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Pie Chart"}))
-
-	items := make([]opts.PieData, 0)
-	for k, v := range data {
-		items = append(items, opts.PieData{Name: k, Value: v})
-	}
-	pie.AddSeries("Categories", items)
-
-	// Render chart to an image (Base64 encoded)
-	var chartBuffer bytes.Buffer
-	if err := pie.Render(&chartBuffer); err != nil {
-		return "", err
-	}
-
-	chartBase64 := base64.StdEncoding.EncodeToString(chartBuffer.Bytes())
-
-	// Read CSS and HTML template
-	tpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", err
-	}
-
-	css, err := os.ReadFile(cssPath)
-	if err != nil {
-		return "", err
-	}
-
-	// Render the final HTML
-	var output bytes.Buffer
-	err = tpl.Execute(&output, map[string]string{
-		"CSS":       string(css),
-		"GraphBase": chartBase64,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return output.String(), nil
-}
-
-func RenderBarGraph(templatePath string, cssPath string, data map[string]float64) (string, error) {
-	// Generate the bar chart
-	bar := charts.NewBar()
-	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Bar Chart"}))
-
-	items := make([]opts.BarData, 0)
-	labels := make([]string, 0)
-	for k, v := range data {
-		items = append(items, opts.BarData{Value: v})
-		labels = append(labels, k)
-	}
-	bar.SetXAxis(labels).AddSeries("Values", items)
-
-	// Render chart to an image (Base64 encoded)
-	var chartBuffer bytes.Buffer
-	if err := bar.Render(&chartBuffer); err != nil {
-		return "", err
-	}
-
-	chartBase64 := base64.StdEncoding.EncodeToString(chartBuffer.Bytes())
-
-	// Read CSS and HTML template
-	tpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		return "", err
-	}
-
-	css, err := os.ReadFile(cssPath)
-	if err != nil {
-		return "", err
-	}
-
-	// Render the final HTML
-	var output bytes.Buffer
-	err = tpl.Execute(&output, map[string]string{
-		"CSS":       string(css),
-		"GraphBase": chartBase64,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return output.String(), nil
-}
-
-// GeneratePDF generates a PDF from an array of HTML strings
 func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {
-	// Create a new PDF generator
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create PDF generator: %w", err)
+		return nil, err
+	}
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Add each HTML string as a page in the PDF
-	for _, html := range htmlContents {
-		page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
-		pdfg.AddPage(page)
+	// Define the template path
+	imagePath := filepath.Join(baseDir, "assets", "criteria_logo.png")
+	cover, err := GetReportCoverHTML("Reporte de Rendimientos", "Criteria 2025", imagePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cover: %w", err)
 	}
+	html := joinHTMLPages(append([]string{cover}, htmlContents...))
+	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
+	page.EnableLocalFileAccess.Set(true)
 
-	// Set global options
-	pdfg.Dpi.Set(300)                                     // Set DPI for high-quality output
-	pdfg.Orientation.Set(wkhtmltopdf.OrientationPortrait) // Set orientation
-	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)             // Set page size
+	pdfg.AddPage(page)
 
-	// Generate the PDF
+	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+
 	err = pdfg.Create()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+		return nil, err
 	}
 
-	// Return the generated PDF as a buffer
 	return bytes.NewBuffer(pdfg.Bytes()), nil
+}
+
+// getReportCoverHTML reads the cover template and injects the title, subtitle, and image path
+func GetReportCoverHTML(title, subtitle, imagePath string) (string, error) {
+	// Get the working directory
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Define the template path
+	templatePath := filepath.Join(baseDir, "templates", "cover.html")
+
+	// Read and parse the template file
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load cover page template: %w", err)
+	}
+
+	// Define template data
+	data := map[string]string{
+		"Title":     title,
+		"Subtitle":  subtitle,
+		"ImagePath": imagePath,
+	}
+
+	// Execute the template with provided data
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to render cover page HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func GetTableHTML(df *dataframe.DataFrame) (string, error) {
+	if df == nil || df.Nrow() == 0 {
+		return "", fmt.Errorf("dataframe is empty or nil")
+	}
+
+	// Get the working directory
+	baseDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	// Define the template path
+	templatePath := filepath.Join(baseDir, "templates", "table.html")
+
+	// Parse the HTML template file
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load table template: %w", err)
+	}
+
+	// Extract headers and rows from dataframe
+	headers := df.Names()
+	rows := make([][]interface{}, df.Nrow())
+
+	for i := 0; i < df.Nrow(); i++ {
+		row := make([]interface{}, len(headers))
+		for j, _ := range headers {
+			row[j] = df.Elem(i, j).String()
+		}
+		rows[i] = row
+	}
+
+	// Define the template data
+	data := map[string]interface{}{
+		"Headers": headers,
+		"Rows":    rows,
+	}
+
+	// Execute the template with the data
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to render table HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+// getSeparatorPageHTML generates a separator page HTML with a given title and subtitle
+func GetSeparatorPageHTML(title string) (string, error) {
+	baseDir, _ := os.Getwd()
+	tmplPath := filepath.Join(baseDir, "templates", "separator.html")
+
+	// Parse the HTML template
+	tmpl, err := template.ParseFiles(tmplPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load separator template: %w", err)
+	}
+
+	// Define the data to be inserted into the template
+	data := map[string]string{
+		"Title": title,
+	}
+
+	// Render the HTML template with data
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to render separator HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func joinHTMLPages(htmlContents []string) string {
+	// Define the CSS to enforce page breaks between sections
+	pageBreakCSS := `<style>
+		.page-break { page-break-before: always; }
+	</style>`
+
+	// Start building the final HTML document
+	var htmlBuilder bytes.Buffer
+	htmlBuilder.WriteString("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Report</title>")
+	htmlBuilder.WriteString(pageBreakCSS) // Add CSS styling for page breaks
+	htmlBuilder.WriteString("</head><body>")
+
+	// Append each HTML content with a page break
+	for i, html := range htmlContents {
+		htmlBuilder.WriteString(html)
+		if i < len(htmlContents)-1 {
+			htmlBuilder.WriteString("<div class='page-break'></div>") // Add page break between sections
+		}
+	}
+
+	htmlBuilder.WriteString("</body></html>")
+
+	return htmlBuilder.String()
+}
+
+func SaveHTMLToFile(htmlContent, filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create HTML file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(htmlContent)
+	if err != nil {
+		return fmt.Errorf("failed to write HTML content to file: %w", err)
+	}
+
+	return nil
+}
+
+func FormatMonetaryValue(v string) string {
+	value, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return v
+	}
+	if value >= 1_000_000_000 {
+		return fmt.Sprintf("$ %.3f MM", float64(value/1_000_000_000))
+	} else if value >= 1_000_000 {
+		return fmt.Sprintf("$ %.1f M", float64(value/1_000_000))
+	} else if value >= 1_000 {
+		return fmt.Sprintf("$ %.1f K", float64(value/1_000))
+	}
+	return fmt.Sprintf("$ %s", v)
+}
+
+func FormatPercentageValue(v string) string {
+	value, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return v
+	}
+	if value == 0 {
+		return "0.0%"
+	}
+	return fmt.Sprintf("%.2f%%", value)
 }
