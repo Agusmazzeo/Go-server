@@ -127,3 +127,25 @@ type Boleto struct {
 	TM  string   `json:"TM"`
 	ORI string   `json:"ORI"`
 }
+
+type Instrumentos struct {
+	ID     int      `json:"ID"`
+	SA     bool     `json:"SA"`
+	F      *string  `json:"F"`
+	FL     *string  `json:"FL"`
+	FE     *string  `json:"FE"`
+	I      string   `json:"I"`
+	D      string   `json:"D"`
+	C      *float64 `json:"C"`
+	PR     *float64 `json:"PR"`
+	PR_S   *string  `json:"PR_S"`
+	N      *float64 `json:"N"`
+	S      float64  `json:"S"`
+	TC     string   `json:"TC"`
+	N_S    *string  `json:"N_S"`
+	S_S    *string  `json:"S_S"`
+	M      *string  `json:"M"`
+	TA     *string  `json:"TA"`
+	TPCP   *string  `json:"TPCP"`
+	CTCNCD *string  `json:"CTCNCD"`
+}

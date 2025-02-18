@@ -362,6 +362,75 @@ func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDa
 	return result, nil
 }
 
+func (s *ESCOServiceClient) GetCteCorriente(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Instrumentos, error) {
+	var result []Instrumentos
+	if !refreshCache {
+		err := s.GetCachedData(&result, "cteCorriente", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+		if err == nil && result != nil {
+			return result, nil
+		}
+	}
+	// tf is filter by concertacion (-1) or liquidacion (0)
+	headers := map[string]string{
+		"CID":   cid,
+		"FID":   fid,
+		"NNCC":  nncc,
+		"AUSER": "False",
+	}
+
+	url := s.BaseURL + "/GetCteCorriente"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	q.Add("AG", "true")
+	q.Add("CODCLI", "cliente-CRITERIA")
+	q.Add("FD", startDate.Format("2006-01-02"))
+	q.Add("FH", endDate.Format("2006-01-02"))
+	q.Add("TF", tf)
+	q.Add("EM", "false")
+	req.URL.RawQuery = q.Encode()
+
+	// Add bearer token
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, utils.NewHTTPError(resp.StatusCode, fmt.Sprintf("failed to retrieve cte corriente: %s", resp.Status))
+	}
+
+	// Save the response and get the response bytes for further processing
+	// body, err := utils.SaveResponseToFile(resp.Body, "boletos_response.json")
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
+	err = s.CacheData(result, "cteCorriente", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (s *ESCOServiceClient) GetCachedData(target interface{}, keys ...string) error {
 	key, err := redis_utils.GenerateUUID(keys...)
 	if err != nil {
