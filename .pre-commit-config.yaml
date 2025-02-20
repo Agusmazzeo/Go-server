@@ -10,12 +10,9 @@ repos:
       - { id: check-merge-conflict }
       - { id: debug-statements }
       - { id: mixed-line-ending, args: ["--fix=no"] }
-      - {
-        id: no-commit-to-branch,
-        args: ["--branch", master],
-      }
+      - { id: no-commit-to-branch, args: ["--branch", master] }
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.52.2
+    rev: v1.64.5
     hooks:
       - id: golangci-lint
   - repo: local
