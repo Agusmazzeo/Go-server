@@ -32,7 +32,6 @@ FROM alpine:3.17
 
 EXPOSE 5051
 ENV PORT 5051
-ENV LOGO_PATH /go/src/app/assets/criteria_logo.png
 
 # ✅ Install fonts and required dependencies
 RUN apk add --no-cache \
@@ -54,6 +53,7 @@ RUN apk add --no-cache \
 COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/libwkhtmltox.so /bin/
 
 # Copy Go application and assets
+COPY ./assets /assets
 COPY ./settings /settings
 COPY ./templates /templates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
