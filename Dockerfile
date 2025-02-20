@@ -55,6 +55,7 @@ COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/libwkhtmltox.so /bin/
 
 # Copy Go application and assets
 COPY ./settings /settings
+COPY ./templates /templates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /go/bin/app
