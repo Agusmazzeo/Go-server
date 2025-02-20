@@ -687,6 +687,10 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 		}
 
 		returnPercentage := ((netEndValue - netStartValue) / netStartValue) * 100
+		if returnPercentage < -90 {
+			// Assume the title was retired
+			returnPercentage = 0
+		}
 		// Append the return for this date range
 		dailyReturns = append(dailyReturns, schemas.ReturnByDate{
 			StartDate:        startDate,

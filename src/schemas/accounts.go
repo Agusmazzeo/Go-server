@@ -13,6 +13,7 @@ type Holding struct {
 	Currency      string
 	CurrencySign  string
 	Value         float64
+	Units         float64
 	DateRequested *time.Time
 	Date          *time.Time
 }
@@ -21,6 +22,7 @@ type Transaction struct {
 	Currency     string
 	CurrencySign string
 	Value        float64
+	Units        float64
 	Date         *time.Time
 }
 

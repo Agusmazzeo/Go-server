@@ -115,7 +115,7 @@ func TestESCOService(t *testing.T) {
 		}
 	})
 
-	t.Run("GetCteCorriente with defined account works correctly", func(t *testing.T) {
+	t.Run("GetCtaCorriente with defined account works correctly", func(t *testing.T) {
 		accounts, err := escoService.BuscarCuentas(token.AccessToken, "11170")
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -126,7 +126,7 @@ func TestESCOService(t *testing.T) {
 
 		startDate := time.Now()
 		endDate := startDate.AddDate(0, 0, 1)
-		result, err := escoService.GetCteCorriente(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "0", startDate, endDate, false)
+		result, err := escoService.GetCtaCorriente(token.AccessToken, accounts[0].ID, accounts[0].FI, strconv.Itoa(accounts[0].N), "0", startDate, endDate, false)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

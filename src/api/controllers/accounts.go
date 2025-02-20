@@ -80,11 +80,13 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 	var err error
 	logger := utils.LoggerFromContext(ctx)
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	var accountState *schemas.AccountState
 	var liquidaciones *schemas.AccountState
 	var boletos *schemas.AccountState
+	var instrumentos *schemas.AccountState
+
 	go func() {
 		accountState, err = c.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval)
 		if err != nil {
@@ -126,6 +128,24 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 		}
 		wg.Done()
 	}()
+
+	go func() {
+		retries := 3
+		for {
+			instrumentos, err = c.GetCtaCorrienteDateRange(ctx, token, id, startDate, endDate)
+			if err != nil {
+				logger.Errorf("error while on GetCtaCorrienteDateRange: %v. Retrying...", err)
+				retries--
+			} else {
+				break
+			}
+			if retries == 0 {
+				logger.Errorf("exhausted retries on GetCtaCorrienteDateRange: %v. Retrying...", err)
+				break
+			}
+		}
+		wg.Done()
+	}()
 	wg.Wait()
 	if err != nil {
 		return nil, err
@@ -146,6 +166,12 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 		if liquidaciones != nil {
 			if liquidacion, ok := (*liquidaciones.Vouchers)[id]; ok {
 				voucher.Transactions = append(voucher.Transactions, liquidacion.Transactions...)
+				(*accountState.Vouchers)[id] = voucher
+			}
+		}
+		if instrumentos != nil {
+			if instrumento, ok := (*instrumentos.Vouchers)[id]; ok {
+				voucher.Transactions = append(voucher.Transactions, instrumento.Transactions...)
 				(*accountState.Vouchers)[id] = voucher
 			}
 		}
@@ -258,6 +284,7 @@ func (c *AccountsController) parseEstadoToAccountState(accStateData *[]esco.Esta
 			Currency:      accData.M,
 			CurrencySign:  accData.MS,
 			Value:         accData.N,
+			Units:         accData.C,
 			DateRequested: date,
 			Date:          parsedDate,
 		})
@@ -305,7 +332,7 @@ func (c *AccountsController) parseBoletosToAccountState(boletos *[]esco.Boleto) 
 			}
 			voucher = (*accStateRes.Vouchers)[id]
 		}
-		if boleto.F != "" {
+		if boleto.FL != "" {
 			// Parse the date as before
 			p, err := time.Parse(utils.ShortSlashDateLayout, boleto.FL)
 			if err != nil {
@@ -324,6 +351,7 @@ func (c *AccountsController) parseBoletosToAccountState(boletos *[]esco.Boleto) 
 			Currency:     "Pesos",
 			CurrencySign: boleto.NS,
 			Value:        boleto.N,
+			Units:        boleto.C,
 			Date:         parsedDate,
 		})
 		(*accStateRes.Vouchers)[id] = voucher
@@ -389,6 +417,79 @@ func (c *AccountsController) parseLiquidacionesToAccountState(liquidaciones *[]e
 			Currency:     "Pesos",
 			CurrencySign: liquidacion.MS,
 			Value:        liquidacion.I,
+			Units:        liquidacion.N,
+			Date:         parsedDate,
+		})
+		(*accStateRes.Vouchers)[id] = voucher
+	}
+
+	return accStateRes, nil
+}
+
+func (c *AccountsController) GetCtaCorrienteDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+
+	account, err := c.GetAccountByID(ctx, token, id)
+	if err != nil {
+		return nil, err
+	}
+	instrumentos, err := c.ESCOClient.GetCtaCorriente(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
+	if err != nil {
+		return nil, err
+	}
+	return c.parseInstrumentosRecoveriesToAccountState(&instrumentos)
+}
+
+func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumentos *[]esco.Instrumentos) (*schemas.AccountState, error) {
+	if instrumentos == nil {
+		return nil, nil
+	}
+	var categoryKey string
+	categoryMap := c.ESCOClient.GetCategoryMap()
+	accStateRes := schemas.NewAccountState()
+	for _, ins := range *instrumentos {
+		if ins.C >= float64(0) || !strings.Contains(ins.D, "Retiro de Títulos") {
+			continue
+		}
+		var voucher schemas.Voucher
+		var exists bool
+		var parsedDate *time.Time
+		id := strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
+		categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
+		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+			var category string
+			var exists bool
+			if category, exists = categoryMap[categoryKey]; !exists {
+				category = "S / C"
+			}
+			(*accStateRes.Vouchers)[id] = schemas.Voucher{
+				ID:           id,
+				Type:         "",
+				Denomination: categoryKey,
+				Category:     category,
+				Transactions: make([]schemas.Transaction, 0, len(*instrumentos)),
+			}
+			voucher = (*accStateRes.Vouchers)[id]
+		}
+		if ins.FL != "" {
+			// Parse the date as before
+			p, err := time.Parse(utils.ShortSlashDateLayout, ins.FL)
+			if err != nil {
+				return nil, err
+			}
+
+			// Set the time to 23:00 in the UTC-3 timezone
+			loc, _ := time.LoadLocation("America/Argentina/Buenos_Aires") // UTC-3 timezone (Argentina time)
+			p = time.Date(p.Year(), p.Month(), p.Day(), 23, 0, 0, 0, loc)
+
+			parsedDate = &p
+		} else {
+			parsedDate = nil
+		}
+		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
+			Currency:     "Pesos",
+			CurrencySign: ins.PR_S,
+			Value:        -ins.C * ins.PR,
+			Units:        -ins.C,
 			Date:         parsedDate,
 		})
 		(*accStateRes.Vouchers)[id] = voucher
