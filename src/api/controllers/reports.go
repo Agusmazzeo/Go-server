@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
@@ -696,10 +695,6 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 		}
 
 		returnPercentage := ((netEndValue - netStartValue) / netStartValue) * 100
-		if math.IsNaN(returnPercentage) {
-			// Assume the title was retired
-			fmt.Println("a")
-		}
 		// Append the return for this date range
 		dailyReturns = append(dailyReturns, schemas.ReturnByDate{
 			StartDate:        startDate,
