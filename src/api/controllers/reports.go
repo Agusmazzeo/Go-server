@@ -724,6 +724,9 @@ func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval tim
 			// Apply compound calculation
 			compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
 		} else {
+			if interval == 24*time.Hour {
+				compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
+			}
 			// Close the current interval
 			returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
 				StartDate:        currentIntervalStart,
