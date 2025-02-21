@@ -100,8 +100,8 @@ func (c *ESCOServiceClientMock) GetBoletos(token, cid, fid, nncc, tf string, sta
 	return boletos, nil
 }
 
-// GetCtaCorriente reads account cte corriente information from a mock file.
-func (c *ESCOServiceClientMock) GetCtaCorriente(token, cid, fid, nncc, tf string, startDate, endDate time.Time, _ bool) ([]esco.Instrumentos, error) {
+// GetCtaCteConsolidado reads account cte corriente information from a mock file.
+func (c *ESCOServiceClientMock) GetCtaCteConsolidado(token, cid, fid, nncc, tf string, startDate, endDate time.Time, _ bool) ([]esco.Instrumentos, error) {
 	var instrumentos []esco.Instrumentos
 	err := c.ReadMockResponse("cte_corriente_response.json", &instrumentos)
 	if err != nil {

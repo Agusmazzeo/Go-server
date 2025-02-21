@@ -132,15 +132,15 @@ func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx contex
 	go func() {
 		retries := 3
 		for {
-			instrumentos, err = c.GetCtaCorrienteDateRange(ctx, token, id, startDate, endDate)
+			instrumentos, err = c.GetCtaCteConsolidadoDateRange(ctx, token, id, startDate, endDate)
 			if err != nil {
-				logger.Errorf("error while on GetCtaCorrienteDateRange: %v. Retrying...", err)
+				logger.Errorf("error while on GetCtaCteConsolidadoDateRange: %v. Retrying...", err)
 				retries--
 			} else {
 				break
 			}
 			if retries == 0 {
-				logger.Errorf("exhausted retries on GetCtaCorrienteDateRange: %v. Retrying...", err)
+				logger.Errorf("exhausted retries on GetCtaCteConsolidadoDateRange: %v. Retrying...", err)
 				break
 			}
 		}
@@ -426,13 +426,13 @@ func (c *AccountsController) parseLiquidacionesToAccountState(liquidaciones *[]e
 	return accStateRes, nil
 }
 
-func (c *AccountsController) GetCtaCorrienteDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (c *AccountsController) GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
 
 	account, err := c.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	instrumentos, err := c.ESCOClient.GetCtaCorriente(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
+	instrumentos, err := c.ESCOClient.GetCtaCteConsolidado(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
 	if err != nil {
 		return nil, err
 	}
@@ -443,18 +443,31 @@ func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumen
 	if instrumentos == nil {
 		return nil, nil
 	}
-	var categoryKey string
+	var id, currencySign, categoryKey string
+	var units, value float64
 	categoryMap := c.ESCOClient.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
 	for _, ins := range *instrumentos {
-		if ins.C >= float64(0) || !strings.Contains(ins.D, "Retiro de Títulos") {
+
+		if ins.C < float64(0) && strings.Contains(ins.D, "Retiro de Títulos") {
+			id = strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
+			currencySign = ins.PR_S
+			units = -ins.C
+			value = -ins.C * ins.PR
+			categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
+		} else if strings.Contains(ins.D, "Renta") {
+			id = strings.Split(ins.I, " - ")[1]
+			currencySign = "$"
+			units = -ins.N
+			value = 0
+			categoryKey = "CCL"
+		} else {
 			continue
 		}
 		var voucher schemas.Voucher
 		var exists bool
 		var parsedDate *time.Time
-		id := strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
-		categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
+
 		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
 			var category string
 			var exists bool
@@ -487,9 +500,9 @@ func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumen
 		}
 		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
-			CurrencySign: ins.PR_S,
-			Value:        -ins.C * ins.PR,
-			Units:        -ins.C,
+			CurrencySign: currencySign,
+			Value:        value,
+			Units:        units,
 			Date:         parsedDate,
 		})
 		(*accStateRes.Vouchers)[id] = voucher
@@ -651,6 +664,7 @@ func collapseAccountStates(states []*schemas.AccountState) schemas.AccountState 
 					transactionMap[key] = transaction
 				} else {
 					existing.Value += transaction.Value
+					existing.Units += transaction.Units
 					transactionMap[key] = existing
 				}
 			}

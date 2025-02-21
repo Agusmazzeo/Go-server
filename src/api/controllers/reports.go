@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
@@ -673,8 +674,16 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 				continue
 			}
 			if transaction.Date.Equal(startDate) {
+				if transaction.Value == 0 && startingHolding.Units != 0 {
+					startingValuePerUnit := startingHolding.Value / startingHolding.Units
+					transaction.Value = transaction.Units * startingValuePerUnit
+				}
 				netStartDateTransactions += transaction.Value
 			} else if transaction.Date.Equal(endDate) {
+				if transaction.Value == 0 && endingHolding.Units != 0 {
+					endingValuePerUnit := endingHolding.Value / endingHolding.Units
+					transaction.Value = transaction.Units * endingValuePerUnit
+				}
 				netEndDateTransactions += transaction.Value
 			}
 		}
@@ -687,9 +696,9 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 		}
 
 		returnPercentage := ((netEndValue - netStartValue) / netStartValue) * 100
-		if returnPercentage < -90 {
+		if math.IsNaN(returnPercentage) {
 			// Assume the title was retired
-			returnPercentage = 0
+			fmt.Println("a")
 		}
 		// Append the return for this date range
 		dailyReturns = append(dailyReturns, schemas.ReturnByDate{

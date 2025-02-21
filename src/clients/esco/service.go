@@ -24,7 +24,7 @@ type ESCOServiceClientI interface {
 	GetEstadoCuenta(token, cid, fid, nncc, tf string, date time.Time, refreshCache bool) ([]EstadoCuentaSchema, error)
 	GetLiquidaciones(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Liquidacion, error)
 	GetBoletos(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Boleto, error)
-	GetCtaCorriente(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Instrumentos, error)
+	GetCtaCteConsolidado(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Instrumentos, error)
 	GetCategoryMap() map[string]string
 }
 
@@ -363,10 +363,10 @@ func (s *ESCOServiceClient) GetBoletos(token, cid, fid, nncc, tf string, startDa
 	return result, nil
 }
 
-func (s *ESCOServiceClient) GetCtaCorriente(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Instrumentos, error) {
+func (s *ESCOServiceClient) GetCtaCteConsolidado(token, cid, fid, nncc, tf string, startDate, endDate time.Time, refreshCache bool) ([]Instrumentos, error) {
 	var result []Instrumentos
 	if !refreshCache {
-		err := s.GetCachedData(&result, "cteCorriente", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+		err := s.GetCachedData(&result, "cteCteConsolidado", nncc, tf, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 		if err == nil && result != nil {
 			return result, nil
 		}
@@ -379,7 +379,7 @@ func (s *ESCOServiceClient) GetCtaCorriente(token, cid, fid, nncc, tf string, st
 		"AUSER": "False",
 	}
 
-	url := s.BaseURL + "/GetCtaCorriente"
+	url := s.BaseURL + "/GetCtaCteConsolidado"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -397,7 +397,7 @@ func (s *ESCOServiceClient) GetCtaCorriente(token, cid, fid, nncc, tf string, st
 	q.Add("FD", startDate.Format("2006-01-02"))
 	q.Add("FH", endDate.Format("2006-01-02"))
 	q.Add("TF", tf)
-	q.Add("EM", "false")
+	q.Add("EM", "true")
 	req.URL.RawQuery = q.Encode()
 
 	// Add bearer token
