@@ -734,7 +734,7 @@ func CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval tim
 			// Reset for the new interval
 			currentIntervalStart = currentIntervalEnd
 			currentIntervalEnd = currentIntervalStart.Add(interval)
-			compoundReturn = 1 + (dailyReturn.ReturnPercentage / 100)
+			// compoundReturn = 1 + (dailyReturn.ReturnPercentage / 100)
 		}
 	}
 
