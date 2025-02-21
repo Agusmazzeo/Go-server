@@ -455,7 +455,7 @@ func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumen
 			units = -ins.C
 			value = -ins.C * ins.PR
 			categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
-		} else if strings.Contains(ins.D, "Renta") {
+		} else if strings.Contains(ins.D, "Renta") || strings.Contains(ins.D, "Boleto") {
 			id = strings.Split(ins.I, " - ")[1]
 			currencySign = "$"
 			units = -ins.N
