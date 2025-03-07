@@ -439,7 +439,7 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
-		{name: "TENENCIA", df: dataframesAndCharts.ReportDF, onlyTotal: false, graphType: "line"},
+		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, onlyTotal: false, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
 		{name: "RETORNO", df: dataframesAndCharts.ReturnDF, onlyTotal: true, graphType: "line", isPercentage: true, includeTable: true},
@@ -457,10 +457,12 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 		// htmlContents = append(htmlContents, htmlContent)
 
 		// Generate bar graph and embed in HTML
-		if report.graphType == "line" {
-			htmlContent, err = rc.generateLineGraphHTML(report.name, report)
+		if report.graphType == "bar" {
+			htmlContent, err = rc.generateStackBarGraphHTML(report.name, report)
 		} else if report.graphType == "pie" {
 			htmlContent, err = rc.generatePieChartHTML(report.name, report)
+		} else if report.graphType == "line" {
+			htmlContent, err = rc.generateLineGraphHTML(report.name, report)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate graph for %s: %w", report.name, err)
@@ -548,6 +550,73 @@ func (rc *ReportsController) generateLineGraphHTML(name string, report *ReportCo
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
 		"Title": name,
 		"Graph": strings.ReplaceAll(string(line.RenderContent()), "let ", "var "),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func (rc *ReportsController) generateStackBarGraphHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
+	// Create a bar chart
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithAnimation(false),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
+	)
+
+	// Extract labels (dates) and data
+	labels := df.Col("DateRequested").Records()
+	bar.SetXAxis(labels)
+
+	for _, asset := range df.Names()[1:] {
+		if report.onlyTotal && asset != "TOTAL" || !report.onlyTotal && asset == "TOTAL" {
+			continue
+		}
+		data := make([]opts.BarData, 0)
+		for _, value := range df.Col(asset).Records() {
+			v, _ := strconv.ParseFloat(value, 32)
+			var label string
+			if report.isPercentage {
+				label = render.FormatPercentageValue(value)
+			} else {
+				label = render.FormatMonetaryValue(value)
+			}
+			data = append(data, opts.BarData{Name: label, Value: v})
+		}
+		bar.AddSeries(asset, data,
+			charts.WithLabelOpts(opts.Label{
+				Show:      opts.Bool(true),
+				Formatter: "{b}",
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Opacity: 0.2,
+			}),
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+		)
+	}
+	bar.SetSeriesOptions(charts.WithBarChartOpts(opts.BarChart{
+		Stack: "stackA",
+	}))
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load bar graph template: %w", err)
+	}
+
+	// Render HTML embedding the chart image
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
