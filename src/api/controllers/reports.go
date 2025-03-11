@@ -92,7 +92,7 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
-	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval)
+	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval, true)
 	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
 	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
@@ -583,6 +583,7 @@ func (rc *ReportsController) generateStackBarGraphHTML(name string, report *Repo
 			v, _ := strconv.ParseFloat(value, 32)
 			var label string
 			if report.isPercentage {
+				value = fmt.Sprintf("%f", 100*v)
 				label = render.FormatPercentageValue(value)
 			} else {
 				label = render.FormatMonetaryValue(value)
@@ -696,7 +697,7 @@ func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (sc
 		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
 	}
 
-	returnsByInterval := CalculateHoldingsReturn(voucher.Holdings, voucher.Transactions, interval)
+	returnsByInterval := CalculateHoldingsReturn(voucher.Holdings, voucher.Transactions, interval, false)
 
 	// Return the result
 	return schemas.VoucherReturn{
@@ -716,7 +717,7 @@ func CalculateFinalIntervalReturn(totalReturns []schemas.ReturnByDate) float64 {
 	return intervalReturn
 }
 
-func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration) []schemas.ReturnByDate {
+func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration, multiVoucher bool) []schemas.ReturnByDate {
 	// Sort holdings by date
 	sortedHoldings := sortHoldingsByDate(holdings)
 	var dailyReturns []schemas.ReturnByDate
@@ -742,17 +743,17 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 				continue
 			}
 			if transaction.Date.Equal(startDate) {
-				if transaction.Value == 0 && startingHolding.Units != 0 {
+				if !multiVoucher && startingHolding.Units != 0 {
 					startingValuePerUnit := startingHolding.Value / startingHolding.Units
 					transaction.Value = transaction.Units * startingValuePerUnit
 				}
-				netStartDateTransactions += transaction.Value
+				netStartDateTransactions -= transaction.Value
 			} else if transaction.Date.Equal(endDate) {
-				if transaction.Value == 0 && endingHolding.Units != 0 {
+				if !multiVoucher && endingHolding.Units != 0 {
 					endingValuePerUnit := endingHolding.Value / endingHolding.Units
 					transaction.Value = transaction.Units * endingValuePerUnit
 				}
-				netEndDateTransactions += transaction.Value
+				netEndDateTransactions -= transaction.Value
 			}
 		}
 		// netStartValue := startingValue + netStartDateTransactions

@@ -350,7 +350,7 @@ func (c *AccountsController) parseBoletosToAccountState(boletos *[]esco.Boleto) 
 		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
 			CurrencySign: boleto.NS,
-			Value:        boleto.N,
+			Value:        -boleto.N,
 			Units:        boleto.C,
 			Date:         parsedDate,
 		})
@@ -416,8 +416,8 @@ func (c *AccountsController) parseLiquidacionesToAccountState(liquidaciones *[]e
 		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
 			CurrencySign: liquidacion.MS,
-			Value:        liquidacion.I,
-			Units:        liquidacion.N,
+			Value:        -liquidacion.I,
+			Units:        liquidacion.Q,
 			Date:         parsedDate,
 		})
 		(*accStateRes.Vouchers)[id] = voucher
@@ -453,13 +453,16 @@ func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumen
 			id = strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
 			currencySign = ins.PR_S
 			units = -ins.C
-			value = -ins.C * ins.PR
+			value = ins.N
 			categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
 		} else if strings.Contains(ins.D, "Renta") || strings.Contains(ins.D, "Boleto") {
 			id = strings.Split(ins.I, " - ")[1]
+			if id == "$" {
+				continue
+			}
 			currencySign = "$"
-			units = -ins.N
-			value = 0
+			units = -ins.C
+			value = ins.N
 			categoryKey = "CCL"
 		} else {
 			continue
@@ -502,7 +505,7 @@ func (c *AccountsController) parseInstrumentosRecoveriesToAccountState(instrumen
 			Currency:     "Pesos",
 			CurrencySign: currencySign,
 			Value:        value,
-			Units:        units,
+			Units:        -units,
 			Date:         parsedDate,
 		})
 		(*accStateRes.Vouchers)[id] = voucher

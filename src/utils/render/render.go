@@ -216,5 +216,5 @@ func FormatPercentageValue(v string) string {
 	if value == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%.2f%%", 100*value)
+	return fmt.Sprintf("%.2f%%", value)
 }
