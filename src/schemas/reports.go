@@ -9,6 +9,8 @@ import (
 type AccountsReports struct {
 	VouchersByCategory       *map[string][]Voucher
 	VouchersReturnByCategory *map[string][]VoucherReturn
+	CategoryVouchers         *map[string]Voucher
+	CategoryVouchersReturn   *map[string]VoucherReturn
 	ReferenceVariables       []*VariableWithValuationResponse
 	TotalHoldingsByDate      []Holding
 	TotalTransactionsByDate  []Transaction
@@ -66,4 +68,6 @@ type ReportDataframes struct {
 	ReportPercentageDf   *dataframe.DataFrame
 	ReturnDF             *dataframe.DataFrame
 	ReferenceVariablesDF *dataframe.DataFrame
+	CategoryDF           *dataframe.DataFrame
+	CategoryPercentageDF *dataframe.DataFrame
 }

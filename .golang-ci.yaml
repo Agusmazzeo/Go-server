@@ -1,0 +1,32 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  gocyclo:
+    min-complexity: 20
+  goimports:
+    local-prefixes: github.com/Agusmazzeo/Go-server
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - gofmt
+    - goimports
+    - gocyclo
+    - revive
+    - depguard
+    - typecheck
+    - predeclared

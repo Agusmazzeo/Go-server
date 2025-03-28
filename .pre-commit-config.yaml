@@ -15,6 +15,7 @@ repos:
     rev: v1.64.5
     hooks:
       - id: golangci-lint
+        args: [--config=.golang-ci.yaml]
   - repo: local
     hooks:
       - id: validate-openapi-schema

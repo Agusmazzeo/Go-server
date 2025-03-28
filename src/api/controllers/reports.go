@@ -39,6 +39,7 @@ type ReportsControllerI interface {
 	ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error)
 	ParseAccountsReportToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 	ParseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
+	ParseAccountsCategoryToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error)
 }
 
 type ReportsController struct {
@@ -72,6 +73,7 @@ func GenerateAccountReports(
 	startDate, endDate time.Time,
 	interval time.Duration) (*schemas.AccountsReports, error) {
 	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
+	categoryVoucherReturns := make(map[string]schemas.VoucherReturn)
 
 	// Iterate through each category and its associated vouchers
 	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
@@ -83,6 +85,14 @@ func GenerateAccountReports(
 			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
 		}
 	}
+	// Iterate through each category vouchers
+	for category, voucher := range *accountStateByCategory.CategoryVouchers {
+		if category == "ARS" {
+			continue
+		}
+		voucherReturn, _ := CalculateVoucherReturn(voucher, interval)
+		categoryVoucherReturns[category] = voucherReturn
+	}
 
 	totalHoldingsByDate := make([]schemas.Holding, 0, len(*accountStateByCategory.TotalHoldingsByDate))
 	for _, holding := range *accountStateByCategory.TotalHoldingsByDate {
@@ -92,13 +102,17 @@ func GenerateAccountReports(
 	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
 		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
 	}
+
 	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval, true)
 	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
-	filteredVouchers := filterVoucherHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
+	filteredVouchers := filterVouchersByCategoryHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
+	filteredCategoryVouchers := filterVouchersHoldingsByInterval(accountStateByCategory.CategoryVouchers, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
 	return &schemas.AccountsReports{
 		VouchersByCategory:       &filteredVouchers,
 		VouchersReturnByCategory: &voucherReturnsByCategory,
+		CategoryVouchers:         &filteredCategoryVouchers,
+		CategoryVouchersReturn:   &categoryVoucherReturns,
 		TotalHoldingsByDate:      filteredTotalHoldings,
 		TotalTransactionsByDate:  totalTransactionsByDate,
 		TotalReturns:             totalReturns,
@@ -106,7 +120,7 @@ func GenerateAccountReports(
 	}, nil
 }
 
-func filterVoucherHoldingsByInterval(vouchersByCategory *map[string][]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string][]schemas.Voucher {
+func filterVouchersByCategoryHoldingsByInterval(vouchersByCategory *map[string][]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string][]schemas.Voucher {
 	filteredVouchersByCategory := make(map[string][]schemas.Voucher)
 
 	for category, vouchers := range *vouchersByCategory {
@@ -117,6 +131,20 @@ func filterVoucherHoldingsByInterval(vouchersByCategory *map[string][]schemas.Vo
 				voucher.Holdings = filteredHoldings
 				filteredVouchersByCategory[category] = append(filteredVouchersByCategory[category], voucher)
 			}
+		}
+	}
+
+	return filteredVouchersByCategory
+}
+
+func filterVouchersHoldingsByInterval(categoryVouchers *map[string]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string]schemas.Voucher {
+	filteredVouchersByCategory := *categoryVouchers
+
+	for _, voucher := range filteredVouchersByCategory {
+		filteredHoldings := filterHoldingsByInterval(voucher.Holdings, startDate, endDate, interval)
+
+		if len(filteredHoldings) > 0 {
+			voucher.Holdings = filteredHoldings
 		}
 	}
 
@@ -151,10 +179,12 @@ func (rc *ReportsController) ParseAccountsReportToDataFrames(
 	var reportPercentageDf *dataframe.DataFrame
 	var returnsDf *dataframe.DataFrame
 	var referenceVariablesDf *dataframe.DataFrame
+	var categoryDf *dataframe.DataFrame
+	var categoryPercentageDf *dataframe.DataFrame
 
 	var wg sync.WaitGroup
-	wg.Add(3)
-	var errChan = make(chan error, 3)
+	wg.Add(4)
+	var errChan = make(chan error, 4)
 	go func() {
 		defer wg.Done()
 		var err error
@@ -164,6 +194,17 @@ func (rc *ReportsController) ParseAccountsReportToDataFrames(
 			return
 		}
 		reportPercentageDf = divideByTotal(reportDf)
+	}()
+
+	go func() {
+		defer wg.Done()
+		var err error
+		categoryDf, err = rc.ParseAccountsCategoryToDataFrame(ctx, accountsReport, startDate, endDate, interval)
+		if err != nil {
+			errChan <- err
+			return
+		}
+		categoryPercentageDf = divideByTotal(categoryDf)
 	}()
 
 	go func() {
@@ -196,6 +237,8 @@ func (rc *ReportsController) ParseAccountsReportToDataFrames(
 		ReportPercentageDf:   reportPercentageDf,
 		ReturnDF:             returnsDf,
 		ReferenceVariablesDF: referenceVariablesDf,
+		CategoryDF:           categoryDf,
+		CategoryPercentageDF: categoryPercentageDf,
 	}, nil
 }
 
@@ -424,6 +467,90 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	return sortDataFrameColumns(&df), nil
 }
 
+// ParseAccountsCategoryToDataFrame converts account reports into a DataFrame
+// for the specified time range and interval.
+func (rc *ReportsController) ParseAccountsCategoryToDataFrame(_ context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
+	dates, err := utils.GenerateDates(startDate, endDate, interval)
+	if err != nil {
+		return nil, err
+	}
+	dateStrs := make([]string, len(dates))
+	for i, date := range dates {
+		dateStrs[i] = date.Format("2006-01-02")
+	}
+
+	// Initialize an empty DataFrame with the DateRequested as the index (as the first column)
+	df := dataframe.New(
+		series.New(dateStrs, series.String, "DateRequested"),
+	)
+
+	// Iterate through the vouchers and add each as a new column
+	for category, voucher := range *accountsReport.CategoryVouchers {
+		voucherValues := make([]string, len(dates))
+
+		// Initialize all rows with empty values for this voucher
+		for i := range voucherValues {
+			voucherValues[i] = "0.0" // Default value if no match found
+		}
+
+		// Iterate through holdings and match the dates to fill the corresponding values
+		for _, holding := range voucher.Holdings {
+			if holding.DateRequested != nil {
+				dateStr := holding.DateRequested.Format("2006-01-02")
+				// Find the index in the dates array that matches this holding's date
+				for i, date := range dateStrs {
+					if date == dateStr {
+						if holding.Value >= 1.0 || holding.Value <= -1.0 {
+							voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
+						} else {
+							voucherValues[i] = "0.0"
+						}
+						break
+					}
+				}
+			}
+		}
+
+		// Add the new series (column) for this voucher to the DataFrame
+		var updatedDf *dataframe.DataFrame
+		updatedDf, err = updateDataFrame(df, category, voucherValues)
+		if err != nil {
+			return nil, err
+		}
+		df = *updatedDf
+
+	}
+
+	totalValues := make([]string, len(dates))
+	for _, totalHolding := range accountsReport.TotalHoldingsByDate {
+		dateStr := totalHolding.DateRequested.Format("2006-01-02")
+		// Find the index in the dates array that matches this holding's date
+		for i, date := range dateStrs {
+			if date == dateStr {
+				if totalHolding.Value >= 1.0 {
+					totalValues[i] = fmt.Sprintf("%.2f", totalHolding.Value)
+				} else {
+					totalValues[i] = "0.0"
+				}
+				break
+			}
+		}
+	}
+	for i, v := range totalValues {
+		if v == "" {
+			totalValues[i] = "0.0"
+		}
+	}
+	// Add the new series (column) for this voucher to the DataFrame
+	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
+	if err != nil {
+		return nil, err
+	}
+	df = *updatedDf
+
+	return sortDataFrameColumns(&df), nil
+}
+
 type ReportConfig struct {
 	name         string
 	df           *dataframe.DataFrame
@@ -439,6 +566,8 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
+		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, onlyTotal: false, graphType: "line", includeTable: true},
+		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, onlyTotal: false, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, onlyTotal: false, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},

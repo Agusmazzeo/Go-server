@@ -551,40 +551,36 @@ func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context
 
 func (c *AccountsController) CollapseAndGroupAccountsStates(accountsStates []*schemas.AccountState) *schemas.AccountStateByCategory {
 	collapsedAccountState := collapseAccountStates(accountsStates)
-	vouchersByCategory := groupAccountStateByCategory(&collapsedAccountState)
-	totalsByDate := groupTotalHoldingsAndTransactionsByDate(&collapsedAccountState)
-	return &schemas.AccountStateByCategory{
-		VouchersByCategory:      vouchersByCategory,
-		TotalHoldingsByDate:     totalsByDate.TotalHoldingsByDate,
-		TotalTransactionsByDate: totalsByDate.TotalTransactionsByDate,
-	}
+	return groupTotalHoldingsAndTransactionsByDate(&collapsedAccountState)
 }
 
 // Group vouchers by category after collapsing, with sorting for consistent ordering
 // In addition of calculating the total holding value
-func groupAccountStateByCategory(state *schemas.AccountState) *map[string][]schemas.Voucher {
+func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schemas.AccountStateByCategory {
+	totalHoldingsByDate := make(map[string]schemas.Holding)
+	totalTransactionsByDate := make(map[string]schemas.Transaction)
+
+	// Vouchers grouped by category
 	vouchersByCategory := make(map[string][]schemas.Voucher)
+
+	// Joined vouchers by category as new holdings
+	categoryHoldingsByDate := make(map[string]map[string]schemas.Holding)
+
+	// Joined voucher transactions by category as new transactions
+	categoryTransactionsByDate := make(map[string]map[string]schemas.Transaction)
 
 	for _, voucher := range *state.Vouchers {
 		category := voucher.Category
 		vouchersByCategory[category] = append(vouchersByCategory[category], voucher)
-	}
 
-	// Sort each category's vouchers by ID for consistent ordering
-	for category := range vouchersByCategory {
-		sort.Slice(vouchersByCategory[category], func(i, j int) bool {
-			return vouchersByCategory[category][i].ID < vouchersByCategory[category][j].ID
-		})
-	}
+		if _, exists := categoryHoldingsByDate[category]; !exists {
+			categoryHoldingsByDate[category] = make(map[string]schemas.Holding)
+		}
 
-	return &vouchersByCategory
-}
+		if _, exists := categoryTransactionsByDate[category]; !exists {
+			categoryTransactionsByDate[category] = make(map[string]schemas.Transaction)
+		}
 
-func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schemas.TotalHoldingsAndTransactionsByDate {
-	totalHoldingsByDate := make(map[string]schemas.Holding)
-	totalTransactionsByDate := make(map[string]schemas.Transaction)
-
-	for _, voucher := range *state.Vouchers {
 		for _, holding := range voucher.Holdings {
 			date := *holding.DateRequested
 			dateStr := date.Format("2006-01-02")
@@ -597,9 +593,24 @@ func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schem
 					Date:          &date,
 				}
 			}
+
 			total := totalHoldingsByDate[dateStr]
 			total.Value += holding.Value
 			totalHoldingsByDate[dateStr] = total
+
+			if _, exists := categoryHoldingsByDate[category][dateStr]; !exists {
+				categoryHoldingsByDate[category][dateStr] = schemas.Holding{
+					Currency:      "Pesos",
+					CurrencySign:  "$",
+					Value:         0,
+					DateRequested: &date,
+					Date:          &date,
+				}
+			}
+
+			categoryHolding := categoryHoldingsByDate[category][dateStr]
+			categoryHolding.Value += holding.Value
+			categoryHoldingsByDate[category][dateStr] = categoryHolding
 		}
 
 		for _, transaction := range voucher.Transactions {
@@ -616,10 +627,34 @@ func groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schem
 			total := totalTransactionsByDate[dateStr]
 			total.Value += transaction.Value
 			totalTransactionsByDate[dateStr] = total
+
+			if _, exists := categoryTransactionsByDate[category][dateStr]; !exists {
+				categoryTransactionsByDate[category][dateStr] = schemas.Transaction{
+					Currency:     "Pesos",
+					CurrencySign: "$",
+					Value:        0,
+					Units:        0,
+					Date:         &date,
+				}
+			}
+
+			categoryTransaction := categoryTransactionsByDate[category][dateStr]
+			categoryTransaction.Value += transaction.Value
+			categoryTransactionsByDate[category][dateStr] = categoryTransaction
 		}
 	}
+	// Sort each category's vouchers by ID for consistent ordering
+	for category := range vouchersByCategory {
+		sort.Slice(vouchersByCategory[category], func(i, j int) bool {
+			return vouchersByCategory[category][i].ID < vouchersByCategory[category][j].ID
+		})
+	}
 
-	return &schemas.TotalHoldingsAndTransactionsByDate{
+	categoryVouchers := generateCategoryVouchers(categoryHoldingsByDate, categoryTransactionsByDate)
+
+	return &schemas.AccountStateByCategory{
+		VouchersByCategory:      &vouchersByCategory,
+		CategoryVouchers:        &categoryVouchers,
 		TotalHoldingsByDate:     &totalHoldingsByDate,
 		TotalTransactionsByDate: &totalTransactionsByDate,
 	}
@@ -712,4 +747,47 @@ func collapseAccountStates(states []*schemas.AccountState) schemas.AccountState 
 		collapsed[voucherID] = existing
 	}
 	return schemas.AccountState{Vouchers: &collapsed}
+}
+
+func generateCategoryVouchers(
+	categoryHoldings map[string]map[string]schemas.Holding,
+	categoryTransactions map[string]map[string]schemas.Transaction,
+) map[string]schemas.Voucher {
+	categoryVouchers := map[string]schemas.Voucher{}
+	for category, holdingsByDate := range categoryHoldings {
+		if _, exist := categoryVouchers[category]; !exist {
+			categoryVouchers[category] = schemas.Voucher{
+				ID:           category,
+				Type:         "Category",
+				Denomination: category,
+				Category:     category,
+				Holdings:     []schemas.Holding{},
+				Transactions: []schemas.Transaction{},
+			}
+		}
+		categoryVoucher := categoryVouchers[category]
+		for _, holding := range holdingsByDate {
+			categoryVoucher.Holdings = append(categoryVoucher.Holdings, holding)
+		}
+		categoryVouchers[category] = categoryVoucher
+	}
+
+	for category, transactionsByDate := range categoryTransactions {
+		if _, exist := categoryVouchers[category]; !exist {
+			categoryVouchers[category] = schemas.Voucher{
+				ID:           category,
+				Type:         "Category",
+				Denomination: category,
+				Category:     category,
+				Holdings:     []schemas.Holding{},
+				Transactions: []schemas.Transaction{},
+			}
+		}
+		categoryVoucher := categoryVouchers[category]
+		for _, transaction := range transactionsByDate {
+			categoryVoucher.Transactions = append(categoryVoucher.Transactions, transaction)
+		}
+		categoryVouchers[category] = categoryVoucher
+	}
+	return categoryVouchers
 }

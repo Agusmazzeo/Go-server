@@ -46,6 +46,7 @@ type TotalHoldingsAndTransactionsByDate struct {
 
 type AccountStateByCategory struct {
 	VouchersByCategory      *map[string][]Voucher
+	CategoryVouchers        *map[string]Voucher
 	TotalHoldingsByDate     *map[string]Holding
 	TotalTransactionsByDate *map[string]Transaction
 }

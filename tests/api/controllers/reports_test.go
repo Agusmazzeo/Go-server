@@ -157,7 +157,7 @@ func TestCalculateHoldingsReturn(t *testing.T) {
 		t.Fatalf("error loading file")
 	}
 
-	totalReturns := controllers.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour)
+	totalReturns := controllers.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour, false)
 
 	for _, total := range totalReturns {
 		if total.ReturnPercentage > 50 {
