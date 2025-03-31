@@ -78,7 +78,7 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, err)
 		return
 	}
-	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate)
+	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
@@ -153,7 +153,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, err)
 		return
 	}
-	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate)
+	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)

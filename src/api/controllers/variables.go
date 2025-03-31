@@ -56,10 +56,10 @@ func (c *Controller) GetVariableWithValuationByID(ctx context.Context, id string
 	return variableResponse, nil
 }
 
-func (c *Controller) GetReferenceVariablesWithValuationDateRange(ctx context.Context, startDate, endDate time.Time) ([]*schemas.VariableWithValuationResponse, error) {
+// GetReferenceVariablesWithValuationDateRange works for getting reference variables in a date range
+func (c *Controller) GetReferenceVariablesWithValuationDateRange(ctx context.Context, startDate, endDate time.Time, interval time.Duration) (map[string]*schemas.VariableWithValuationResponse, error) {
 	var wg sync.WaitGroup
-	var variableValuations = make([]*schemas.VariableWithValuationResponse, 0, 2)
-	var variableValuationsChan = make(chan *schemas.VariableWithValuationResponse)
+	var variableValuationsMap = map[string]*schemas.VariableWithValuationResponse{}
 	var errChan = make(chan error)
 	wg.Add(2)
 	go func() {
@@ -69,7 +69,8 @@ func (c *Controller) GetReferenceVariablesWithValuationDateRange(ctx context.Con
 			errChan <- err
 			return
 		}
-		variableValuationsChan <- variableValuations
+		variableValuationsMap["USD A3500"] = variableValuations
+		variableValuationsMap["USD A3500 Variacion"] = ComputeValuationVariations(variableValuations, interval)
 	}()
 	go func() {
 		defer wg.Done()
@@ -78,23 +79,17 @@ func (c *Controller) GetReferenceVariablesWithValuationDateRange(ctx context.Con
 			errChan <- err
 			return
 		}
-		variableValuationsChan <- variableValuations
+		variableValuationsMap["Inflacion Mensual"] = variableValuations
 	}()
 	go func() {
 		wg.Wait()
-		variableValuationsChan <- nil
+		close(errChan)
 	}()
-	for {
-		select {
-		case err := <-errChan:
-			return nil, err
-		case variableValuation := <-variableValuationsChan:
-			if variableValuation == nil {
-				return variableValuations, nil
-			}
-			variableValuations = append(variableValuations, variableValuation)
-		}
+
+	if err := <-errChan; err != nil {
+		return nil, err
 	}
+	return variableValuationsMap, nil
 }
 
 func (c *Controller) GetVariableWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error) {
@@ -199,7 +194,15 @@ func (c *Controller) CompleteValuations(v *schemas.VariableWithValuationResponse
 }
 
 func (c *Controller) GetA3500DateRange(ctx context.Context, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error) {
-	return c.GetVariableWithValuationDateRangeByID(ctx, utils.A3500ID, startDate, endDate)
+	a3500Valuations, err := c.GetVariableWithValuationDateRangeByID(ctx, utils.A3500ID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	err = c.CompleteValuations(a3500Valuations, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	return a3500Valuations, nil
 }
 
 func (c *Controller) getVariablesMap(ctx context.Context) (map[string]string, error) {
@@ -212,4 +215,55 @@ func (c *Controller) getVariablesMap(ctx context.Context) (map[string]string, er
 		variablesMap[variable.ID] = variable.Description
 	}
 	return variablesMap, nil
+}
+
+// ComputeValuationVariations works for calculating variables reference variation over time
+func ComputeValuationVariations(input *schemas.VariableWithValuationResponse, interval time.Duration) *schemas.VariableWithValuationResponse {
+	if len(input.Valuations) == 0 {
+		return &schemas.VariableWithValuationResponse{
+			ID:          input.ID,
+			Description: input.Description + " (variation)",
+			Valuations:  []schemas.VariableValuation{},
+		}
+	}
+
+	// Parse and map valuations by date
+	valuationMap := make(map[time.Time]float64)
+	var dateList []time.Time
+
+	for _, val := range input.Valuations {
+		t, err := time.Parse("2006-01-02", val.Date)
+		if err != nil {
+			continue // skip invalid date
+		}
+		valuationMap[t] = val.Value
+		dateList = append(dateList, t)
+	}
+
+	// Sort dates
+	sort.Slice(dateList, func(i, j int) bool {
+		return dateList[i].Before(dateList[j])
+	})
+
+	// Compute variations over interval
+	var variations []schemas.VariableValuation
+	for _, date := range dateList {
+		prevDate := date.Add(-interval)
+		prevVal, ok := valuationMap[prevDate]
+		currVal := valuationMap[date]
+
+		if ok {
+			delta := currVal - prevVal
+			variations = append(variations, schemas.VariableValuation{
+				Date:  date.Format("2006-01-02"),
+				Value: delta,
+			})
+		}
+	}
+
+	return &schemas.VariableWithValuationResponse{
+		ID:          input.ID,
+		Description: input.Description + " (variation)",
+		Valuations:  variations,
+	}
 }

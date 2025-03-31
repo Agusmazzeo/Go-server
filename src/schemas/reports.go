@@ -11,7 +11,7 @@ type AccountsReports struct {
 	VouchersReturnByCategory *map[string][]VoucherReturn
 	CategoryVouchers         *map[string]Voucher
 	CategoryVouchersReturn   *map[string]VoucherReturn
-	ReferenceVariables       []*VariableWithValuationResponse
+	ReferenceVariables       *map[string]*VariableWithValuationResponse
 	TotalHoldingsByDate      []Holding
 	TotalTransactionsByDate  []Transaction
 	TotalReturns             []ReturnByDate

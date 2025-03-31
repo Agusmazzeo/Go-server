@@ -23,7 +23,7 @@ type IController interface {
 	GetAllVariables(ctx context.Context) ([]schemas.Variable, error)
 	GetVariableWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.VariableWithValuationResponse, error)
 	GetVariableWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.VariableWithValuationResponse, error)
-	GetReferenceVariablesWithValuationDateRange(ctx context.Context, startDate, endDate time.Time) ([]*schemas.VariableWithValuationResponse, error)
+	GetReferenceVariablesWithValuationDateRange(ctx context.Context, startDate, endDate time.Time, interval time.Duration) (map[string]*schemas.VariableWithValuationResponse, error)
 
 	PostToken(ctx context.Context, username, password string) (*schemas.TokenResponse, error)
 }

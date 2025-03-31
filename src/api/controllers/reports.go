@@ -28,7 +28,7 @@ import (
 )
 
 type ReportsControllerI interface {
-	GetReport(ctx context.Context, accountsStates *schemas.AccountStateByCategory, variablesWithValuations []*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
+	GetReport(ctx context.Context, accountsStates *schemas.AccountStateByCategory, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
 	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
 	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
 	CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
@@ -56,7 +56,7 @@ func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BC
 func (rc *ReportsController) GetReport(
 	ctx context.Context,
 	accountsStates *schemas.AccountStateByCategory,
-	variablesWithValuations []*schemas.VariableWithValuationResponse,
+	variablesWithValuations map[string]*schemas.VariableWithValuationResponse,
 	startDate, endDate time.Time,
 	interval time.Duration,
 ) (*schemas.AccountsReports, error) {
@@ -64,7 +64,7 @@ func (rc *ReportsController) GetReport(
 	if err != nil {
 		return nil, err
 	}
-	accountReports.ReferenceVariables = variablesWithValuations
+	accountReports.ReferenceVariables = &variablesWithValuations
 	return accountReports, nil
 }
 
@@ -438,7 +438,7 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 	)
 
 	// Iterate through the vouchers and add each as a new column
-	for _, referenceVariable := range (*accountsReport).ReferenceVariables {
+	for name, referenceVariable := range *(*accountsReport).ReferenceVariables {
 		for _, valuation := range referenceVariable.Valuations {
 			valuationValues := make([]string, len(dates))
 
@@ -457,7 +457,7 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 			}
 
 			// Add the new series (column) for this voucher to the DataFrame
-			updatedDf, err := updateDataFrame(df, referenceVariable.Description, valuationValues)
+			updatedDf, err := updateDataFrame(df, name, valuationValues)
 			if err != nil {
 				return nil, err
 			}
@@ -573,7 +573,7 @@ func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataf
 		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
-		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflación mensual (variación en %)", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
+		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 	} {
 		if report.df == nil {
 			continue
