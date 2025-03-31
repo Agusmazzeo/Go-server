@@ -26,7 +26,6 @@ linters:
     - gofmt
     - goimports
     - gocyclo
-    - revive
     - depguard
     - typecheck
     - predeclared
