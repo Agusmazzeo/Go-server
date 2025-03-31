@@ -10,6 +10,7 @@ import (
 	"server/src/schemas"
 	"server/src/utils"
 	"server/src/utils/render"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -456,7 +457,7 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 			}
 
 			// Add the new series (column) for this voucher to the DataFrame
-			updatedDf, err := updateDataFrame(df, fmt.Sprintf("Variables de Referencia-%s", referenceVariable.Description), valuationValues)
+			updatedDf, err := updateDataFrame(df, referenceVariable.Description, valuationValues)
 			if err != nil {
 				return nil, err
 			}
@@ -552,27 +553,27 @@ func (rc *ReportsController) ParseAccountsCategoryToDataFrame(_ context.Context,
 }
 
 type ReportConfig struct {
-	name         string
-	df           *dataframe.DataFrame
-	graphType    string
-	onlyTotal    bool
-	isPercentage bool
-	includeTable bool
+	name             string
+	df               *dataframe.DataFrame
+	graphType        string
+	columnsToInclude []string
+	columnsToExclude []string
+	isPercentage     bool
+	includeTable     bool
 }
 
 // ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
 func (rc *ReportsController) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
 	var htmlContents []string
-
+	returnWithReferencesDF := utils.UnionDataFramesByIndex(*dataframesAndCharts.ReturnDF, *dataframesAndCharts.ReferenceVariablesDF, "DateRequested")
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
-		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, onlyTotal: false, graphType: "line", includeTable: true},
-		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, onlyTotal: false, graphType: "bar", isPercentage: true},
-		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, onlyTotal: false, graphType: "bar", isPercentage: true},
-		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, onlyTotal: true, graphType: "line", includeTable: true},
+		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
+		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
-		{name: "RETORNO", df: dataframesAndCharts.ReturnDF, onlyTotal: true, graphType: "line", isPercentage: true, includeTable: true},
-		{name: "VARIABLES DE REFERENCIA", df: dataframesAndCharts.ReferenceVariablesDF, graphType: "line", includeTable: true},
+		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflación mensual (variación en %)", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 	} {
 		if report.df == nil {
 			continue
@@ -640,7 +641,7 @@ func (rc *ReportsController) generateLineGraphHTML(name string, report *ReportCo
 	line.SetXAxis(labels)
 
 	for _, asset := range df.Names()[1:] {
-		if report.onlyTotal && asset != "TOTAL" || !report.onlyTotal && asset == "TOTAL" {
+		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
 			continue
 		}
 		data := make([]opts.LineData, 0)
@@ -704,7 +705,7 @@ func (rc *ReportsController) generateStackBarGraphHTML(name string, report *Repo
 	bar.SetXAxis(labels)
 
 	for _, asset := range df.Names()[1:] {
-		if report.onlyTotal && asset != "TOTAL" || !report.onlyTotal && asset == "TOTAL" {
+		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
 			continue
 		}
 		data := make([]opts.BarData, 0)
