@@ -35,8 +35,8 @@ services:
       - 5440:5432
     expose:
       - '5440'
-    volumes:
-      - ./database:/var/lib/postgresql/data
+    # volumes:
+    #   - ./database:/var/lib/postgresql/data
     networks:
       - local-net
 

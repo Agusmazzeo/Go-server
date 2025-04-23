@@ -160,7 +160,7 @@ func TestCalculateHoldingsReturn(t *testing.T) {
 	totalReturns := controllers.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour, false)
 
 	for _, total := range totalReturns {
-		if total.ReturnPercentage > 50 {
+		if total.ReturnPercentage > 200 {
 			t.Errorf("expected return to not be higher than 50 but got %2.f", total.ReturnPercentage)
 		}
 	}

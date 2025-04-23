@@ -26,6 +26,5 @@ linters:
     - gofmt
     - goimports
     - gocyclo
-    - depguard
     - typecheck
     - predeclared

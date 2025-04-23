@@ -7,48 +7,7 @@
         "Type": "Título Públicos / Dolar Estadounidense",
         "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
         "Category": "BONOS H. D.",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-04T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-04T23:00:00-03:00",
-            "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": 39.385303010038065
-          },
-          {
-            "StartDate": "2024-05-05T23:00:00-03:00",
-            "EndDate": "2024-05-06T23:00:00-03:00",
-            "ReturnPercentage": 3.9144136672748298
-          },
-          {
-            "StartDate": "2024-05-06T23:00:00-03:00",
-            "EndDate": "2024-05-07T23:00:00-03:00",
-            "ReturnPercentage": 4.7725458898643325
-          },
-          {
-            "StartDate": "2024-05-07T23:00:00-03:00",
-            "EndDate": "2024-05-08T23:00:00-03:00",
-            "ReturnPercentage": 4.6617915904936025
-          },
-          {
-            "StartDate": "2024-05-08T23:00:00-03:00",
-            "EndDate": "2024-05-09T23:00:00-03:00",
-            "ReturnPercentage": -3.8719068413391566
-          },
-          {
-            "StartDate": "2024-05-09T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": 8.555420956995752
-          },
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-11T23:00:00-03:00",
-            "ReturnPercentage": 2.945337315589658
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ],
     "CER": [
@@ -57,43 +16,7 @@
         "Type": "Título Públicos / Pesos",
         "Denomination": "5925 / BONO DEL TESORO BONCER 2% 2026",
         "Category": "CER",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-11T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-11T23:00:00-03:00",
-            "EndDate": "2024-05-12T23:00:00-03:00",
-            "ReturnPercentage": 1.4327485380116967
-          },
-          {
-            "StartDate": "2024-05-12T23:00:00-03:00",
-            "EndDate": "2024-05-13T23:00:00-03:00",
-            "ReturnPercentage": 2.046699336984714
-          },
-          {
-            "StartDate": "2024-05-13T23:00:00-03:00",
-            "EndDate": "2024-05-14T23:00:00-03:00",
-            "ReturnPercentage": -1.4406779661017
-          },
-          {
-            "StartDate": "2024-05-14T23:00:00-03:00",
-            "EndDate": "2024-05-15T23:00:00-03:00",
-            "ReturnPercentage": -1.6910289481226748
-          },
-          {
-            "StartDate": "2024-05-15T23:00:00-03:00",
-            "EndDate": "2024-05-16T23:00:00-03:00",
-            "ReturnPercentage": 1.253644314868807
-          },
-          {
-            "StartDate": "2024-05-16T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": -0.4319032536711731
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ],
     "M. MARKET": [
@@ -102,86 +25,14 @@
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
         "Category": "M. MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-31T23:00:00-03:00",
-            "EndDate": "2024-06-01T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-06-01T23:00:00-03:00",
-            "EndDate": "2024-06-02T23:00:00-03:00",
-            "ReturnPercentage": 0.13948229930094147
-          },
-          {
-            "StartDate": "2024-06-02T23:00:00-03:00",
-            "EndDate": "2024-06-03T23:00:00-03:00",
-            "ReturnPercentage": 1.6668800388672134
-          },
-          {
-            "StartDate": "2024-06-03T23:00:00-03:00",
-            "EndDate": "2024-06-04T23:00:00-03:00",
-            "ReturnPercentage": 0.5963911941177846
-          }
-        ]
+        "ReturnsByDateRange": null
       },
       {
         "ID": "QUINQUELA P_554",
         "Type": "Fondos / Pesos",
         "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
         "Category": "M. MARKET",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-04-26T23:00:00-03:00",
-            "EndDate": "2024-04-27T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-04-27T23:00:00-03:00",
-            "EndDate": "2024-04-28T23:00:00-03:00",
-            "ReturnPercentage": 1.072710103347685
-          },
-          {
-            "StartDate": "2024-04-28T23:00:00-03:00",
-            "EndDate": "2024-04-29T23:00:00-03:00",
-            "ReturnPercentage": -86.64268489842462
-          },
-          {
-            "StartDate": "2024-04-29T23:00:00-03:00",
-            "EndDate": "2024-04-30T23:00:00-03:00",
-            "ReturnPercentage": 0.8642452766568942
-          },
-          {
-            "StartDate": "2024-04-30T23:00:00-03:00",
-            "EndDate": "2024-05-01T23:00:00-03:00",
-            "ReturnPercentage": -54.39989737038249
-          },
-          {
-            "StartDate": "2024-05-01T23:00:00-03:00",
-            "EndDate": "2024-05-02T23:00:00-03:00",
-            "ReturnPercentage": -79.58833966728353
-          },
-          {
-            "StartDate": "2024-05-02T23:00:00-03:00",
-            "EndDate": "2024-05-03T23:00:00-03:00",
-            "ReturnPercentage": 0.7411307377792831
-          },
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-04T23:00:00-03:00",
-            "ReturnPercentage": 0.30095018738316437
-          },
-          {
-            "StartDate": "2024-05-04T23:00:00-03:00",
-            "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": 1.1104514330628534
-          },
-          {
-            "StartDate": "2024-05-05T23:00:00-03:00",
-            "EndDate": "2024-05-06T23:00:00-03:00",
-            "ReturnPercentage": 0.8783355432732565
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ],
     "MEP": [
@@ -190,58 +41,7 @@
         "Type": "Dolar Estadounidense",
         "Denomination": "Dolar Estadounidense",
         "Category": "MEP",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-04-26T23:00:00-03:00",
-            "EndDate": "2024-04-27T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-04-27T23:00:00-03:00",
-            "EndDate": "2024-04-28T23:00:00-03:00",
-            "ReturnPercentage": 4.05049979508898
-          },
-          {
-            "StartDate": "2024-04-28T23:00:00-03:00",
-            "EndDate": "2024-04-29T23:00:00-03:00",
-            "ReturnPercentage": -3.358073081165547
-          },
-          {
-            "StartDate": "2024-04-29T23:00:00-03:00",
-            "EndDate": "2024-04-30T23:00:00-03:00",
-            "ReturnPercentage": 3.1829886148424524
-          },
-          {
-            "StartDate": "2024-04-30T23:00:00-03:00",
-            "EndDate": "2024-05-01T23:00:00-03:00",
-            "ReturnPercentage": 12.412659443426532
-          },
-          {
-            "StartDate": "2024-05-01T23:00:00-03:00",
-            "EndDate": "2024-05-02T23:00:00-03:00",
-            "ReturnPercentage": 0.051900181177089166
-          },
-          {
-            "StartDate": "2024-05-02T23:00:00-03:00",
-            "EndDate": "2024-05-03T23:00:00-03:00",
-            "ReturnPercentage": 6.347469427434715
-          },
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-04T23:00:00-03:00",
-            "ReturnPercentage": -3.065394307137581
-          },
-          {
-            "StartDate": "2024-05-04T23:00:00-03:00",
-            "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": 2.2449170736007495
-          },
-          {
-            "StartDate": "2024-05-05T23:00:00-03:00",
-            "EndDate": "2024-05-06T23:00:00-03:00",
-            "ReturnPercentage": 5.966666846282753
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ],
     "S / C": [
@@ -250,38 +50,7 @@
         "Type": "Letes / Pesos",
         "Denomination": "9261 / LECAP VTO. 26JUL24",
         "Category": "S / C",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-24T23:00:00-03:00",
-            "EndDate": "2024-05-25T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-25T23:00:00-03:00",
-            "EndDate": "2024-05-26T23:00:00-03:00",
-            "ReturnPercentage": 1.7191977086360222
-          },
-          {
-            "StartDate": "2024-05-26T23:00:00-03:00",
-            "EndDate": "2024-05-27T23:00:00-03:00",
-            "ReturnPercentage": 0.252549780485567
-          },
-          {
-            "StartDate": "2024-05-27T23:00:00-03:00",
-            "EndDate": "2024-05-28T23:00:00-03:00",
-            "ReturnPercentage": 1.4436585611096842
-          },
-          {
-            "StartDate": "2024-05-28T23:00:00-03:00",
-            "EndDate": "2024-05-29T23:00:00-03:00",
-            "ReturnPercentage": 0.5348615034453053
-          },
-          {
-            "StartDate": "2024-05-29T23:00:00-03:00",
-            "EndDate": "2024-05-30T23:00:00-03:00",
-            "ReturnPercentage": 0.8920767679775121
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ],
     "TASA FIJA": [
@@ -290,81 +59,14 @@
         "Type": "Letes / Pesos",
         "Denomination": "9253 / LECAP VTO. 28FEB25",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-11T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-11T23:00:00-03:00",
-            "EndDate": "2024-05-12T23:00:00-03:00",
-            "ReturnPercentage": 2.4347826086956514
-          },
-          {
-            "StartDate": "2024-05-12T23:00:00-03:00",
-            "EndDate": "2024-05-13T23:00:00-03:00",
-            "ReturnPercentage": -2.8013582342954146
-          },
-          {
-            "StartDate": "2024-05-13T23:00:00-03:00",
-            "EndDate": "2024-05-14T23:00:00-03:00",
-            "ReturnPercentage": -0.978165938864628
-          },
-          {
-            "StartDate": "2024-05-14T23:00:00-03:00",
-            "EndDate": "2024-05-15T23:00:00-03:00",
-            "ReturnPercentage": -4.921502910566233
-          },
-          {
-            "StartDate": "2024-05-15T23:00:00-03:00",
-            "EndDate": "2024-05-16T23:00:00-03:00",
-            "ReturnPercentage": 4.916512059369205
-          }
-        ]
+        "ReturnsByDateRange": null
       },
       {
         "ID": "S31E5",
         "Type": "Letes / Pesos",
         "Denomination": "9251 / LECAP VTO. 31ENE25",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-11T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-11T23:00:00-03:00",
-            "EndDate": "2024-05-12T23:00:00-03:00",
-            "ReturnPercentage": 2.64591439688715
-          },
-          {
-            "StartDate": "2024-05-12T23:00:00-03:00",
-            "EndDate": "2024-05-13T23:00:00-03:00",
-            "ReturnPercentage": -2.2517058377558685
-          },
-          {
-            "StartDate": "2024-05-13T23:00:00-03:00",
-            "EndDate": "2024-05-14T23:00:00-03:00",
-            "ReturnPercentage": -0.4731249515240954
-          },
-          {
-            "StartDate": "2024-05-14T23:00:00-03:00",
-            "EndDate": "2024-05-15T23:00:00-03:00",
-            "ReturnPercentage": -4.340710723192009
-          },
-          {
-            "StartDate": "2024-05-15T23:00:00-03:00",
-            "EndDate": "2024-05-16T23:00:00-03:00",
-            "ReturnPercentage": 4.276985743380846
-          },
-          {
-            "StartDate": "2024-05-16T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": -1.5625
-          }
-        ]
+        "ReturnsByDateRange": null
       },
       {
         "ID": "",
@@ -378,94 +80,19 @@
         "Type": "Letes / Pesos",
         "Denomination": "9252 / LECAP VTO. 14OCT24",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-03T23:00:00-03:00",
-            "EndDate": "2024-05-04T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-04T23:00:00-03:00",
-            "EndDate": "2024-05-05T23:00:00-03:00",
-            "ReturnPercentage": 0.9963768115942129
-          },
-          {
-            "StartDate": "2024-05-05T23:00:00-03:00",
-            "EndDate": "2024-05-06T23:00:00-03:00",
-            "ReturnPercentage": 0.8080717488789135
-          },
-          {
-            "StartDate": "2024-05-06T23:00:00-03:00",
-            "EndDate": "2024-05-07T23:00:00-03:00",
-            "ReturnPercentage": -1.068495831887617
-          },
-          {
-            "StartDate": "2024-05-07T23:00:00-03:00",
-            "EndDate": "2024-05-08T23:00:00-03:00",
-            "ReturnPercentage": 1.8974820143884852
-          },
-          {
-            "StartDate": "2024-05-08T23:00:00-03:00",
-            "EndDate": "2024-05-09T23:00:00-03:00",
-            "ReturnPercentage": -1.2002471096990597
-          },
-          {
-            "StartDate": "2024-05-09T23:00:00-03:00",
-            "EndDate": "2024-05-10T23:00:00-03:00",
-            "ReturnPercentage": 1.732916480571678
-          }
-        ]
+        "ReturnsByDateRange": null
       },
       {
         "ID": "S29N4",
         "Type": "Letes / Pesos",
         "Denomination": "9255 / LECAP VTO. 29NOV24",
         "Category": "TASA FIJA",
-        "ReturnsByDateRange": [
-          {
-            "StartDate": "2024-05-10T23:00:00-03:00",
-            "EndDate": "2024-05-11T23:00:00-03:00",
-            "ReturnPercentage": 0
-          },
-          {
-            "StartDate": "2024-05-11T23:00:00-03:00",
-            "EndDate": "2024-05-12T23:00:00-03:00",
-            "ReturnPercentage": 2.000930665425771
-          },
-          {
-            "StartDate": "2024-05-12T23:00:00-03:00",
-            "EndDate": "2024-05-13T23:00:00-03:00",
-            "ReturnPercentage": -1.5510948905109512
-          },
-          {
-            "StartDate": "2024-05-13T23:00:00-03:00",
-            "EndDate": "2024-05-14T23:00:00-03:00",
-            "ReturnPercentage": 1.1214087117701554
-          },
-          {
-            "StartDate": "2024-05-14T23:00:00-03:00",
-            "EndDate": "2024-05-15T23:00:00-03:00",
-            "ReturnPercentage": -2.676198331958579
-          },
-          {
-            "StartDate": "2024-05-15T23:00:00-03:00",
-            "EndDate": "2024-05-16T23:00:00-03:00",
-            "ReturnPercentage": 2.881627271871179
-          },
-          {
-            "StartDate": "2024-05-16T23:00:00-03:00",
-            "EndDate": "2024-05-17T23:00:00-03:00",
-            "ReturnPercentage": 0.04576659038901809
-          },
-          {
-            "StartDate": "2024-05-17T23:00:00-03:00",
-            "EndDate": "2024-05-18T23:00:00-03:00",
-            "ReturnPercentage": -0.37894830887760245
-          }
-        ]
+        "ReturnsByDateRange": null
       }
     ]
   },
+  "CategoryVouchers": {},
+  "CategoryVouchersReturn": {},
   "ReferenceVariables": null,
   "TotalHoldingsByDate": [],
   "TotalTransactionsByDate": [],

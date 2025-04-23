@@ -7,6 +7,8 @@ DOCKER_COMPOSE=docker compose
 POSTGRES_DB=postgres-db
 REDIS=redis
 API=api
+GOOSE=goose
+MIGRATIONS_DIR=migrations
 
 default: build
 
@@ -65,7 +67,7 @@ dc-logs:
 dc-api-up:
 	${DOCKER_COMPOSE} up -d ${API}
 
-dc-postgres-up:
+dc-db-up:
 	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
 
 dc-redis-up:
@@ -73,3 +75,15 @@ dc-redis-up:
 
 dc-down:
 	${DOCKER_COMPOSE} down
+
+db-migrate-up:
+	$(GOOSE) -dir $(MIGRATIONS_DIR) up
+
+db-migrate-down:
+	$(GOOSE) -dir $(MIGRATIONS_DIR) down
+
+db-migrate-create:
+ifndef name
+	$(error Usage: make migrations-create name=create_assets_table)
+endif
+	$(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql

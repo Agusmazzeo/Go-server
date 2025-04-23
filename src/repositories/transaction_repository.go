@@ -1,0 +1,56 @@
+package repositories
+
+import (
+	"context"
+	"time"
+
+	"server/src/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type TransactionRepository interface {
+	GetByClientID(ctx context.Context, clientID string) ([]models.Transaction, error)
+	Create(ctx context.Context, t *models.Transaction) error
+}
+
+type transactionRepo struct {
+	db *pgxpool.Pool
+}
+
+func NewTransactionRepository(db *pgxpool.Pool) TransactionRepository {
+	return &transactionRepo{db: db}
+}
+
+func (r *transactionRepo) GetByClientID(ctx context.Context, clientID string) ([]models.Transaction, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, client_id, asset_id, transaction_type, quantity, price_per_unit, total_value, date FROM transactions WHERE client_id = $1`,
+		clientID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []models.Transaction
+	for rows.Next() {
+		var t models.Transaction
+		var date time.Time
+		if err := rows.Scan(&t.ID, &t.ClientID, &t.AssetID, &t.TransactionType, &t.Quantity, &t.PricePerUnit, &t.TotalValue, &date); err != nil {
+			return nil, err
+		}
+		t.Date = date
+		transactions = append(transactions, t)
+	}
+	return transactions, rows.Err()
+}
+
+func (r *transactionRepo) Create(ctx context.Context, t *models.Transaction) error {
+	err := r.db.QueryRow(ctx,
+		`INSERT INTO transactions (client_id, asset_id, transaction_type, quantity, price_per_unit, total_value, date)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING id`,
+		t.ClientID, t.AssetID, t.TransactionType, t.Quantity, t.PricePerUnit, t.TotalValue, t.Date,
+	).Scan(&t.ID)
+	return err
+}
