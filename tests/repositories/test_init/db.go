@@ -46,6 +46,7 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 
 	// Set reasonable pool size for testing
 	config.MaxConns = 5
+	config.MinConns = 1
 
 	// Create connection pool
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
@@ -57,6 +58,9 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 	if err := pool.Ping(context.Background()); err != nil {
 		t.Fatalf("Failed to ping database: %v\nPlease check your database configuration and ensure it's running.", err)
 	}
+
+	// Truncate tables before starting tests
+	TruncateTables(t, pool)
 
 	TestDB = pool
 	return pool
@@ -111,8 +115,8 @@ func CleanupTestDB() {
 }
 
 // TruncateTables truncates all tables in the test database
-func TruncateTables(t *testing.T) {
-	if TestDB == nil {
+func TruncateTables(t *testing.T, pool *pgxpool.Pool) {
+	if pool == nil {
 		t.Fatal("Database connection not initialized")
 	}
 
@@ -125,7 +129,7 @@ func TruncateTables(t *testing.T) {
 	}
 
 	for _, table := range tables {
-		_, err := TestDB.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
+		_, err := pool.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
 		if err != nil {
 			t.Fatalf("Failed to truncate table %s: %v", table, err)
 		}

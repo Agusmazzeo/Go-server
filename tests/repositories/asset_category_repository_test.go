@@ -15,7 +15,6 @@ import (
 func TestAssetCategoryRepository(t *testing.T) {
 	// Setup test database connection
 	db := test_init.SetupTestDB(t)
-	defer test_init.TruncateTables(t)
 
 	// Create repository instance
 	repo := repositories.NewAssetCategoryRepository(db)
