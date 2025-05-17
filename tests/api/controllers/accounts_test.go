@@ -44,7 +44,7 @@ func TestGetAccountState(t *testing.T) {
 		t.Error(err)
 	}
 
-	if accountState == nil || len(*accountState.Vouchers) == 0 {
+	if accountState == nil || len(*accountState.Assets) == 0 {
 		t.Errorf("expected non-empty account state")
 	}
 }
@@ -60,7 +60,7 @@ func TestGetAccountStateDateRange(t *testing.T) {
 		t.Error(err)
 	}
 
-	if accountState == nil || len(*accountState.Vouchers) == 0 {
+	if accountState == nil || len(*accountState.Assets) == 0 {
 		t.Errorf("expected non-empty account state for the date range")
 	}
 }
@@ -75,7 +75,7 @@ func TestGetBoletosDateRange(t *testing.T) {
 		t.Error(err)
 	}
 
-	if accountState == nil || len(*accountState.Vouchers) == 0 {
+	if accountState == nil || len(*accountState.Assets) == 0 {
 		t.Errorf("expected non-empty account state for the date range")
 	}
 }
@@ -90,7 +90,7 @@ func TestGetLiquidacionesDateRange(t *testing.T) {
 		t.Error(err)
 	}
 
-	if accountState == nil || len(*accountState.Vouchers) == 0 {
+	if accountState == nil || len(*accountState.Assets) == 0 {
 		t.Errorf("expected non-empty account state for the date range")
 	}
 }
@@ -131,7 +131,7 @@ func TestCollapseAndGroupAccountsStates(t *testing.T) {
 			}
 
 			// Compare the newly generated report with the saved one
-			if !compareVouchersByCategory(t, *collapsedAccounts.VouchersByCategory, *savedReport.VouchersByCategory) {
+			if !compareAssetsByCategory(t, *collapsedAccounts.AssetsByCategory, *savedReport.AssetsByCategory) {
 				t.Errorf("Generated report does not match the saved report on iteration %d", i+1)
 				outputFile := fmt.Sprintf("collapsed_account_states_%d.json", i+1)
 				err = utils.SaveStructToJSONFile(collapsedAccounts, fmt.Sprintf("%s/%s", outputDir, outputFile))

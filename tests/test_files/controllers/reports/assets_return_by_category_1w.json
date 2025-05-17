@@ -1,6 +1,6 @@
 {
-  "VouchersByCategory": {},
-  "VouchersReturnByCategory": {
+  "AssetsByCategory": {},
+  "AssetsReturnByCategory": {
     "BONOS H. D.": [
       {
         "ID": "AL30",
@@ -91,8 +91,8 @@
       }
     ]
   },
-  "CategoryVouchers": {},
-  "CategoryVouchersReturn": {},
+  "CategoryAssets": {},
+  "CategoryAssetsReturn": {},
   "ReferenceVariables": null,
   "TotalHoldingsByDate": [],
   "TotalTransactionsByDate": [],

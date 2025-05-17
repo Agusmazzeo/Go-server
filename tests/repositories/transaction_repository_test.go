@@ -16,6 +16,7 @@ import (
 func TestTransactionRepository(t *testing.T) {
 	// Setup test database connection
 	db := test_init.SetupTestDB(t)
+	defer test_init.TruncateTables(t, db)
 
 	// Create repository instance
 	repo := repositories.NewTransactionRepository(db)

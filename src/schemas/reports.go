@@ -7,18 +7,18 @@ import (
 )
 
 type AccountsReports struct {
-	VouchersByCategory       *map[string][]Voucher
-	VouchersReturnByCategory *map[string][]VoucherReturn
-	CategoryVouchers         *map[string]Voucher
-	CategoryVouchersReturn   *map[string]VoucherReturn
-	ReferenceVariables       *map[string]*VariableWithValuationResponse
-	TotalHoldingsByDate      []Holding
-	TotalTransactionsByDate  []Transaction
-	TotalReturns             []ReturnByDate
-	FinalIntervalReturn      float64
+	AssetsByCategory        *map[string][]Asset
+	AssetsReturnByCategory  *map[string][]AssetReturn
+	CategoryAssets          *map[string]Asset
+	CategoryAssetsReturn    *map[string]AssetReturn
+	ReferenceVariables      *map[string]*VariableWithValuationResponse
+	TotalHoldingsByDate     []Holding
+	TotalTransactionsByDate []Transaction
+	TotalReturns            []ReturnByDate
+	FinalIntervalReturn     float64
 }
 
-type VoucherReturn struct {
+type AssetReturn struct {
 	ID                 string
 	Type               string
 	Denomination       string

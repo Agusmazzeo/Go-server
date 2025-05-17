@@ -1,6 +1,6 @@
 [
   {
-    "Vouchers": {
+    "Assets": {
       "$": {
         "ID": "$",
         "Type": "Pesos",
@@ -394,7 +394,7 @@
     }
   },
   {
-    "Vouchers": {
+    "Assets": {
       "$": {
         "ID": "$",
         "Type": "Pesos",

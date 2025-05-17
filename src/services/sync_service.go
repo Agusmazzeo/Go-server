@@ -43,10 +43,5 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Starting sync for account %s from %s to %s", accountID, startDate, endDate)
 
-	account, err := s.escoService.GetAccountByID(ctx, token, accountID)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

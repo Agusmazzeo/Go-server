@@ -130,20 +130,20 @@ func TestGetAccountState(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if state.Vouchers == nil {
-		t.Fatal("Expected vouchers map to be initialized")
+	if state.Assets == nil {
+		t.Fatal("Expected assets map to be initialized")
 	}
 
-	voucher, exists := (*state.Vouchers)["test-asset"]
+	asset, exists := (*state.Assets)["test-asset"]
 	if !exists {
-		t.Fatal("Expected voucher for test-asset to exist")
+		t.Fatal("Expected asset for test-asset to exist")
 	}
 
-	if len(voucher.Holdings) != 1 {
-		t.Errorf("Expected 1 holding, got %d", len(voucher.Holdings))
+	if len(asset.Holdings) != 1 {
+		t.Errorf("Expected 1 holding, got %d", len(asset.Holdings))
 	}
 
-	holding := voucher.Holdings[0]
+	holding := asset.Holdings[0]
 	if holding.Currency != "USD" {
 		t.Errorf("Expected currency USD, got %s", holding.Currency)
 	}
@@ -236,22 +236,22 @@ func TestGetAccountStateWithTransactions(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if state.Vouchers == nil {
-		t.Fatal("Expected vouchers map to be initialized")
+	if state.Assets == nil {
+		t.Fatal("Expected assets map to be initialized")
 	}
 
-	voucher, exists := (*state.Vouchers)["test-asset"]
+	asset, exists := (*state.Assets)["test-asset"]
 	if !exists {
-		t.Fatal("Expected voucher for test-asset to exist")
+		t.Fatal("Expected asset for test-asset to exist")
 	}
 
-	if len(voucher.Transactions) != 3 {
-		t.Errorf("Expected 3 transactions, got %d", len(voucher.Transactions))
+	if len(asset.Transactions) != 3 {
+		t.Errorf("Expected 3 transactions, got %d", len(asset.Transactions))
 	}
 
 	// Verify transaction values
 	var totalValue float64
-	for _, transaction := range voucher.Transactions {
+	for _, transaction := range asset.Transactions {
 		totalValue += transaction.Value
 	}
 	expectedTotal := -500.0 + -300.0 + 200.0
@@ -342,24 +342,24 @@ func TestGetMultiAccountStateByCategory(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if state.VouchersByCategory == nil {
-		t.Fatal("Expected vouchers by category map to be initialized")
+	if state.AssetsByCategory == nil {
+		t.Fatal("Expected assets by category map to be initialized")
 	}
 
-	vouchers, exists := (*state.VouchersByCategory)["Stocks"]
+	assets, exists := (*state.AssetsByCategory)["Stocks"]
 	if !exists {
-		t.Fatal("Expected vouchers for Stocks category to exist")
+		t.Fatal("Expected assets for Stocks category to exist")
 	}
 
-	if len(vouchers) != 1 {
-		t.Errorf("Expected 1 voucher in Stocks category, got %d", len(vouchers))
+	if len(assets) != 1 {
+		t.Errorf("Expected 1 asset in Stocks category, got %d", len(assets))
 	}
 
-	voucher := vouchers[0]
-	if voucher.Category != "Stocks" {
-		t.Errorf("Expected category Stocks, got %s", voucher.Category)
+	asset := assets[0]
+	if asset.Category != "Stocks" {
+		t.Errorf("Expected category Stocks, got %s", asset.Category)
 	}
-	if len(voucher.Holdings) != 2 {
-		t.Errorf("Expected 2 holdings, got %d", len(voucher.Holdings))
+	if len(asset.Holdings) != 2 {
+		t.Errorf("Expected 2 holdings, got %d", len(asset.Holdings))
 	}
 }

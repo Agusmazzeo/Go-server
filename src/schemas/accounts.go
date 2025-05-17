@@ -26,7 +26,7 @@ type Transaction struct {
 	Date         *time.Time
 }
 
-type Voucher struct {
+type Asset struct {
 	ID           string
 	Type         string
 	Denomination string
@@ -36,7 +36,7 @@ type Voucher struct {
 }
 
 type AccountState struct {
-	Vouchers *map[string]Voucher
+	Assets *map[string]Asset
 }
 
 type TotalHoldingsAndTransactionsByDate struct {
@@ -45,12 +45,12 @@ type TotalHoldingsAndTransactionsByDate struct {
 }
 
 type AccountStateByCategory struct {
-	VouchersByCategory      *map[string][]Voucher
-	CategoryVouchers        *map[string]Voucher
+	AssetsByCategory        *map[string][]Asset
+	CategoryAssets          *map[string]Asset
 	TotalHoldingsByDate     *map[string]Holding
 	TotalTransactionsByDate *map[string]Transaction
 }
 
 func NewAccountState() *AccountState {
-	return &AccountState{Vouchers: &map[string]Voucher{}}
+	return &AccountState{Assets: &map[string]Asset{}}
 }

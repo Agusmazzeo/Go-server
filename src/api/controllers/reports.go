@@ -68,31 +68,31 @@ func (rc *ReportsController) GetReport(
 	return accountReports, nil
 }
 
-// GenerateAccountReports calculates the return for each voucher per category and returns an AccountsReports struct.
+// GenerateAccountReports calculates the return for each asset per category and returns an AccountsReports struct.
 func GenerateAccountReports(
 	accountStateByCategory *schemas.AccountStateByCategory,
 	startDate, endDate time.Time,
 	interval time.Duration) (*schemas.AccountsReports, error) {
-	voucherReturnsByCategory := make(map[string][]schemas.VoucherReturn)
-	categoryVoucherReturns := make(map[string]schemas.VoucherReturn)
+	assetReturnsByCategory := make(map[string][]schemas.AssetReturn)
+	categoryAssetReturns := make(map[string]schemas.AssetReturn)
 
-	// Iterate through each category and its associated vouchers
-	for category, vouchers := range *accountStateByCategory.VouchersByCategory {
+	// Iterate through each category and its associated assets
+	for category, assets := range *accountStateByCategory.AssetsByCategory {
 		if category == "ARS" {
 			continue
 		}
-		for _, voucher := range vouchers {
-			voucherReturn, _ := CalculateVoucherReturn(voucher, interval)
-			voucherReturnsByCategory[category] = append(voucherReturnsByCategory[category], voucherReturn)
+		for _, asset := range assets {
+			assetReturn, _ := CalculateAssetReturn(asset, interval)
+			assetReturnsByCategory[category] = append(assetReturnsByCategory[category], assetReturn)
 		}
 	}
-	// Iterate through each category vouchers
-	for category, voucher := range *accountStateByCategory.CategoryVouchers {
+	// Iterate through each category assets
+	for category, asset := range *accountStateByCategory.CategoryAssets {
 		if category == "ARS" {
 			continue
 		}
-		voucherReturn, _ := CalculateVoucherReturn(voucher, interval)
-		categoryVoucherReturns[category] = voucherReturn
+		assetReturn, _ := CalculateAssetReturn(asset, interval)
+		categoryAssetReturns[category] = assetReturn
 	}
 
 	totalHoldingsByDate := make([]schemas.Holding, 0, len(*accountStateByCategory.TotalHoldingsByDate))
@@ -106,50 +106,50 @@ func GenerateAccountReports(
 
 	totalReturns := CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval, true)
 	finalIntervalReturn := CalculateFinalIntervalReturn(totalReturns)
-	filteredVouchers := filterVouchersByCategoryHoldingsByInterval(accountStateByCategory.VouchersByCategory, startDate, endDate, interval)
-	filteredCategoryVouchers := filterVouchersHoldingsByInterval(accountStateByCategory.CategoryVouchers, startDate, endDate, interval)
+	filteredAssets := filterAssetsByCategoryHoldingsByInterval(accountStateByCategory.AssetsByCategory, startDate, endDate, interval)
+	filteredCategoryAssets := filterAssetsHoldingsByInterval(accountStateByCategory.CategoryAssets, startDate, endDate, interval)
 	filteredTotalHoldings := filterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
 	return &schemas.AccountsReports{
-		VouchersByCategory:       &filteredVouchers,
-		VouchersReturnByCategory: &voucherReturnsByCategory,
-		CategoryVouchers:         &filteredCategoryVouchers,
-		CategoryVouchersReturn:   &categoryVoucherReturns,
-		TotalHoldingsByDate:      filteredTotalHoldings,
-		TotalTransactionsByDate:  totalTransactionsByDate,
-		TotalReturns:             totalReturns,
-		FinalIntervalReturn:      finalIntervalReturn,
+		AssetsByCategory:        &filteredAssets,
+		AssetsReturnByCategory:  &assetReturnsByCategory,
+		CategoryAssets:          &filteredCategoryAssets,
+		CategoryAssetsReturn:    &categoryAssetReturns,
+		TotalHoldingsByDate:     filteredTotalHoldings,
+		TotalTransactionsByDate: totalTransactionsByDate,
+		TotalReturns:            totalReturns,
+		FinalIntervalReturn:     finalIntervalReturn,
 	}, nil
 }
 
-func filterVouchersByCategoryHoldingsByInterval(vouchersByCategory *map[string][]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string][]schemas.Voucher {
-	filteredVouchersByCategory := make(map[string][]schemas.Voucher)
+func filterAssetsByCategoryHoldingsByInterval(assetsByCategory *map[string][]schemas.Asset, startDate, endDate time.Time, interval time.Duration) map[string][]schemas.Asset {
+	filteredAssetsByCategory := make(map[string][]schemas.Asset)
 
-	for category, vouchers := range *vouchersByCategory {
-		for _, voucher := range vouchers {
-			filteredHoldings := filterHoldingsByInterval(voucher.Holdings, startDate, endDate, interval)
+	for category, assets := range *assetsByCategory {
+		for _, asset := range assets {
+			filteredHoldings := filterHoldingsByInterval(asset.Holdings, startDate, endDate, interval)
 
 			if len(filteredHoldings) > 0 {
-				voucher.Holdings = filteredHoldings
-				filteredVouchersByCategory[category] = append(filteredVouchersByCategory[category], voucher)
+				asset.Holdings = filteredHoldings
+				filteredAssetsByCategory[category] = append(filteredAssetsByCategory[category], asset)
 			}
 		}
 	}
 
-	return filteredVouchersByCategory
+	return filteredAssetsByCategory
 }
 
-func filterVouchersHoldingsByInterval(categoryVouchers *map[string]schemas.Voucher, startDate, endDate time.Time, interval time.Duration) map[string]schemas.Voucher {
-	filteredVouchersByCategory := *categoryVouchers
+func filterAssetsHoldingsByInterval(categoryAssets *map[string]schemas.Asset, startDate, endDate time.Time, interval time.Duration) map[string]schemas.Asset {
+	filteredAssetsByCategory := *categoryAssets
 
-	for _, voucher := range filteredVouchersByCategory {
-		filteredHoldings := filterHoldingsByInterval(voucher.Holdings, startDate, endDate, interval)
+	for _, asset := range filteredAssetsByCategory {
+		filteredHoldings := filterHoldingsByInterval(asset.Holdings, startDate, endDate, interval)
 
 		if len(filteredHoldings) > 0 {
-			voucher.Holdings = filteredHoldings
+			asset.Holdings = filteredHoldings
 		}
 	}
 
-	return filteredVouchersByCategory
+	return filteredAssetsByCategory
 }
 
 func filterHoldingsByInterval(holdings []schemas.Holding, startDate, endDate time.Time, interval time.Duration) []schemas.Holding {
@@ -285,27 +285,27 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 		series.New(dateStrs, series.String, "DateRequested"),
 	)
 
-	// Iterate through the vouchers and add each as a new column
-	for _, vouchers := range *accountsReport.VouchersByCategory {
-		for _, voucher := range vouchers {
-			voucherValues := make([]string, len(dates))
+	// Iterate through the assets and add each as a new column
+	for _, assets := range *accountsReport.AssetsByCategory {
+		for _, asset := range assets {
+			assetValues := make([]string, len(dates))
 
-			// Initialize all rows with empty values for this voucher
-			for i := range voucherValues {
-				voucherValues[i] = "0.0" // Default value if no match found
+			// Initialize all rows with empty values for this asset
+			for i := range assetValues {
+				assetValues[i] = "0.0" // Default value if no match found
 			}
 
 			// Iterate through holdings and match the dates to fill the corresponding values
-			for _, holding := range voucher.Holdings {
+			for _, holding := range asset.Holdings {
 				if holding.DateRequested != nil {
 					dateStr := holding.DateRequested.Format("2006-01-02")
 					// Find the index in the dates array that matches this holding's date
 					for i, date := range dateStrs {
 						if date == dateStr {
 							if holding.Value >= 1.0 || holding.Value <= -1.0 {
-								voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
+								assetValues[i] = fmt.Sprintf("%.2f", holding.Value)
 							} else {
-								voucherValues[i] = "0.0"
+								assetValues[i] = "0.0"
 							}
 							break
 						}
@@ -313,8 +313,8 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 				}
 			}
 
-			// Add the new series (column) for this voucher to the DataFrame
-			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID), voucherValues)
+			// Add the new series (column) for this asset to the DataFrame
+			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", asset.Category, asset.ID), assetValues)
 			if err != nil {
 				return nil, err
 			}
@@ -342,7 +342,7 @@ func (rc *ReportsController) ParseAccountsReportToDataFrame(ctx context.Context,
 			totalValues[i] = "0.0"
 		}
 	}
-	// Add the new series (column) for this voucher to the DataFrame
+	// Add the new series (column) for this asset to the DataFrame
 	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
 	if err != nil {
 		return nil, err
@@ -367,30 +367,30 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 		series.New(dateStrs, series.String, "DateRequested"),
 	)
 
-	// Iterate through the vouchers and add each as a new column
-	for _, vouchers := range *accountsReport.VouchersReturnByCategory {
-		for _, voucher := range vouchers {
-			voucherValues := make([]string, len(dates))
+	// Iterate through the assets and add each as a new column
+	for _, assets := range *accountsReport.AssetsReturnByCategory {
+		for _, asset := range assets {
+			assetValues := make([]string, len(dates))
 
-			// Initialize all rows with empty values for this voucher
-			for i := range voucherValues {
-				voucherValues[i] = "0.0" // Default value if no match found
+			// Initialize all rows with empty values for this asset
+			for i := range assetValues {
+				assetValues[i] = "0.0" // Default value if no match found
 			}
 
-			// Iterate through vouchers return and match the dates to fill the corresponding values
-			for _, returnsByDate := range voucher.ReturnsByDateRange {
+			// Iterate through assets return and match the dates to fill the corresponding values
+			for _, returnsByDate := range asset.ReturnsByDateRange {
 				dateStr := returnsByDate.EndDate.Format("2006-01-02")
 				// Find the index in the dates array that matches this holding's date
 				for i, date := range dateStrs {
 					if date == dateStr {
-						voucherValues[i] = fmt.Sprintf("%.2f", returnsByDate.ReturnPercentage)
+						assetValues[i] = fmt.Sprintf("%.2f", returnsByDate.ReturnPercentage)
 						break
 					}
 				}
 			}
 
-			// Add the new series (column) for this voucher to the DataFrame
-			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", voucher.Category, voucher.ID), voucherValues)
+			// Add the new series (column) for this asset to the DataFrame
+			updatedDf, err := updateDataFrame(df, fmt.Sprintf("%s-%s", asset.Category, asset.ID), assetValues)
 			if err != nil {
 				return nil, err
 			}
@@ -413,7 +413,7 @@ func (rc *ReportsController) ParseAccountsReturnToDataFrame(ctx context.Context,
 			totalValues[i] = "0.0"
 		}
 	}
-	// Add the new series (column) for this voucher to the DataFrame
+	// Add the new series (column) for this asset to the DataFrame
 	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
 	if err != nil {
 		return nil, err
@@ -437,12 +437,12 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 		series.New(dateStrs, series.String, "DateRequested"),
 	)
 
-	// Iterate through the vouchers and add each as a new column
+	// Iterate through the assets and add each as a new column
 	for name, referenceVariable := range *(*accountsReport).ReferenceVariables {
 		for _, valuation := range referenceVariable.Valuations {
 			valuationValues := make([]string, len(dates))
 
-			// Initialize all rows with empty values for this voucher
+			// Initialize all rows with empty values for this asset
 			for i := range valuationValues {
 				valuationValues[i] = "0.0" // Default value if no match found
 			}
@@ -456,7 +456,7 @@ func (rc *ReportsController) ParseReferenceVariablesToDataFrame(ctx context.Cont
 				}
 			}
 
-			// Add the new series (column) for this voucher to the DataFrame
+			// Add the new series (column) for this asset to the DataFrame
 			updatedDf, err := updateDataFrame(df, name, valuationValues)
 			if err != nil {
 				return nil, err
@@ -485,26 +485,26 @@ func (rc *ReportsController) ParseAccountsCategoryToDataFrame(_ context.Context,
 		series.New(dateStrs, series.String, "DateRequested"),
 	)
 
-	// Iterate through the vouchers and add each as a new column
-	for category, voucher := range *accountsReport.CategoryVouchers {
-		voucherValues := make([]string, len(dates))
+	// Iterate through the assets and add each as a new column
+	for category, asset := range *accountsReport.CategoryAssets {
+		assetValues := make([]string, len(dates))
 
-		// Initialize all rows with empty values for this voucher
-		for i := range voucherValues {
-			voucherValues[i] = "0.0" // Default value if no match found
+		// Initialize all rows with empty values for this asset
+		for i := range assetValues {
+			assetValues[i] = "0.0" // Default value if no match found
 		}
 
 		// Iterate through holdings and match the dates to fill the corresponding values
-		for _, holding := range voucher.Holdings {
+		for _, holding := range asset.Holdings {
 			if holding.DateRequested != nil {
 				dateStr := holding.DateRequested.Format("2006-01-02")
 				// Find the index in the dates array that matches this holding's date
 				for i, date := range dateStrs {
 					if date == dateStr {
 						if holding.Value >= 1.0 || holding.Value <= -1.0 {
-							voucherValues[i] = fmt.Sprintf("%.2f", holding.Value)
+							assetValues[i] = fmt.Sprintf("%.2f", holding.Value)
 						} else {
-							voucherValues[i] = "0.0"
+							assetValues[i] = "0.0"
 						}
 						break
 					}
@@ -512,9 +512,9 @@ func (rc *ReportsController) ParseAccountsCategoryToDataFrame(_ context.Context,
 			}
 		}
 
-		// Add the new series (column) for this voucher to the DataFrame
+		// Add the new series (column) for this asset to the DataFrame
 		var updatedDf *dataframe.DataFrame
-		updatedDf, err = updateDataFrame(df, category, voucherValues)
+		updatedDf, err = updateDataFrame(df, category, assetValues)
 		if err != nil {
 			return nil, err
 		}
@@ -542,7 +542,7 @@ func (rc *ReportsController) ParseAccountsCategoryToDataFrame(_ context.Context,
 			totalValues[i] = "0.0"
 		}
 	}
-	// Add the new series (column) for this voucher to the DataFrame
+	// Add the new series (column) for this asset to the DataFrame
 	updatedDf, err := updateDataFrame(df, "TOTAL", totalValues)
 	if err != nil {
 		return nil, err
@@ -821,20 +821,20 @@ func (rc *ReportsController) generatePieChartHTML(name string, report *ReportCon
 	return htmlBuffer.String(), nil
 }
 
-// CalculateVoucherReturn calculates the return for a single voucher by taking holdings in pairs and applying transactions within the date ranges.
-func CalculateVoucherReturn(voucher schemas.Voucher, interval time.Duration) (schemas.VoucherReturn, error) {
-	if len(voucher.Holdings) < 2 {
-		return schemas.VoucherReturn{}, fmt.Errorf("insufficient holdings data to calculate return for voucher %s", voucher.ID)
+// CalculateAssetReturn calculates the return for a single asset by taking holdings in pairs and applying transactions within the date ranges.
+func CalculateAssetReturn(asset schemas.Asset, interval time.Duration) (schemas.AssetReturn, error) {
+	if len(asset.Holdings) < 2 {
+		return schemas.AssetReturn{}, fmt.Errorf("insufficient holdings data to calculate return for asset %s", asset.ID)
 	}
 
-	returnsByInterval := CalculateHoldingsReturn(voucher.Holdings, voucher.Transactions, interval, false)
+	returnsByInterval := CalculateHoldingsReturn(asset.Holdings, asset.Transactions, interval, false)
 
 	// Return the result
-	return schemas.VoucherReturn{
-		ID:                 voucher.ID,
-		Type:               voucher.Type,
-		Denomination:       voucher.Denomination,
-		Category:           voucher.Category,
+	return schemas.AssetReturn{
+		ID:                 asset.ID,
+		Type:               asset.Type,
+		Denomination:       asset.Denomination,
+		Category:           asset.Category,
 		ReturnsByDateRange: returnsByInterval,
 	}, nil
 }
@@ -847,7 +847,7 @@ func CalculateFinalIntervalReturn(totalReturns []schemas.ReturnByDate) float64 {
 	return intervalReturn
 }
 
-func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration, multiVoucher bool) []schemas.ReturnByDate {
+func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.Transaction, interval time.Duration, multiAsset bool) []schemas.ReturnByDate {
 	// Sort holdings by date
 	sortedHoldings := sortHoldingsByDate(holdings)
 	var dailyReturns []schemas.ReturnByDate
@@ -873,13 +873,13 @@ func CalculateHoldingsReturn(holdings []schemas.Holding, transactions []schemas.
 				continue
 			}
 			if transaction.Date.Equal(startDate) {
-				if !multiVoucher && startingHolding.Units != 0 {
+				if !multiAsset && startingHolding.Units != 0 {
 					startingValuePerUnit := startingHolding.Value / startingHolding.Units
 					transaction.Value = transaction.Units * startingValuePerUnit
 				}
 				netStartDateTransactions -= transaction.Value
 			} else if transaction.Date.Equal(endDate) {
-				if !multiVoucher && endingHolding.Units != 0 {
+				if !multiAsset && endingHolding.Units != 0 {
 					endingValuePerUnit := endingHolding.Value / endingHolding.Units
 					transaction.Value = transaction.Units * endingValuePerUnit
 				}
@@ -1222,7 +1222,7 @@ func applyStylesToAllSheets(f *excelize.File) error {
 		return err
 	}
 
-	// Define a style for the second row (Voucher IDs)
+	// Define a style for the second row (Asset IDs)
 	secondRowStyle, err := f.NewStyle(&excelize.Style{
 		Font: &excelize.Font{Italic: true, Color: "000000"},
 		Fill: excelize.Fill{Type: "pattern", Color: []string{"E2EFDA"}, Pattern: 1}, // Light green

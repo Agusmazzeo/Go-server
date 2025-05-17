@@ -141,24 +141,24 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 		return nil, fmt.Errorf("empty account state received")
 	}
 
-	for id := range *accountState.Vouchers {
-		voucher := (*accountState.Vouchers)[id]
+	for id := range *accountState.Assets {
+		asset := (*accountState.Assets)[id]
 		if boletos != nil {
-			if boleto, ok := (*boletos.Vouchers)[id]; ok {
-				voucher.Transactions = append(voucher.Transactions, boleto.Transactions...)
-				(*accountState.Vouchers)[id] = voucher
+			if boleto, ok := (*boletos.Assets)[id]; ok {
+				asset.Transactions = append(asset.Transactions, boleto.Transactions...)
+				(*accountState.Assets)[id] = asset
 			}
 		}
 		if liquidaciones != nil {
-			if liquidacion, ok := (*liquidaciones.Vouchers)[id]; ok {
-				voucher.Transactions = append(voucher.Transactions, liquidacion.Transactions...)
-				(*accountState.Vouchers)[id] = voucher
+			if liquidacion, ok := (*liquidaciones.Assets)[id]; ok {
+				asset.Transactions = append(asset.Transactions, liquidacion.Transactions...)
+				(*accountState.Assets)[id] = asset
 			}
 		}
 		if instrumentos != nil {
-			if instrumento, ok := (*instrumentos.Vouchers)[id]; ok {
-				voucher.Transactions = append(voucher.Transactions, instrumento.Transactions...)
-				(*accountState.Vouchers)[id] = voucher
+			if instrumento, ok := (*instrumentos.Assets)[id]; ok {
+				asset.Transactions = append(asset.Transactions, instrumento.Transactions...)
+				(*accountState.Assets)[id] = asset
 			}
 		}
 	}
@@ -174,11 +174,11 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 	}
 	intervalHours := interval.Hours()
 	numDays := int(endDate.Sub(startDate).Hours()/intervalHours) + 1
-	vouchers := make(map[string]schemas.Voucher)
+	assets := make(map[string]schemas.Asset)
 
 	var wg sync.WaitGroup
 	var errChan = make(chan error, numDays)
-	var voucherChan = make(chan *schemas.AccountState, numDays)
+	var assetChan = make(chan *schemas.AccountState, numDays)
 	wg.Add(numDays)
 
 	for i := 0; i < numDays; i++ {
@@ -207,30 +207,30 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 				errChan <- err
 				return
 			}
-			voucherChan <- accountState
+			assetChan <- accountState
 		}(i)
 	}
 
 	go func() {
 		wg.Wait()
 		close(errChan)
-		close(voucherChan)
+		close(assetChan)
 	}()
 
-	for accountState := range voucherChan {
-		for key, value := range *accountState.Vouchers {
-			if v, ok := vouchers[key]; ok {
+	for accountState := range assetChan {
+		for key, value := range *accountState.Assets {
+			if v, ok := assets[key]; ok {
 				v.Holdings = append(v.Holdings, value.Holdings...)
-				vouchers[key] = v
+				assets[key] = v
 			} else {
-				vouchers[key] = value
+				assets[key] = value
 			}
 		}
 	}
-	for _, voucher := range vouchers {
-		sortHoldingsByDateRequested(&voucher)
+	for _, asset := range assets {
+		sortHoldingsByDateRequested(&asset)
 	}
-	return &schemas.AccountState{Vouchers: &vouchers}, <-errChan
+	return &schemas.AccountState{Assets: &assets}, <-errChan
 }
 
 func (s *ESCOService) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
@@ -296,24 +296,24 @@ func (s *ESCOService) parseEstadoToAccountState(accStateData *[]esco.EstadoCuent
 	categoryMap := s.client.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
 	for _, accData := range *accStateData {
-		var voucher schemas.Voucher
+		var asset schemas.Asset
 		var exists bool
 		var parsedDate *time.Time
-		if voucher, exists = (*accStateRes.Vouchers)[accData.A]; !exists {
+		if asset, exists = (*accStateRes.Assets)[accData.A]; !exists {
 			categoryKey = fmt.Sprintf("%s - %s", accData.A, accData.D)
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
 				category = "S / C"
 			}
-			(*accStateRes.Vouchers)[accData.A] = schemas.Voucher{
+			(*accStateRes.Assets)[accData.A] = schemas.Asset{
 				ID:           accData.A,
 				Type:         accData.TI,
 				Denomination: accData.D,
 				Category:     category,
 				Holdings:     make([]schemas.Holding, 0, len(*accStateData)),
 			}
-			voucher = (*accStateRes.Vouchers)[accData.A]
+			asset = (*accStateRes.Assets)[accData.A]
 		}
 		if accData.F != "" {
 			p, err := time.Parse(utils.ShortSlashDateLayout, accData.F)
@@ -324,7 +324,7 @@ func (s *ESCOService) parseEstadoToAccountState(accStateData *[]esco.EstadoCuent
 		} else {
 			parsedDate = nil
 		}
-		voucher.Holdings = append(voucher.Holdings, schemas.Holding{
+		asset.Holdings = append(asset.Holdings, schemas.Holding{
 			Currency:      accData.M,
 			CurrencySign:  accData.MS,
 			Value:         accData.N,
@@ -332,7 +332,7 @@ func (s *ESCOService) parseEstadoToAccountState(accStateData *[]esco.EstadoCuent
 			DateRequested: date,
 			Date:          parsedDate,
 		})
-		(*accStateRes.Vouchers)[accData.A] = voucher
+		(*accStateRes.Assets)[accData.A] = asset
 	}
 
 	return accStateRes, nil
@@ -343,25 +343,25 @@ func (s *ESCOService) parseBoletosToAccountState(boletos *[]esco.Boleto) (*schem
 	categoryMap := s.client.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
 	for _, boleto := range *boletos {
-		var voucher schemas.Voucher
+		var asset schemas.Asset
 		var exists bool
 		var parsedDate *time.Time
 		id := strings.Split(boleto.I, " - ")[0]
 		categoryKey = boleto.I
-		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+		if asset, exists = (*accStateRes.Assets)[id]; !exists {
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
 				category = "S / C"
 			}
-			(*accStateRes.Vouchers)[id] = schemas.Voucher{
+			(*accStateRes.Assets)[id] = schemas.Asset{
 				ID:           id,
 				Type:         boleto.T,
 				Denomination: boleto.FL,
 				Category:     category,
 				Transactions: make([]schemas.Transaction, 0, len(*boletos)),
 			}
-			voucher = (*accStateRes.Vouchers)[id]
+			asset = (*accStateRes.Assets)[id]
 		}
 		if boleto.FL != "" {
 			p, err := time.Parse(utils.ShortSlashDateLayout, boleto.FL)
@@ -374,14 +374,14 @@ func (s *ESCOService) parseBoletosToAccountState(boletos *[]esco.Boleto) (*schem
 		} else {
 			parsedDate = nil
 		}
-		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
+		asset.Transactions = append(asset.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
 			CurrencySign: boleto.NS,
 			Value:        -boleto.N,
 			Units:        boleto.C,
 			Date:         parsedDate,
 		})
-		(*accStateRes.Vouchers)[id] = voucher
+		(*accStateRes.Assets)[id] = asset
 	}
 
 	return accStateRes, nil
@@ -392,25 +392,25 @@ func (s *ESCOService) parseLiquidacionesToAccountState(liquidaciones *[]esco.Liq
 	categoryMap := s.client.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
 	for _, liquidacion := range *liquidaciones {
-		var voucher schemas.Voucher
+		var asset schemas.Asset
 		var exists bool
 		var parsedDate *time.Time
 		id := strings.Split(liquidacion.F, " - ")[0]
 		categoryKey = fmt.Sprintf("%s / %s", liquidacion.F, id)
-		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+		if asset, exists = (*accStateRes.Assets)[id]; !exists {
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
 				category = "S / C"
 			}
-			(*accStateRes.Vouchers)[id] = schemas.Voucher{
+			(*accStateRes.Assets)[id] = schemas.Asset{
 				ID:           id,
 				Type:         "",
 				Denomination: categoryKey,
 				Category:     category,
 				Transactions: make([]schemas.Transaction, 0, len(*liquidaciones)),
 			}
-			voucher = (*accStateRes.Vouchers)[id]
+			asset = (*accStateRes.Assets)[id]
 		}
 		if liquidacion.FL != "" {
 			p, err := time.Parse(utils.ShortSlashDateLayout, liquidacion.FL)
@@ -423,14 +423,14 @@ func (s *ESCOService) parseLiquidacionesToAccountState(liquidaciones *[]esco.Liq
 		} else {
 			parsedDate = nil
 		}
-		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
+		asset.Transactions = append(asset.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
 			CurrencySign: liquidacion.MS,
 			Value:        -liquidacion.I,
 			Units:        liquidacion.Q,
 			Date:         parsedDate,
 		})
-		(*accStateRes.Vouchers)[id] = voucher
+		(*accStateRes.Assets)[id] = asset
 	}
 
 	return accStateRes, nil
@@ -475,24 +475,24 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 		} else {
 			continue
 		}
-		var voucher schemas.Voucher
+		var asset schemas.Asset
 		var exists bool
 		var parsedDate *time.Time
 
-		if voucher, exists = (*accStateRes.Vouchers)[id]; !exists {
+		if asset, exists = (*accStateRes.Assets)[id]; !exists {
 			var category string
 			var exists bool
 			if category, exists = categoryMap[categoryKey]; !exists {
 				category = "S / C"
 			}
-			(*accStateRes.Vouchers)[id] = schemas.Voucher{
+			(*accStateRes.Assets)[id] = schemas.Asset{
 				ID:           id,
 				Type:         "",
 				Denomination: categoryKey,
 				Category:     category,
 				Transactions: make([]schemas.Transaction, 0, len(*instrumentos)),
 			}
-			voucher = (*accStateRes.Vouchers)[id]
+			asset = (*accStateRes.Assets)[id]
 		}
 		if ins.FL != "" {
 			p, err := time.Parse(utils.ShortSlashDateLayout, ins.FL)
@@ -505,44 +505,44 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 		} else {
 			parsedDate = nil
 		}
-		voucher.Transactions = append(voucher.Transactions, schemas.Transaction{
+		asset.Transactions = append(asset.Transactions, schemas.Transaction{
 			Currency:     "Pesos",
 			CurrencySign: currencySign,
 			Value:        value,
 			Units:        -units,
 			Date:         parsedDate,
 		})
-		(*accStateRes.Vouchers)[id] = voucher
+		(*accStateRes.Assets)[id] = asset
 	}
 
 	return accStateRes, nil
 }
 
 func (s *ESCOService) collapseAccountStates(states []*schemas.AccountState) schemas.AccountState {
-	holdingMapByVoucherID := make(map[string]map[string]schemas.Holding)
-	transactionMapByVoucherID := make(map[string]map[string]schemas.Transaction)
-	voucherMapByID := make(map[string]schemas.Voucher)
+	holdingMapByAssetID := make(map[string]map[string]schemas.Holding)
+	transactionMapByAssetID := make(map[string]map[string]schemas.Transaction)
+	assetMapByID := make(map[string]schemas.Asset)
 
 	for _, state := range states {
-		if state.Vouchers == nil {
+		if state.Assets == nil {
 			continue
 		}
 		var holdingMap map[string]schemas.Holding
 		var transactionMap map[string]schemas.Transaction
 		var found bool
-		for voucherID, voucher := range *state.Vouchers {
-			if _, found := voucherMapByID[voucherID]; !found {
-				voucherMapByID[voucherID] = voucher
+		for assetID, asset := range *state.Assets {
+			if _, found := assetMapByID[assetID]; !found {
+				assetMapByID[assetID] = asset
 			}
-			if holdingMap, found = holdingMapByVoucherID[voucherID]; !found {
-				holdingMapByVoucherID[voucherID] = make(map[string]schemas.Holding)
-				holdingMap = holdingMapByVoucherID[voucherID]
+			if holdingMap, found = holdingMapByAssetID[assetID]; !found {
+				holdingMapByAssetID[assetID] = make(map[string]schemas.Holding)
+				holdingMap = holdingMapByAssetID[assetID]
 			}
-			if transactionMap, found = transactionMapByVoucherID[voucherID]; !found {
-				transactionMapByVoucherID[voucherID] = make(map[string]schemas.Transaction)
-				transactionMap = transactionMapByVoucherID[voucherID]
+			if transactionMap, found = transactionMapByAssetID[assetID]; !found {
+				transactionMapByAssetID[assetID] = make(map[string]schemas.Transaction)
+				transactionMap = transactionMapByAssetID[assetID]
 			}
-			for _, holding := range voucher.Holdings {
+			for _, holding := range asset.Holdings {
 				date := holding.DateRequested.Format("2006-01-02")
 				if existing, found := holdingMap[date]; !found {
 					holdingMap[date] = holding
@@ -551,9 +551,9 @@ func (s *ESCOService) collapseAccountStates(states []*schemas.AccountState) sche
 					holdingMap[date] = existing
 				}
 			}
-			holdingMapByVoucherID[voucherID] = holdingMap
+			holdingMapByAssetID[assetID] = holdingMap
 
-			for _, transaction := range voucher.Transactions {
+			for _, transaction := range asset.Transactions {
 				key := transaction.Date.Format("2006-01-02")
 				if existing, found := transactionMap[key]; !found {
 					transactionMap[key] = transaction
@@ -563,26 +563,26 @@ func (s *ESCOService) collapseAccountStates(states []*schemas.AccountState) sche
 					transactionMap[key] = existing
 				}
 			}
-			transactionMapByVoucherID[voucherID] = transactionMap
+			transactionMapByAssetID[assetID] = transactionMap
 		}
 	}
-	collapsed := make(map[string]schemas.Voucher)
-	for voucherID, voucher := range voucherMapByID {
-		var existing schemas.Voucher
+	collapsed := make(map[string]schemas.Asset)
+	for assetID, asset := range assetMapByID {
+		var existing schemas.Asset
 		var ok bool
-		if existing, ok = collapsed[voucherID]; !ok {
-			collapsed[voucherID] = schemas.Voucher{
-				ID:           voucherID,
-				Type:         voucher.Type,
-				Category:     voucher.Category,
-				Denomination: voucher.Denomination,
+		if existing, ok = collapsed[assetID]; !ok {
+			collapsed[assetID] = schemas.Asset{
+				ID:           assetID,
+				Type:         asset.Type,
+				Category:     asset.Category,
+				Denomination: asset.Denomination,
 				Holdings:     []schemas.Holding{},
 				Transactions: []schemas.Transaction{},
 			}
-			existing = collapsed[voucherID]
+			existing = collapsed[assetID]
 		}
 		holdings := existing.Holdings
-		for _, holding := range holdingMapByVoucherID[voucherID] {
+		for _, holding := range holdingMapByAssetID[assetID] {
 			holdings = append(holdings, holding)
 		}
 		existing.Holdings = holdings
@@ -591,7 +591,7 @@ func (s *ESCOService) collapseAccountStates(states []*schemas.AccountState) sche
 		})
 
 		transactions := existing.Transactions
-		for _, transaction := range transactionMapByVoucherID[voucherID] {
+		for _, transaction := range transactionMapByAssetID[assetID] {
 			transactions = append(transactions, transaction)
 		}
 		existing.Transactions = transactions
@@ -599,21 +599,21 @@ func (s *ESCOService) collapseAccountStates(states []*schemas.AccountState) sche
 			return existing.Transactions[i].Date.Before(*existing.Transactions[j].Date)
 		})
 
-		collapsed[voucherID] = existing
+		collapsed[assetID] = existing
 	}
-	return schemas.AccountState{Vouchers: &collapsed}
+	return schemas.AccountState{Assets: &collapsed}
 }
 
 func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.AccountState) *schemas.AccountStateByCategory {
 	totalHoldingsByDate := make(map[string]schemas.Holding)
 	totalTransactionsByDate := make(map[string]schemas.Transaction)
-	vouchersByCategory := make(map[string][]schemas.Voucher)
+	assetsByCategory := make(map[string][]schemas.Asset)
 	categoryHoldingsByDate := make(map[string]map[string]schemas.Holding)
 	categoryTransactionsByDate := make(map[string]map[string]schemas.Transaction)
 
-	for _, voucher := range *state.Vouchers {
-		category := voucher.Category
-		vouchersByCategory[category] = append(vouchersByCategory[category], voucher)
+	for _, asset := range *state.Assets {
+		category := asset.Category
+		assetsByCategory[category] = append(assetsByCategory[category], asset)
 
 		if _, exists := categoryHoldingsByDate[category]; !exists {
 			categoryHoldingsByDate[category] = make(map[string]schemas.Holding)
@@ -622,7 +622,7 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 			categoryTransactionsByDate[category] = make(map[string]schemas.Transaction)
 		}
 
-		for _, holding := range voucher.Holdings {
+		for _, holding := range asset.Holdings {
 			date := *holding.DateRequested
 			dateStr := date.Format("2006-01-02")
 			if _, exists := totalHoldingsByDate[dateStr]; !exists {
@@ -652,7 +652,7 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 			categoryHoldingsByDate[category][dateStr] = categoryHolding
 		}
 
-		for _, transaction := range voucher.Transactions {
+		for _, transaction := range asset.Transactions {
 			date := *transaction.Date
 			dateStr := date.Format("2006-01-02")
 			if _, exists := totalTransactionsByDate[dateStr]; !exists {
@@ -682,30 +682,30 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 		}
 	}
 
-	for category := range vouchersByCategory {
-		sort.Slice(vouchersByCategory[category], func(i, j int) bool {
-			return vouchersByCategory[category][i].ID < vouchersByCategory[category][j].ID
+	for category := range assetsByCategory {
+		sort.Slice(assetsByCategory[category], func(i, j int) bool {
+			return assetsByCategory[category][i].ID < assetsByCategory[category][j].ID
 		})
 	}
 
-	categoryVouchers := s.generateCategoryVouchers(categoryHoldingsByDate, categoryTransactionsByDate)
+	categoryAssets := s.generateCategoryAssets(categoryHoldingsByDate, categoryTransactionsByDate)
 
 	return &schemas.AccountStateByCategory{
-		VouchersByCategory:      &vouchersByCategory,
-		CategoryVouchers:        &categoryVouchers,
+		AssetsByCategory:        &assetsByCategory,
+		CategoryAssets:          &categoryAssets,
 		TotalHoldingsByDate:     &totalHoldingsByDate,
 		TotalTransactionsByDate: &totalTransactionsByDate,
 	}
 }
 
-func (s *ESCOService) generateCategoryVouchers(
+func (s *ESCOService) generateCategoryAssets(
 	categoryHoldings map[string]map[string]schemas.Holding,
 	categoryTransactions map[string]map[string]schemas.Transaction,
-) map[string]schemas.Voucher {
-	categoryVouchers := map[string]schemas.Voucher{}
+) map[string]schemas.Asset {
+	categoryAssets := map[string]schemas.Asset{}
 	for category, holdingsByDate := range categoryHoldings {
-		if _, exist := categoryVouchers[category]; !exist {
-			categoryVouchers[category] = schemas.Voucher{
+		if _, exist := categoryAssets[category]; !exist {
+			categoryAssets[category] = schemas.Asset{
 				ID:           category,
 				Type:         "Category",
 				Denomination: category,
@@ -714,16 +714,16 @@ func (s *ESCOService) generateCategoryVouchers(
 				Transactions: []schemas.Transaction{},
 			}
 		}
-		categoryVoucher := categoryVouchers[category]
+		categoryAsset := categoryAssets[category]
 		for _, holding := range holdingsByDate {
-			categoryVoucher.Holdings = append(categoryVoucher.Holdings, holding)
+			categoryAsset.Holdings = append(categoryAsset.Holdings, holding)
 		}
-		categoryVouchers[category] = categoryVoucher
+		categoryAssets[category] = categoryAsset
 	}
 
 	for category, transactionsByDate := range categoryTransactions {
-		if _, exist := categoryVouchers[category]; !exist {
-			categoryVouchers[category] = schemas.Voucher{
+		if _, exist := categoryAssets[category]; !exist {
+			categoryAssets[category] = schemas.Asset{
 				ID:           category,
 				Type:         "Category",
 				Denomination: category,
@@ -732,17 +732,17 @@ func (s *ESCOService) generateCategoryVouchers(
 				Transactions: []schemas.Transaction{},
 			}
 		}
-		categoryVoucher := categoryVouchers[category]
+		categoryAsset := categoryAssets[category]
 		for _, transaction := range transactionsByDate {
-			categoryVoucher.Transactions = append(categoryVoucher.Transactions, transaction)
+			categoryAsset.Transactions = append(categoryAsset.Transactions, transaction)
 		}
-		categoryVouchers[category] = categoryVoucher
+		categoryAssets[category] = categoryAsset
 	}
-	return categoryVouchers
+	return categoryAssets
 }
 
-func sortHoldingsByDateRequested(voucher *schemas.Voucher) {
-	sort.Slice(voucher.Holdings, func(i, j int) bool {
-		return voucher.Holdings[i].DateRequested.Before(*voucher.Holdings[j].DateRequested)
+func sortHoldingsByDateRequested(asset *schemas.Asset) {
+	sort.Slice(asset.Holdings, func(i, j int) bool {
+		return asset.Holdings[i].DateRequested.Before(*asset.Holdings[j].DateRequested)
 	})
 }

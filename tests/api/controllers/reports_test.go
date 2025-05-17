@@ -15,8 +15,8 @@ import (
 
 // TestGenerateAccountReports verifies the report generation consistency.
 func TestGenerateAccountReports(t *testing.T) {
-	const inputFile = "../../test_files/controllers/reports/vouchers_by_category_1w.json"
-	const outputFile = "../../test_files/controllers/reports/vouchers_return_by_category_1w.json"
+	const inputFile = "../../test_files/controllers/reports/assets_by_category_1w.json"
+	const outputFile = "../../test_files/controllers/reports/assets_return_by_category_1w.json"
 
 	// Load the input data
 	var accountData schemas.AccountStateByCategory
@@ -65,26 +65,26 @@ func TestGenerateAccountReports(t *testing.T) {
 // compareReports compares two AccountsReports by checking each field and nested struct.
 func compareReports(t *testing.T, newReport, savedReport *schemas.AccountsReports) bool {
 	t.Helper()
-	if !compareVouchersByCategory(t, *newReport.VouchersByCategory, *savedReport.VouchersByCategory) {
+	if !compareAssetsByCategory(t, *newReport.AssetsByCategory, *savedReport.AssetsByCategory) {
 		return false
 	}
 
-	if !compareVouchersReturnByCategory(t, *newReport.VouchersReturnByCategory, *savedReport.VouchersReturnByCategory) {
+	if !compareAssetsReturnByCategory(t, *newReport.AssetsReturnByCategory, *savedReport.AssetsReturnByCategory) {
 		return false
 	}
 
 	return true
 }
 
-func compareVouchersByCategory(t *testing.T, v1, v2 map[string][]schemas.Voucher) bool {
+func compareAssetsByCategory(t *testing.T, v1, v2 map[string][]schemas.Asset) bool {
 	t.Helper()
 	if len(v1) != len(v2) {
 		return false
 	}
 
-	for category, vouchers1 := range v1 {
-		vouchers2, exists := v2[category]
-		if !exists || !reflect.DeepEqual(vouchers1, vouchers2) {
+	for category, assets1 := range v1 {
+		assets2, exists := v2[category]
+		if !exists || !reflect.DeepEqual(assets1, assets2) {
 			return false
 		}
 	}
@@ -92,15 +92,15 @@ func compareVouchersByCategory(t *testing.T, v1, v2 map[string][]schemas.Voucher
 	return true
 }
 
-func compareVouchersReturnByCategory(t *testing.T, v1, v2 map[string][]schemas.VoucherReturn) bool {
+func compareAssetsReturnByCategory(t *testing.T, v1, v2 map[string][]schemas.AssetReturn) bool {
 	t.Helper()
 	if len(v1) != len(v2) {
 		return false
 	}
 
-	for category, voucherReturns1 := range v1 {
-		voucherReturns2, exists := v2[category]
-		if !exists || !compareVoucherReturns(t, voucherReturns1, voucherReturns2) {
+	for category, assetReturns1 := range v1 {
+		assetReturns2, exists := v2[category]
+		if !exists || !compareAssetReturns(t, assetReturns1, assetReturns2) {
 			return false
 		}
 	}
@@ -108,7 +108,7 @@ func compareVouchersReturnByCategory(t *testing.T, v1, v2 map[string][]schemas.V
 	return true
 }
 
-func compareVoucherReturns(t *testing.T, v1, v2 []schemas.VoucherReturn) bool {
+func compareAssetReturns(t *testing.T, v1, v2 []schemas.AssetReturn) bool {
 	t.Helper()
 	if len(v1) != len(v2) {
 		return false

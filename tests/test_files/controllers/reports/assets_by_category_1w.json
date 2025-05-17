@@ -1,5 +1,5 @@
 {
-  "VouchersByCategory": {
+  "AssetsByCategory": {
     "ARS": [
       {
         "ID": "$",
@@ -865,7 +865,7 @@
       }
     ]
   },
-  "CategoryVouchers": {},
+  "CategoryAssets": {},
   "TotalHoldingsByDate": {},
   "TotalTransactionsByDate": {}
 }
