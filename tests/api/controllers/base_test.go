@@ -9,6 +9,7 @@ import (
 	"server/src/clients/esco"
 	"server/src/config"
 	"server/src/schemas"
+	"server/src/services"
 	bcra_test "server/tests/clients/bcra"
 	esco_test "server/tests/clients/esco"
 	"server/tests/init_test"
@@ -60,8 +61,10 @@ func TestMain(m *testing.M) {
 		// os.Exit(1)
 	}
 
+	escoService := services.NewESCOService(escoClient)
+
 	ctrl = controllers.NewController(nil, escoClient, bcraClient)
-	accountsController = controllers.NewAccountsController(escoClient)
+	accountsController = controllers.NewAccountsController(escoClient, escoService)
 	reportsController = controllers.NewReportsController(escoClient, bcraClient, db)
 
 	os.Exit(m.Run())

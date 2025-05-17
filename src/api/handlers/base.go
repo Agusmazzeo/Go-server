@@ -8,6 +8,7 @@ import (
 	"server/src/api/controllers"
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
+	"server/src/services"
 	"server/src/utils"
 
 	"github.com/sirupsen/logrus"
@@ -22,8 +23,9 @@ type Handler struct {
 }
 
 func NewHandler(logger *logrus.Logger, db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
+	escoService := services.NewESCOService(escoClient)
 	controller := controllers.NewController(db, escoClient, bcraClient)
-	accountsController := controllers.NewAccountsController(escoClient)
+	accountsController := controllers.NewAccountsController(escoClient, escoService)
 	reportsController := controllers.NewReportsController(escoClient, bcraClient, nil)
 	return &Handler{Logger: logger, Controller: controller, AccountsController: accountsController, ReportsController: reportsController}, nil
 }
