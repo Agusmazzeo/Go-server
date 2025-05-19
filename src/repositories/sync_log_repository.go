@@ -9,15 +9,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type SyncLogRepository struct {
+type SyncLogRepository interface {
+	MarkClientForDate(ctx context.Context, clientID string, syncDate time.Time) error
+	GetLastSyncDate(ctx context.Context, clientID string) (*time.Time, error)
+	MarkClientForDates(ctx context.Context, clientID string, syncDates []time.Time) error
+	GetSyncedDates(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) ([]time.Time, error)
+	CleanupSyncLogs(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) error
+}
+
+type syncLogRepo struct {
 	DB *pgxpool.Pool
 }
 
-func NewSyncLogRepository(db *pgxpool.Pool) *SyncLogRepository {
-	return &SyncLogRepository{DB: db}
+func NewSyncLogRepository(db *pgxpool.Pool) SyncLogRepository {
+	return &syncLogRepo{DB: db}
 }
 
-func (r *SyncLogRepository) MarkClientForDate(ctx context.Context, clientID string, syncDate time.Time) error {
+func (r *syncLogRepo) MarkClientForDate(ctx context.Context, clientID string, syncDate time.Time) error {
 	_, err := r.DB.Exec(ctx, `
 		INSERT INTO sync_logs (client_id, sync_date)
 		VALUES ($1, $2)
@@ -25,7 +33,7 @@ func (r *SyncLogRepository) MarkClientForDate(ctx context.Context, clientID stri
 	return err
 }
 
-func (r *SyncLogRepository) GetLastSyncDate(ctx context.Context, clientID string) (*time.Time, error) {
+func (r *syncLogRepo) GetLastSyncDate(ctx context.Context, clientID string) (*time.Time, error) {
 	var syncDate time.Time
 	err := r.DB.QueryRow(ctx, `
 		SELECT sync_date
@@ -43,7 +51,7 @@ func (r *SyncLogRepository) GetLastSyncDate(ctx context.Context, clientID string
 	return &syncDate, nil
 }
 
-func (r *SyncLogRepository) MarkClientForDates(ctx context.Context, clientID string, syncDates []time.Time) error {
+func (r *syncLogRepo) MarkClientForDates(ctx context.Context, clientID string, syncDates []time.Time) error {
 	if len(syncDates) == 0 {
 		return nil
 	}
@@ -81,7 +89,20 @@ func (r *SyncLogRepository) MarkClientForDates(ctx context.Context, clientID str
 	return tx.Commit(ctx)
 }
 
-func (r *SyncLogRepository) GetSyncedDatesInRange(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) ([]time.Time, error) {
+func (r *syncLogRepo) CleanupSyncLogs(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) error {
+	_, err := r.DB.Exec(ctx, `
+		DELETE FROM sync_logs
+		WHERE client_id = $1
+		AND sync_date >= $2
+		AND sync_date <= $3
+	`, clientID, startDate, endDate)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *syncLogRepo) GetSyncedDates(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) ([]time.Time, error) {
 	rows, err := r.DB.Query(ctx, `
 		SELECT sync_date
 		FROM sync_logs
