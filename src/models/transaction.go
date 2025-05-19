@@ -9,7 +9,7 @@ type Transaction struct {
 	ClientID        string     `db:"client_id"`
 	AssetID         int        `db:"asset_id"`
 	TransactionType string     `db:"transaction_type"`
-	Quantity        float64    `db:"quantity"`
+	Units           float64    `db:"units"`
 	PricePerUnit    float64    `db:"price_per_unit"`
 	TotalValue      float64    `db:"total_value"`
 	Date            time.Time  `db:"date"`

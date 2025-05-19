@@ -25,7 +25,7 @@ func TestAssetRepository(t *testing.T) {
 		Name:        "Test Category",
 		Description: "Test Description",
 	}
-	err := categoryRepo.Create(ctx, category)
+	err := categoryRepo.Create(ctx, category, nil)
 	require.NoError(t, err)
 	// Test cases
 	t.Run("Create and GetByID", func(t *testing.T) {
@@ -38,8 +38,31 @@ func TestAssetRepository(t *testing.T) {
 			Currency:   "USD",
 		}
 
-		// Test Create
-		err = repo.Create(ctx, asset)
+		// Test Create without transaction
+		err = repo.Create(ctx, asset, nil)
+		require.NoError(t, err)
+
+		// Test Create with transaction
+		asset2 := &models.Asset{
+			ExternalID: "EXT-002",
+			Name:       "Test Asset 2",
+			AssetType:  "BOND",
+			CategoryID: category.ID,
+			Currency:   "EUR",
+		}
+
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		err = repo.Create(ctx, asset2, tx)
+		require.NoError(t, err)
+
+		err = tx.Commit(ctx)
 		require.NoError(t, err)
 
 		// Test GetByID
@@ -57,14 +80,14 @@ func TestAssetRepository(t *testing.T) {
 		// Create multiple assets
 		assets := []*models.Asset{
 			{
-				ExternalID: "EXT-002",
+				ExternalID: "EXT-003",
 				Name:       "Asset 1",
 				AssetType:  "STOCK",
 				CategoryID: category.ID,
 				Currency:   "USD",
 			},
 			{
-				ExternalID: "EXT-003",
+				ExternalID: "EXT-004",
 				Name:       "Asset 2",
 				AssetType:  "BOND",
 				CategoryID: category.ID,
@@ -73,7 +96,7 @@ func TestAssetRepository(t *testing.T) {
 		}
 
 		for _, asset := range assets {
-			err := repo.Create(ctx, asset)
+			err := repo.Create(ctx, asset, nil)
 			require.NoError(t, err)
 		}
 

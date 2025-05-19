@@ -31,7 +31,7 @@ func TestHoldingRepository(t *testing.T) {
 			Name:        "Test Category",
 			Description: "Test Description",
 		}
-		err := categoryRepo.Create(ctx, category)
+		err := categoryRepo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		asset := &models.Asset{
@@ -41,28 +41,51 @@ func TestHoldingRepository(t *testing.T) {
 			CategoryID: category.ID,
 			Currency:   "USD",
 		}
-		err = assetRepo.Create(ctx, asset)
+		err = assetRepo.Create(ctx, asset, nil)
 		require.NoError(t, err)
 
 		holding := &models.Holding{
 			ClientID: clientID,
 			AssetID:  asset.ID,
-			Quantity: 100,
+			Units:    100,
 			Value:    1000.0,
 			Date:     time.Now(),
 		}
 
-		// Test Create
-		err = repo.Create(ctx, holding)
+		// Test Create without transaction
+		err = repo.Create(ctx, holding, nil)
+		require.NoError(t, err)
+
+		// Test Create with transaction
+		holding2 := &models.Holding{
+			ClientID: clientID,
+			AssetID:  asset.ID,
+			Units:    200,
+			Value:    2000.0,
+			Date:     time.Now(),
+		}
+
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		err = repo.Create(ctx, holding2, tx)
+		require.NoError(t, err)
+
+		err = tx.Commit(ctx)
 		require.NoError(t, err)
 
 		// Test GetByClientID
 		holdings, err := repo.GetByClientID(ctx, clientID)
 		require.NoError(t, err)
-		assert.GreaterOrEqual(t, len(holdings), 1)
+		assert.GreaterOrEqual(t, len(holdings), 2)
 		assert.Equal(t, clientID, holdings[0].ClientID)
 		assert.Equal(t, holding.AssetID, holdings[0].AssetID)
-		assert.Equal(t, holding.Quantity, holdings[0].Quantity)
+		assert.Equal(t, holding.Units, holdings[0].Units)
 		assert.Equal(t, holding.Value, holdings[0].Value)
 	})
 

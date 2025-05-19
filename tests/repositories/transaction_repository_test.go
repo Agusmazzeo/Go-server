@@ -30,7 +30,7 @@ func TestTransactionRepository(t *testing.T) {
 			Name:        "Test Category",
 			Description: "Test Description",
 		}
-		err := categoryRepo.Create(ctx, category)
+		err := categoryRepo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		asset := &models.Asset{
@@ -40,31 +40,56 @@ func TestTransactionRepository(t *testing.T) {
 			CategoryID: category.ID,
 			Currency:   "USD",
 		}
-		err = assetRepo.Create(ctx, asset)
+		err = assetRepo.Create(ctx, asset, nil)
 		require.NoError(t, err)
 
 		transaction := &models.Transaction{
 			ClientID:        clientID,
 			AssetID:         asset.ID,
 			TransactionType: "BUY",
-			Quantity:        10,
+			Units:           10,
 			PricePerUnit:    100.0,
 			TotalValue:      1000.0,
 			Date:            time.Now(),
 		}
 
-		// Test Create
-		err = repo.Create(ctx, transaction)
+		// Test Create without transaction
+		err = repo.Create(ctx, transaction, nil)
+		require.NoError(t, err)
+
+		// Test Create with transaction
+		transaction2 := &models.Transaction{
+			ClientID:        clientID,
+			AssetID:         asset.ID,
+			TransactionType: "SELL",
+			Units:           5,
+			PricePerUnit:    110.0,
+			TotalValue:      550.0,
+			Date:            time.Now(),
+		}
+
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		err = repo.Create(ctx, transaction2, tx)
+		require.NoError(t, err)
+
+		err = tx.Commit(ctx)
 		require.NoError(t, err)
 
 		// Test GetByClientID
 		transactions, err := repo.GetByClientID(ctx, clientID)
 		require.NoError(t, err)
-		assert.GreaterOrEqual(t, len(transactions), 1)
+		assert.GreaterOrEqual(t, len(transactions), 2)
 		assert.Equal(t, clientID, transactions[0].ClientID)
 		assert.Equal(t, transaction.AssetID, transactions[0].AssetID)
 		assert.Equal(t, transaction.TransactionType, transactions[0].TransactionType)
-		assert.Equal(t, transaction.Quantity, transactions[0].Quantity)
+		assert.Equal(t, transaction.Units, transactions[0].Units)
 		assert.Equal(t, transaction.PricePerUnit, transactions[0].PricePerUnit)
 		assert.Equal(t, transaction.TotalValue, transactions[0].TotalValue)
 	})

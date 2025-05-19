@@ -7,3 +7,8 @@ const (
 	A3500ID            = "5"
 	MonthlyInflationID = "27"
 )
+
+const (
+	AssetCurrencyPesos   = "Pesos"
+	AssetCurrencyDolares = "USD"
+)

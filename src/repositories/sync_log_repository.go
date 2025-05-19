@@ -26,11 +26,18 @@ func NewSyncLogRepository(db *pgxpool.Pool) SyncLogRepository {
 }
 
 func (r *syncLogRepo) MarkClientForDate(ctx context.Context, clientID string, syncDate time.Time) error {
-	_, err := r.DB.Exec(ctx, `
+	query := `
 		INSERT INTO sync_logs (client_id, sync_date)
 		VALUES ($1, $2)
-	`, clientID, syncDate)
-	return err
+		ON CONFLICT (client_id, sync_date) DO NOTHING`
+
+	var err error
+
+	_, err = r.DB.Exec(ctx, query, clientID, syncDate)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *syncLogRepo) GetLastSyncDate(ctx context.Context, clientID string) (*time.Time, error) {

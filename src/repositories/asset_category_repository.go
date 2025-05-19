@@ -5,13 +5,16 @@ import (
 
 	"server/src/models"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AssetCategoryRepository interface {
 	GetAll(ctx context.Context) ([]models.AssetCategory, error)
 	GetByID(ctx context.Context, id int) (*models.AssetCategory, error)
-	Create(ctx context.Context, ac *models.AssetCategory) error
+	GetByName(ctx context.Context, name string) (*models.AssetCategory, error)
+
+	Create(ctx context.Context, ac *models.AssetCategory, tx pgx.Tx) error
 }
 
 type assetCategoryRepo struct {
@@ -53,13 +56,46 @@ func (r *assetCategoryRepo) GetByID(ctx context.Context, id int) (*models.AssetC
 	return &ac, nil
 }
 
-func (r *assetCategoryRepo) Create(ctx context.Context, ac *models.AssetCategory) error {
+func (r *assetCategoryRepo) GetByName(ctx context.Context, name string) (*models.AssetCategory, error) {
+	var ac models.AssetCategory
 	err := r.db.QueryRow(ctx,
-		`INSERT INTO asset_categories (name, description) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING RETURNING id`,
-		ac.Name, ac.Description,
-	).Scan(&ac.ID)
+		`SELECT id, name, description FROM asset_categories WHERE name = $1`, name,
+	).Scan(&ac.ID, &ac.Name, &ac.Description)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &ac, nil
+}
+
+func (r *assetCategoryRepo) Create(ctx context.Context, ac *models.AssetCategory, tx pgx.Tx) error {
+	query := `
+		INSERT INTO asset_categories (name, description)
+		VALUES ($1, $2)
+		ON CONFLICT (name) DO NOTHING
+		RETURNING id`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		err = tx.QueryRow(ctx, query, ac.Name, ac.Description).Scan(&ac.ID)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	return tx.QueryRow(ctx, query, ac.Name, ac.Description).Scan(&ac.ID)
 }

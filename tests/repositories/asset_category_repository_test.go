@@ -29,11 +29,29 @@ func TestAssetCategoryRepository(t *testing.T) {
 		}
 
 		// Test Create
-		err := repo.Create(ctx, category)
+		err := repo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		// Test GetByID
 		retrievedCategory, err := repo.GetByID(ctx, category.ID)
+		require.NoError(t, err)
+		assert.Equal(t, category.Name, retrievedCategory.Name)
+		assert.Equal(t, category.Description, retrievedCategory.Description)
+	})
+
+	t.Run("Create and GetByName", func(t *testing.T) {
+		ctx := context.Background()
+		category := &models.AssetCategory{
+			Name:        "Test Category By Name",
+			Description: "Test Description",
+		}
+
+		// Test Create
+		err := repo.Create(ctx, category, nil)
+		require.NoError(t, err)
+
+		// Test GetByName
+		retrievedCategory, err := repo.GetByName(ctx, category.Name)
 		require.NoError(t, err)
 		assert.Equal(t, category.Name, retrievedCategory.Name)
 		assert.Equal(t, category.Description, retrievedCategory.Description)
@@ -49,7 +67,7 @@ func TestAssetCategoryRepository(t *testing.T) {
 		}
 
 		for _, category := range categories {
-			err := repo.Create(ctx, category)
+			err := repo.Create(ctx, category, nil)
 			require.NoError(t, err)
 		}
 
