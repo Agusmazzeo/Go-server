@@ -12,6 +12,7 @@ import (
 
 type TransactionRepository interface {
 	GetByClientID(ctx context.Context, clientID string) ([]models.Transaction, error)
+	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Transaction, error)
 	Create(ctx context.Context, t *models.Transaction, tx pgx.Tx) error
 }
 
@@ -41,6 +42,29 @@ func (r *transactionRepo) GetByClientID(ctx context.Context, clientID string) ([
 			return nil, err
 		}
 		t.Date = date
+		transactions = append(transactions, t)
+	}
+	return transactions, rows.Err()
+}
+
+func (r *transactionRepo) GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Transaction, error) {
+	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, transaction_type, units, price_per_unit, total_value, date, created_at, deleted, deleted_at FROM transactions WHERE date BETWEEN $1 AND $2 ORDER BY date DESC`, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []models.Transaction
+	for rows.Next() {
+		var t models.Transaction
+		var date, createdAt time.Time
+		var deletedAt *time.Time
+		if err := rows.Scan(&t.ID, &t.ClientID, &t.AssetID, &t.TransactionType, &t.Units, &t.PricePerUnit, &t.TotalValue, &date, &createdAt, &t.Deleted, &deletedAt); err != nil {
+			return nil, err
+		}
+		t.Date = date
+		t.CreatedAt = createdAt
+		t.DeletedAt = deletedAt
 		transactions = append(transactions, t)
 	}
 	return transactions, rows.Err()

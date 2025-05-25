@@ -12,6 +12,7 @@ import (
 
 type HoldingRepository interface {
 	GetByClientID(ctx context.Context, clientID string) ([]models.Holding, error)
+	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Holding, error)
 	Create(ctx context.Context, h *models.Holding, tx pgx.Tx) error
 }
 
@@ -25,6 +26,26 @@ func NewHoldingRepository(db *pgxpool.Pool) HoldingRepository {
 
 func (r *holdingRepo) GetByClientID(ctx context.Context, clientID string) ([]models.Holding, error) {
 	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE client_id = $1 order by date desc`, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var holdings []models.Holding
+	for rows.Next() {
+		var h models.Holding
+		var date time.Time
+		if err := rows.Scan(&h.ID, &h.ClientID, &h.AssetID, &h.Units, &h.Value, &date); err != nil {
+			return nil, err
+		}
+		h.Date = date
+		holdings = append(holdings, h)
+	}
+	return holdings, rows.Err()
+}
+
+func (r *holdingRepo) GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Holding, error) {
+	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE date BETWEEN $1 AND $2 ORDER BY date DESC`, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
