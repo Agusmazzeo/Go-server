@@ -11,6 +11,7 @@ import (
 )
 
 type SyncServiceI interface {
+	IsDataSynced(ctx context.Context, accountID string, startDate, endDate time.Time) (bool, error)
 	SyncDataFromAccount(ctx context.Context, accountID string, startDate, endDate time.Time) error
 }
 
@@ -92,6 +93,7 @@ func (s *SyncService) storeAccountState(ctx context.Context, accountID string, a
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Storing account state for account %s", accountID)
 	var err error
+	dates := make(map[time.Time]bool)
 	for _, asset := range *accountState.Assets {
 		err = s.storeAsset(ctx, &asset)
 		if err != nil {
@@ -101,8 +103,32 @@ func (s *SyncService) storeAccountState(ctx context.Context, accountID string, a
 		if err != nil {
 			return err
 		}
+		err = s.storeTransactions(ctx, accountID, asset.ID, asset.Transactions)
+		if err != nil {
+			return err
+		}
+		for _, holding := range asset.Holdings {
+			dates[*holding.DateRequested] = true
+		}
+		for _, transaction := range asset.Transactions {
+			dates[*transaction.Date] = true
+		}
+	}
+	datesList := make([]time.Time, 0)
+	for date := range dates {
+		datesList = append(datesList, date)
+	}
+	err = s.markDatesAsSynced(ctx, accountID, datesList)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func (s *SyncService) markDatesAsSynced(ctx context.Context, accountID string, dates []time.Time) error {
+	logger := utils.LoggerFromContext(ctx)
+	logger.Infof("Marking dates as synced for account %s", accountID)
+	return s.syncLogRepository.MarkClientForDates(ctx, accountID, dates)
 }
 
 func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) error {
@@ -114,8 +140,7 @@ func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) erro
 	}
 	if dbAssetCategory == nil {
 		dbAssetCategory = &models.AssetCategory{
-			Name:        asset.Category,
-			Description: "Category not found",
+			Name: asset.Category,
 		}
 		err = s.assetCategoryRepository.Create(ctx, dbAssetCategory, nil)
 		if err != nil {
@@ -151,6 +176,28 @@ func (s *SyncService) storeHoldings(ctx context.Context, accountID, assetID stri
 			Value:     holding.Value,
 			Units:     holding.Units,
 			Date:      *holding.Date,
+			CreatedAt: time.Now(),
+		}, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID string, transactions []schemas.Transaction) error {
+	logger := utils.LoggerFromContext(ctx)
+	logger.Infof("Storing transactions for account %s", accountID)
+	assetIDInt, err := strconv.Atoi(assetID)
+	if err != nil {
+		return err
+	}
+	for _, transaction := range transactions {
+		err = s.transactionRepository.Create(ctx, &models.Transaction{
+			ClientID:  accountID,
+			AssetID:   assetIDInt,
+			Units:     transaction.Units,
+			Date:      *transaction.Date,
 			CreatedAt: time.Now(),
 		}, nil)
 		if err != nil {

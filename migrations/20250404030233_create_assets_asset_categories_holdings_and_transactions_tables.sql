@@ -35,7 +35,8 @@ CREATE TABLE holdings (
     date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted BOOLEAN DEFAULT FALSE,
-    deleted_at TIMESTAMP
+    deleted_at TIMESTAMP,
+    UNIQUE(client_id, asset_id, date)
 );
 
 CREATE INDEX idx_holdings_client_id ON holdings(client_id);

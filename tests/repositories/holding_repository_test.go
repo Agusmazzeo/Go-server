@@ -62,7 +62,7 @@ func TestHoldingRepository(t *testing.T) {
 			AssetID:  asset.ID,
 			Units:    200,
 			Value:    2000.0,
-			Date:     time.Now(),
+			Date:     time.Now().Add(-time.Hour * 24),
 		}
 
 		tx, err := db.Begin(ctx)

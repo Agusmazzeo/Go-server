@@ -1,0 +1,25 @@
+{
+  "assets": {
+    "YMCQO": {
+      "id": "YMCQO",
+      "denomination": "57118 / ON YPF CL. 25 V13/02/26",
+      "type": "STOCK",
+      "category": "TASA FIJA",
+      "holdings": [
+        {
+          "value": 222222222.64,
+          "units": 509694310.0,
+          "currency": "Pesos",
+          "date": "2024-03-01T00:00:00Z"
+        },
+        {
+          "value": 222222222.64,
+          "units": 509694310.0,
+          "currency": "Pesos",
+          "date": "2024-03-02T00:00:00Z"
+        }
+      ],
+      "transactions": []
+    }
+  }
+}

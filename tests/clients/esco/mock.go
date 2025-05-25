@@ -7,6 +7,7 @@ import (
 	"os"
 	"server/src/clients/esco"
 	"server/src/schemas"
+	"server/src/services"
 	"server/src/utils"
 	"time"
 )
@@ -113,4 +114,22 @@ func (c *ESCOServiceClientMock) GetCtaCteConsolidado(token, cid, fid, nncc, tf s
 // GetCategoryMap returns a mocked category map.
 func (c *ESCOServiceClientMock) GetCategoryMap() map[string]string {
 	return *c.categoryMap
+}
+
+// MockESCOService is a mock implementation of services.ESCOServiceI
+type MockESCOService struct {
+	services.ESCOServiceI
+	getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
+}
+
+// NewMockESCOService creates a new instance of MockESCOService
+func NewMockESCOService(getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)) *MockESCOService {
+	return &MockESCOService{
+		getAccountStateFunc: getAccountStateFunc,
+	}
+}
+
+// GetAccountStateWithTransactions implements the ESCOServiceI interface
+func (m *MockESCOService) GetAccountStateWithTransactions(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+	return m.getAccountStateFunc(ctx, token, accountID, startDate, endDate, interval)
 }

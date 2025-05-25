@@ -24,7 +24,7 @@ func NewHoldingRepository(db *pgxpool.Pool) HoldingRepository {
 }
 
 func (r *holdingRepo) GetByClientID(ctx context.Context, clientID string) ([]models.Holding, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE client_id = $1`, clientID)
+	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE client_id = $1 order by date desc`, clientID)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +47,9 @@ func (r *holdingRepo) Create(ctx context.Context, h *models.Holding, tx pgx.Tx) 
 	query := `
 		INSERT INTO holdings (client_id, asset_id, units, value, date)
 		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (client_id, asset_id, date) DO UPDATE SET
+			units = EXCLUDED.units,
+			value = EXCLUDED.value
 		RETURNING id`
 
 	var err error

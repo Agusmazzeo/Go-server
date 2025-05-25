@@ -45,26 +45,44 @@ func (r *assetCategoryRepo) GetAll(ctx context.Context) ([]models.AssetCategory,
 }
 
 func (r *assetCategoryRepo) GetByID(ctx context.Context, id int) (*models.AssetCategory, error) {
-	var ac models.AssetCategory
-	err := r.db.QueryRow(ctx,
+	rows, err := r.db.Query(ctx,
 		`SELECT id, name, description FROM asset_categories WHERE id = $1`, id,
-	).Scan(&ac.ID, &ac.Name, &ac.Description)
-
+	)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, nil
+	}
+
+	var ac models.AssetCategory
+	if err := rows.Scan(&ac.ID, &ac.Name, &ac.Description); err != nil {
+		return nil, err
+	}
+
 	return &ac, nil
 }
 
 func (r *assetCategoryRepo) GetByName(ctx context.Context, name string) (*models.AssetCategory, error) {
-	var ac models.AssetCategory
-	err := r.db.QueryRow(ctx,
+	rows, err := r.db.Query(ctx,
 		`SELECT id, name, description FROM asset_categories WHERE name = $1`, name,
-	).Scan(&ac.ID, &ac.Name, &ac.Description)
-
+	)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		return nil, nil
+	}
+
+	var ac models.AssetCategory
+	if err := rows.Scan(&ac.ID, &ac.Name, &ac.Description); err != nil {
+		return nil, err
+	}
+
 	return &ac, nil
 }
 

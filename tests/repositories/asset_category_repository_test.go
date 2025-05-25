@@ -82,7 +82,7 @@ func TestAssetCategoryRepository(t *testing.T) {
 		nonExistentID := 999999
 
 		category, err := repo.GetByID(ctx, nonExistentID)
-		require.Error(t, err)
+		require.Nil(t, err)
 		assert.Nil(t, category)
 	})
 }
