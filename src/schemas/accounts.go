@@ -51,6 +51,13 @@ type AccountStateByCategory struct {
 	TotalTransactionsByDate *map[string]Transaction
 }
 
+// SyncRequest represents a request to sync account data
+type SyncRequest struct {
+	AccountID string    `json:"account_id"`
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+}
+
 func NewAccountState() *AccountState {
 	return &AccountState{Assets: &map[string]Asset{}}
 }

@@ -11,7 +11,7 @@ import (
 // LoadAllReportSchedule loads all report schedules and schedules them
 func (c *Controller) LoadAllReportSchedule(ctx context.Context) error {
 	var reportSchedules []*models.ReportSchedule
-	if err := c.DB.WithContext(ctx).Find(&reportSchedules).Error; err != nil {
+	if err := c.DB.QueryRow(ctx, "SELECT * FROM report_schedules").Scan(&reportSchedules); err != nil {
 		return err
 	}
 
@@ -27,7 +27,7 @@ func (c *Controller) LoadAllReportSchedule(ctx context.Context) error {
 // LoadReportScheduleByID loads a report schedule by ID and schedules it
 func (c *Controller) LoadReportScheduleByID(ctx context.Context, ID uint) error {
 	var reportSchedule *models.ReportSchedule
-	if err := c.DB.WithContext(ctx).First(reportSchedule, "id = ?", ID).Error; err != nil {
+	if err := c.DB.QueryRow(ctx, "SELECT * FROM report_schedules WHERE id = $1", ID).Scan(&reportSchedule); err != nil {
 		return err
 	}
 	if err := c.ScheduleReport(ctx, reportSchedule, tasks.SendReportByEmail); err != nil {

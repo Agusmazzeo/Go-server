@@ -7,10 +7,13 @@ import (
 	"os"
 	"server/src/api/handlers"
 	"server/src/config"
+	"server/src/repositories"
 	"server/src/schemas"
+	"server/src/services"
 	"server/src/utils"
 	bcra_test "server/tests/clients/bcra"
 	esco_test "server/tests/clients/esco"
+	"server/tests/init_test"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -41,8 +44,31 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	db := init_test.SetupTestDB(nil)
+	defer init_test.TruncateTables(nil, db)
+
+	holdingRepository := repositories.NewHoldingRepository(db)
+	transactionRepository := repositories.NewTransactionRepository(db)
+	assetRepository := repositories.NewAssetRepository(db)
+	assetCategoryRepository := repositories.NewAssetCategoryRepository(db)
+	syncLogRepository := repositories.NewSyncLogRepository(db)
+
+	escoService := services.NewESCOService(escoClient)
+	syncService := services.NewSyncService(
+		holdingRepository,
+		transactionRepository,
+		assetRepository,
+		assetCategoryRepository,
+		syncLogRepository,
+		escoService,
+	)
+	if err != nil {
+		log.Println(err, "Error while starting handler")
+		os.Exit(1)
+	}
+
 	r := chi.NewRouter()
-	h, err := handlers.NewHandler(logger, nil, escoClient, bcraClient)
+	h, err := handlers.NewHandler(logger, db, escoClient, bcraClient, escoService, syncService)
 	if err != nil {
 		log.Println(err, "Error while starting handler")
 		os.Exit(1)

@@ -23,17 +23,20 @@ type AccountsControllerI interface {
 	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error)
 	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
+	SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) (*schemas.AccountState, error)
 }
 
 type AccountsController struct {
 	ESCOClient  esco.ESCOServiceClientI
 	ESCOService services.ESCOServiceI
+	SyncService services.SyncServiceI
 }
 
-func NewAccountsController(escoClient esco.ESCOServiceClientI, escoService services.ESCOServiceI) *AccountsController {
+func NewAccountsController(escoClient esco.ESCOServiceClientI, escoService services.ESCOServiceI, syncService services.SyncServiceI) *AccountsController {
 	return &AccountsController{
 		ESCOClient:  escoClient,
 		ESCOService: escoService,
+		SyncService: syncService,
 	}
 }
 
@@ -419,4 +422,22 @@ func generateCategoryAssets(
 		categoryAssets[category] = categoryAsset
 	}
 	return categoryAssets
+}
+
+// SyncAccount syncs account data for a given account ID and date range
+func (c *AccountsController) SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+
+	// Use syncService to sync the data
+	err := c.SyncService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the synced account state
+	accountState, err := c.ESCOService.GetAccountStateWithTransactions(ctx, token, accountID, startDate, endDate, time.Hour*24)
+	if err != nil {
+		return nil, err
+	}
+
+	return accountState, nil
 }

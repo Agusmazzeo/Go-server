@@ -177,7 +177,7 @@ func TestCreateReportSchedule(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	resp, err := reportsController.CreateReportSchedule(ctx, req)
+	resp, err := reportsScheduleController.CreateReportSchedule(ctx, req)
 
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -201,13 +201,23 @@ func TestCreateReportSchedule(t *testing.T) {
 
 func TestGetAllReportSchedules(t *testing.T) {
 	ctx := context.Background()
+	var err error
 
 	// Create some test data
-	testDB.Create(&models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true})
-	testDB.Create(&models.ReportSchedule{SenderID: 4, RecipientOrganizationID: 5, ReportTemplateID: 6, CronTime: "0 0 * * *", Active: true})
+	_, err = testDB.Exec(ctx,
+		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
+		1, 2, 3, "0 0 * * *", true)
+	if err != nil {
+		t.Fatalf("Failed to create test data: %v", err)
+	}
+	_, err = testDB.Exec(ctx,
+		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
+		4, 5, 6, "0 0 * * *", true)
+	if err != nil {
+		t.Fatalf("Failed to create test data: %v", err)
+	}
 
-	resp, err := reportsController.GetAllReportSchedules(ctx)
-
+	resp, err := reportsScheduleController.GetAllReportSchedules(ctx)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -217,14 +227,19 @@ func TestGetAllReportSchedules(t *testing.T) {
 }
 
 func TestGetReportScheduleByID(t *testing.T) {
+	ctx := context.Background()
+	var err error
+	var rs models.ReportSchedule
 
 	// Create a test record
-	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	testDB.Create(rs)
+	err = testDB.QueryRow(ctx,
+		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id",
+		1, 2, 3, "0 0 * * *", true).Scan(&rs.ID)
+	if err != nil {
+		t.Fatalf("Failed to create test record: %v", err)
+	}
 
-	ctx := context.Background()
-	resp, err := reportsController.GetReportScheduleByID(ctx, rs.ID)
-
+	resp, err := reportsScheduleController.GetReportScheduleByID(ctx, rs.ID)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -237,10 +252,17 @@ func TestGetReportScheduleByID(t *testing.T) {
 }
 
 func TestUpdateReportSchedule(t *testing.T) {
+	ctx := context.Background()
+	var err error
+	var rs models.ReportSchedule
 
 	// Create a test record
-	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	testDB.Create(rs)
+	err = testDB.QueryRow(ctx,
+		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id",
+		1, 2, 3, "0 0 * * *", true).Scan(&rs.ID)
+	if err != nil {
+		t.Fatalf("Failed to create test record: %v", err)
+	}
 
 	// Update the record
 	req := &schemas.UpdateReportScheduleRequest{
@@ -258,9 +280,7 @@ func TestUpdateReportSchedule(t *testing.T) {
 	*req.CronTime = "0 1 * * *"
 	*req.Active = false
 
-	ctx := context.Background()
-	resp, err := reportsController.UpdateReportSchedule(ctx, req)
-
+	resp, err := reportsScheduleController.UpdateReportSchedule(ctx, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -285,21 +305,29 @@ func TestUpdateReportSchedule(t *testing.T) {
 }
 
 func TestDeleteReportSchedule(t *testing.T) {
+	ctx := context.Background()
+	var err error
+	var rs models.ReportSchedule
 
 	// Create a test record
-	rs := &models.ReportSchedule{SenderID: 1, RecipientOrganizationID: 2, ReportTemplateID: 3, CronTime: "0 0 * * *", Active: true}
-	testDB.Create(rs)
+	err = testDB.QueryRow(ctx,
+		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id",
+		1, 2, 3, "0 0 * * *", true).Scan(&rs.ID)
+	if err != nil {
+		t.Fatalf("Failed to create test record: %v", err)
+	}
 
-	ctx := context.Background()
-	err := reportsController.DeleteReportSchedule(ctx, rs.ID)
-
+	err = reportsScheduleController.DeleteReportSchedule(ctx, rs.ID)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
 	// Verify deletion
-	var count int64
-	testDB.Model(&models.ReportSchedule{}).Where("id = ?", rs.ID).Count(&count)
+	var count int
+	err = testDB.QueryRow(ctx, "SELECT COUNT(*) FROM report_schedules WHERE id = $1", rs.ID).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to verify deletion: %v", err)
+	}
 	if count != 0 {
 		t.Fatalf("Expected count 0, got %d", count)
 	}

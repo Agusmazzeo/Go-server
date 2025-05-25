@@ -8,7 +8,7 @@ CREATE TABLE report_schedules (
     last_sent_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    active BOOLEAN NOT NULL
+    active BOOLEAN NOT NULL DEFAULT True
 );
 
 -- +goose Down

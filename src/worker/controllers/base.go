@@ -4,16 +4,16 @@ import (
 	"server/src/scheduler"
 	"sync"
 
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Controller struct {
-	DB             *gorm.DB
+	DB             *pgxpool.Pool
 	SchedulerMutex sync.Mutex
 	Schedulers     map[uint]*scheduler.ScheduledTask
 }
 
-func NewController(db *gorm.DB) *Controller {
+func NewController(db *pgxpool.Pool) *Controller {
 	return &Controller{DB: db, SchedulerMutex: sync.Mutex{}, Schedulers: map[uint]*scheduler.ScheduledTask{}}
 }
 

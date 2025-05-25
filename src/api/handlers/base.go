@@ -11,23 +11,37 @@ import (
 	"server/src/services"
 	"server/src/utils"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 type Handler struct {
-	Logger             *logrus.Logger
-	Controller         controllers.IController
-	AccountsController controllers.AccountsControllerI
-	ReportsController  controllers.ReportsControllerI
+	Logger                   *logrus.Logger
+	Controller               controllers.IController
+	AccountsController       controllers.AccountsControllerI
+	ReportsController        controllers.ReportsControllerI
+	ReportScheduleController controllers.ReportScheduleControllerI
 }
 
-func NewHandler(logger *logrus.Logger, db *gorm.DB, escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) (*Handler, error) {
-	escoService := services.NewESCOService(escoClient)
-	controller := controllers.NewController(db, escoClient, bcraClient)
-	accountsController := controllers.NewAccountsController(escoClient, escoService)
-	reportsController := controllers.NewReportsController(escoClient, bcraClient, nil)
-	return &Handler{Logger: logger, Controller: controller, AccountsController: accountsController, ReportsController: reportsController}, nil
+func NewHandler(
+	logger *logrus.Logger,
+	db *pgxpool.Pool,
+	escoClient esco.ESCOServiceClientI,
+	bcraClient bcra.BCRAServiceClientI,
+	escoService services.ESCOServiceI,
+	syncService services.SyncServiceI,
+) (*Handler, error) {
+	controller := controllers.NewController(escoClient, bcraClient)
+	accountsController := controllers.NewAccountsController(escoClient, escoService, syncService)
+	reportsController := controllers.NewReportsController(escoClient, bcraClient)
+	reportScheduleController := controllers.NewReportScheduleController(db)
+	return &Handler{
+		Logger:                   logger,
+		Controller:               controller,
+		AccountsController:       accountsController,
+		ReportsController:        reportsController,
+		ReportScheduleController: reportScheduleController,
+	}, nil
 }
 
 func (h *Handler) respond(w http.ResponseWriter, _ *http.Request, data interface{}, status int) {

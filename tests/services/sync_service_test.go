@@ -9,7 +9,7 @@ import (
 	"server/src/schemas"
 	"server/src/services"
 	esco_test "server/tests/clients/esco"
-	"server/tests/repositories/test_init"
+	"server/tests/init_test"
 	"testing"
 	"time"
 
@@ -23,7 +23,7 @@ type testSyncService struct {
 }
 
 func setupTest(t *testing.T, holdingRepo repositories.HoldingRepository, transactionRepo repositories.TransactionRepository, assetRepo repositories.AssetRepository, assetCategoryRepo repositories.AssetCategoryRepository) (*testSyncService, *esco_test.ESCOServiceClientMock) {
-	db := test_init.SetupTestDB(t)
+	db := init_test.SetupTestDB(t)
 	syncLogRepo := repositories.NewSyncLogRepository(db)
 
 	// Setup mock ESCO service
@@ -169,7 +169,7 @@ func TestIsDataSynced(t *testing.T) {
 }
 
 func TestSyncDataFromAccount(t *testing.T) {
-	db := test_init.SetupTestDB(t)
+	db := init_test.SetupTestDB(t)
 	ctx := context.Background()
 	accountID := "4014D4EFDD5DE27B"
 	token := "test-token"

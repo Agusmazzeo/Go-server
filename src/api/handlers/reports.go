@@ -213,7 +213,7 @@ func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	_, err := h.ReportsController.GetAllReportSchedules(ctx)
+	_, err := h.ReportScheduleController.GetAllReportSchedules(ctx)
 
 	if err != nil {
 		h.HandleErrors(w, err)
@@ -234,7 +234,7 @@ func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = h.ReportsController.GetReportScheduleByID(ctx, uint(id))
+	_, err = h.ReportScheduleController.GetReportScheduleByID(ctx, uint(id))
 
 	if err != nil {
 		h.HandleErrors(w, err)
@@ -255,7 +255,7 @@ func (h *Handler) CreateReportSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := h.ReportsController.CreateReportSchedule(ctx, &reportSchedule)
+	created, err := h.ReportScheduleController.CreateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
 		h.HandleErrors(w, err)
 		return
@@ -283,7 +283,7 @@ func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 	reportSchedule.ID = uint(id)
 
-	updated, err := h.ReportsController.UpdateReportSchedule(ctx, &reportSchedule)
+	updated, err := h.ReportScheduleController.UpdateReportSchedule(ctx, &reportSchedule)
 	if err != nil {
 		h.HandleErrors(w, err)
 		return
@@ -303,7 +303,7 @@ func (h *Handler) DeleteReportSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.ReportsController.DeleteReportSchedule(ctx, uint(id))
+	err = h.ReportScheduleController.DeleteReportSchedule(ctx, uint(id))
 	if err != nil {
 		h.HandleErrors(w, err)
 		return

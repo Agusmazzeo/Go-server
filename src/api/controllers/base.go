@@ -34,8 +34,8 @@ type Controller struct {
 	BCRAClient bcra.BCRAServiceClientI
 }
 
-func NewController(db *gorm.DB, escoCLient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) *Controller {
-	return &Controller{DB: db, ESCOClient: escoCLient, BCRAClient: bcraClient}
+func NewController(escoCLient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) *Controller {
+	return &Controller{ESCOClient: escoCLient, BCRAClient: bcraClient}
 }
 
 func (c *Controller) GetDBClient() *gorm.DB {

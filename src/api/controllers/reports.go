@@ -24,16 +24,10 @@ import (
 	"github.com/go-gota/gota/dataframe"
 	"github.com/go-gota/gota/series"
 	"github.com/xuri/excelize/v2"
-	"gorm.io/gorm"
 )
 
 type ReportsControllerI interface {
 	GetReport(ctx context.Context, accountsStates *schemas.AccountStateByCategory, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
-	GetReportScheduleByID(ctx context.Context, ID uint) (*schemas.ReportScheduleResponse, error)
-	GetAllReportSchedules(ctx context.Context) ([]*schemas.ReportScheduleResponse, error)
-	CreateReportSchedule(ctx context.Context, req *schemas.CreateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
-	UpdateReportSchedule(ctx context.Context, req *schemas.UpdateReportScheduleRequest) (*schemas.ReportScheduleResponse, error)
-	DeleteReportSchedule(ctx context.Context, id uint) error
 
 	ParseAccountsReportToDataFrames(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*schemas.ReportDataframes, error)
 	ParseAccountsReportToXLSX(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) (*excelize.File, error)
@@ -46,11 +40,10 @@ type ReportsControllerI interface {
 type ReportsController struct {
 	ESCOClient esco.ESCOServiceClientI
 	BCRAClient bcra.BCRAServiceClientI
-	DB         *gorm.DB
 }
 
-func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI, db *gorm.DB) *ReportsController {
-	return &ReportsController{ESCOClient: escoClient, BCRAClient: bcraClient, DB: db}
+func NewReportsController(escoClient esco.ESCOServiceClientI, bcraClient bcra.BCRAServiceClientI) *ReportsController {
+	return &ReportsController{ESCOClient: escoClient, BCRAClient: bcraClient}
 }
 
 func (rc *ReportsController) GetReport(

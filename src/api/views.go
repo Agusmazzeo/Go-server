@@ -6,6 +6,9 @@ import (
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/config"
+	"server/src/database"
+	"server/src/repositories"
+	"server/src/services"
 	redis_utils "server/src/utils/redis"
 	"time"
 
@@ -21,14 +24,20 @@ type Server struct {
 }
 
 func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
-	// db, err := database.SetupDB(cfg)
-	// if err != nil {
-	// 	return nil, err
-	// }
+
+	// Initialize Redis
 	redis, err := redis_utils.NewRedisHandler(cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	// Initialize Database
+	db, err := database.SetupDB(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Clients
 	escoClient, err := esco.NewClient(cfg, redis)
 	if err != nil {
 		return nil, err
@@ -37,7 +46,33 @@ func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	handler, err := handlers.NewHandler(logger, nil, escoClient, bcraClient)
+
+	// Initialize Repositories
+	assetCategoryRepository := repositories.NewAssetCategoryRepository(db)
+	assetRepository := repositories.NewAssetRepository(db)
+	holdingRepository := repositories.NewHoldingRepository(db)
+	transactionRepository := repositories.NewTransactionRepository(db)
+	syncLogRepository := repositories.NewSyncLogRepository(db)
+
+	// Initialize Services
+	escoService := services.NewESCOService(escoClient)
+	syncService := services.NewSyncService(
+		holdingRepository,
+		transactionRepository,
+		assetRepository,
+		assetCategoryRepository,
+		syncLogRepository,
+		escoService,
+	)
+
+	handler, err := handlers.NewHandler(
+		logger,
+		db,
+		escoClient,
+		bcraClient,
+		escoService,
+		syncService,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +111,7 @@ func (s *Server) InitRoutes() {
 	s.Router.Route("/api/accounts", func(r chi.Router) {
 		r.Get("/", s.Handler.GetAllAccounts)
 		r.Get("/{ids}", s.Handler.GetAccountState)
+		r.Post("/sync", s.Handler.SyncAccount)
 	})
 
 	s.Router.Route("/api/currencies", func(r chi.Router) {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"server/src/schemas"
 	"server/src/utils"
@@ -101,4 +102,47 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.respond(w, r, accountState, 200)
+}
+
+// SyncAccount handles the POST request to sync account data
+func (h *Handler) SyncAccount(w http.ResponseWriter, r *http.Request) {
+	var syncRequest schemas.SyncRequest
+	if err := json.NewDecoder(r.Body).Decode(&syncRequest); err != nil {
+		h.HandleErrors(w, err)
+		return
+	}
+
+	// Validate request
+	if syncRequest.AccountID == "" {
+		h.HandleErrors(w, utils.BadRequest("account_id is required"))
+		return
+	}
+	if syncRequest.StartDate.IsZero() {
+		h.HandleErrors(w, utils.BadRequest("start_date is required"))
+		return
+	}
+	if syncRequest.EndDate.IsZero() {
+		h.HandleErrors(w, utils.BadRequest("end_date is required"))
+		return
+	}
+	if syncRequest.EndDate.Before(syncRequest.StartDate) {
+		h.HandleErrors(w, utils.BadRequest("end_date must be after start_date"))
+		return
+	}
+
+	// Get token from request header
+	token := jwtauth.TokenFromHeader(r)
+	if token == "" {
+		h.HandleErrors(w, utils.NewHTTPError(http.StatusBadRequest, "empty token detected"))
+		return
+	}
+
+	// Call controller to sync account
+	accountState, err := h.AccountsController.SyncAccount(context.Background(), token, syncRequest.AccountID, syncRequest.StartDate, syncRequest.EndDate)
+	if err != nil {
+		h.HandleErrors(w, err)
+		return
+	}
+
+	h.respond(w, r, accountState, http.StatusOK)
 }

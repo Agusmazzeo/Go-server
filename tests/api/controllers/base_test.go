@@ -8,6 +8,7 @@ import (
 	"server/src/clients/bcra"
 	"server/src/clients/esco"
 	"server/src/config"
+	"server/src/repositories"
 	"server/src/schemas"
 	"server/src/services"
 	bcra_test "server/tests/clients/bcra"
@@ -15,8 +16,7 @@ import (
 	"server/tests/init_test"
 	"testing"
 
-	"github.com/go-logr/logr"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var token *schemas.TokenResponse
@@ -25,7 +25,8 @@ var bcraClient bcra.BCRAServiceClientI
 var ctrl *controllers.Controller
 var accountsController *controllers.AccountsController
 var reportsController *controllers.ReportsController
-var testDB *gorm.DB
+var reportsScheduleController *controllers.ReportScheduleController
+var testDB *pgxpool.Pool
 
 func TestMain(m *testing.M) {
 
@@ -50,10 +51,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	db, cleanup := init_test.SetUpTestDatabase(&logr.Logger{})
-	testDB = db
-
-	defer cleanup()
+	testDB = init_test.SetupTestDB(nil)
 
 	token, err = escoClient.PostToken(context.Background(), "user", "password")
 	if err != nil {
@@ -61,11 +59,25 @@ func TestMain(m *testing.M) {
 		// os.Exit(1)
 	}
 
-	escoService := services.NewESCOService(escoClient)
+	holdingRepository := repositories.NewHoldingRepository(testDB)
+	transactionRepository := repositories.NewTransactionRepository(testDB)
+	assetRepository := repositories.NewAssetRepository(testDB)
+	assetCategoryRepository := repositories.NewAssetCategoryRepository(testDB)
+	syncLogRepository := repositories.NewSyncLogRepository(testDB)
 
-	ctrl = controllers.NewController(nil, escoClient, bcraClient)
-	accountsController = controllers.NewAccountsController(escoClient, escoService)
-	reportsController = controllers.NewReportsController(escoClient, bcraClient, db)
+	escoService := services.NewESCOService(escoClient)
+	syncService := services.NewSyncService(
+		holdingRepository,
+		transactionRepository,
+		assetRepository,
+		assetCategoryRepository,
+		syncLogRepository,
+		escoService,
+	)
+	ctrl = controllers.NewController(escoClient, bcraClient)
+	accountsController = controllers.NewAccountsController(escoClient, escoService, syncService)
+	reportsController = controllers.NewReportsController(escoClient, bcraClient)
+	reportsScheduleController = controllers.NewReportScheduleController(testDB)
 
 	os.Exit(m.Run())
 }

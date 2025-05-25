@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"server/tests/repositories/test_init"
+	"server/tests/init_test"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +15,8 @@ import (
 
 func TestTransactionRepository(t *testing.T) {
 	// Setup test database connection
-	db := test_init.SetupTestDB(t)
-	defer test_init.TruncateTables(t, db)
+	db := init_test.SetupTestDB(t)
+	defer init_test.TruncateTables(t, db)
 
 	// Create repository instance
 	repo := repositories.NewTransactionRepository(db)

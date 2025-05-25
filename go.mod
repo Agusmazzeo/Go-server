@@ -57,7 +57,6 @@ require (
 	github.com/aws/aws-sdk-go v1.53.17
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-echarts/go-echarts/v2 v2.4.6
-	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

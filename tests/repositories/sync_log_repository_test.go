@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"server/tests/repositories/test_init"
+	"server/tests/init_test"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +14,7 @@ import (
 )
 
 func setupTest(t *testing.T) (*pgxpool.Pool, repositories.SyncLogRepository) {
-	db := test_init.SetupTestDB(t)
+	db := init_test.SetupTestDB(t)
 	repo := repositories.NewSyncLogRepository(db)
 	return db, repo
 }

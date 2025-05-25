@@ -11,8 +11,8 @@ import (
 )
 
 type SyncServiceI interface {
-	IsDataSynced(ctx context.Context, accountID string, startDate, endDate time.Time) (bool, error)
-	SyncDataFromAccount(ctx context.Context, accountID string, startDate, endDate time.Time) error
+	IsDataSynced(ctx context.Context, token, accountID string, startDate, endDate time.Time) (bool, error)
+	SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) error
 }
 
 type SyncService struct {
