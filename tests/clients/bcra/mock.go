@@ -21,66 +21,6 @@ func NewMockClient(mockDataDir string) (*BCRAServiceClientMock, error) {
 	}, nil
 }
 
-// GetDivisas reads the saved Divisas response from a file and returns the data.
-func (c *BCRAServiceClientMock) GetDivisas(_ context.Context) (*bcra.GetDivisasResponse, error) {
-	filePath := fmt.Sprintf("%s/divisas_response.json", c.mockDataDir)
-
-	// Read saved response from file
-	responseBytes, err := utils.ReadResponseFromFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal the response into the GetDivisasResponse struct
-	var divisasResponse bcra.GetDivisasResponse
-	err = json.Unmarshal(responseBytes, &divisasResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return &divisasResponse, nil
-}
-
-// GetCotizaciones reads the saved Cotizaciones response from a file and returns the data.
-func (c *BCRAServiceClientMock) GetCotizaciones(_ context.Context, _ string) (*bcra.GetCotizacionesResponse, error) {
-	filePath := fmt.Sprintf("%s/cotizaciones_response.json", c.mockDataDir)
-
-	// Read saved response from file
-	responseBytes, err := utils.ReadResponseFromFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal the response into the GetCotizacionesResponse struct
-	var cotizacionesResponse bcra.GetCotizacionesResponse
-	err = json.Unmarshal(responseBytes, &cotizacionesResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cotizacionesResponse, nil
-}
-
-// GetCotizacionesPorMoneda reads the saved CotizacionesPorMoneda response from a file and returns the data.
-func (c *BCRAServiceClientMock) GetCotizacionesPorMoneda(_ context.Context, _ string, _ string, _ string) (*bcra.GetCotizacionesByMonedaResponse, error) {
-	filePath := fmt.Sprintf("%s/cotizaciones_por_moneda_response.json", c.mockDataDir)
-
-	// Read saved response from file
-	responseBytes, err := utils.ReadResponseFromFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal the response into the GetCotizacionesByMonedaResponse struct
-	var cotizacionesByMonedaResponse bcra.GetCotizacionesByMonedaResponse
-	err = json.Unmarshal(responseBytes, &cotizacionesByMonedaResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return &cotizacionesByMonedaResponse, nil
-}
-
 // GetCotizaciones reads the saved Cotizaciones response from a file and returns the data.
 func (c *BCRAServiceClientMock) GetVariables(_ context.Context) (*bcra.GetVariablesResponse, error) {
 	filePath := fmt.Sprintf("%s/variables_response.json", c.mockDataDir)
@@ -102,7 +42,7 @@ func (c *BCRAServiceClientMock) GetVariables(_ context.Context) (*bcra.GetVariab
 }
 
 // GetCotizacionesPorMoneda reads the saved CotizacionesPorMoneda response from a file and returns the data.
-func (c *BCRAServiceClientMock) GetVariablePorFecha(_ context.Context, _ string, _ string, _ string) (*bcra.GetVariablesResponse, error) {
+func (c *BCRAServiceClientMock) GetVariablesPorFecha(_ context.Context, _ string, _ string, _ string) (*bcra.GetVariablesResponse, error) {
 	filePath := fmt.Sprintf("%s/variable_por_fecha_response.json", c.mockDataDir)
 
 	// Read saved response from file

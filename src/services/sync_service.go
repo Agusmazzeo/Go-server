@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"server/src/models"
 	"server/src/repositories"
 	"server/src/schemas"
@@ -97,15 +98,15 @@ func (s *SyncService) storeAccountState(ctx context.Context, accountID string, a
 	for _, asset := range *accountState.Assets {
 		err = s.storeAsset(ctx, &asset)
 		if err != nil {
-			return err
+			return fmt.Errorf("error storing asset %s: %w", asset.ID, err)
 		}
 		err = s.storeHoldings(ctx, accountID, asset.ID, asset.Holdings)
 		if err != nil {
-			return err
+			return fmt.Errorf("error storing holdings for asset %s: %w", asset.ID, err)
 		}
 		err = s.storeTransactions(ctx, accountID, asset.ID, asset.Transactions)
 		if err != nil {
-			return err
+			return fmt.Errorf("error storing transactions for asset %s: %w", asset.ID, err)
 		}
 		for _, holding := range asset.Holdings {
 			dates[*holding.DateRequested] = true
@@ -120,7 +121,7 @@ func (s *SyncService) storeAccountState(ctx context.Context, accountID string, a
 	}
 	err = s.markDatesAsSynced(ctx, accountID, datesList)
 	if err != nil {
-		return err
+		return fmt.Errorf("error marking dates as synced: %w", err)
 	}
 	return nil
 }
@@ -136,7 +137,7 @@ func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) erro
 	logger.Infof("Storing asset %s", asset.ID)
 	dbAssetCategory, err := s.assetCategoryRepository.GetByName(ctx, asset.Category)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting asset category: %w", err)
 	}
 	if dbAssetCategory == nil {
 		dbAssetCategory = &models.AssetCategory{
@@ -144,7 +145,7 @@ func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) erro
 		}
 		err = s.assetCategoryRepository.Create(ctx, dbAssetCategory, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating asset category: %w", err)
 		}
 	}
 	dbAsset := models.Asset{
@@ -156,7 +157,7 @@ func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) erro
 	}
 	err = s.assetRepository.Create(ctx, &dbAsset, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating asset: %w", err)
 	}
 	asset.ID = strconv.Itoa(dbAsset.ID)
 	return nil
@@ -175,11 +176,11 @@ func (s *SyncService) storeHoldings(ctx context.Context, accountID, assetID stri
 			AssetID:   assetIDInt,
 			Value:     holding.Value,
 			Units:     holding.Units,
-			Date:      *holding.Date,
+			Date:      *holding.DateRequested,
 			CreatedAt: time.Now(),
 		}, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating holding: %w", err)
 		}
 	}
 	return nil
@@ -190,7 +191,7 @@ func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID 
 	logger.Infof("Storing transactions for account %s", accountID)
 	assetIDInt, err := strconv.Atoi(assetID)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating transaction: %w", err)
 	}
 	for _, transaction := range transactions {
 		err = s.transactionRepository.Create(ctx, &models.Transaction{
@@ -201,7 +202,7 @@ func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID 
 			CreatedAt: time.Now(),
 		}, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("error creating transaction: %w", err)
 		}
 	}
 	return nil

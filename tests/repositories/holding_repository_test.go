@@ -80,7 +80,7 @@ func TestHoldingRepository(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test GetByClientID
-		holdings, err := repo.GetByClientID(ctx, clientID)
+		holdings, err := repo.GetByClientID(ctx, clientID, time.Now().Add(-time.Hour*24), time.Now())
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(holdings), 2)
 		assert.Equal(t, clientID, holdings[0].ClientID)
@@ -93,7 +93,7 @@ func TestHoldingRepository(t *testing.T) {
 		ctx := context.Background()
 		nonExistentClientID := "non-existent-client"
 
-		holdings, err := repo.GetByClientID(ctx, nonExistentClientID)
+		holdings, err := repo.GetByClientID(ctx, nonExistentClientID, time.Now(), time.Now())
 		require.NoError(t, err)
 		assert.Empty(t, holdings)
 	})

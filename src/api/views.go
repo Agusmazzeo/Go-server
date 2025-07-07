@@ -114,11 +114,6 @@ func (s *Server) InitRoutes() {
 		r.Post("/sync", s.Handler.SyncAccount)
 	})
 
-	s.Router.Route("/api/currencies", func(r chi.Router) {
-		r.Get("/", s.Handler.GetAllCurrencies)
-		r.Get("/{id}", s.Handler.GetCurrencyWithValuationByID)
-	})
-
 	s.Router.Route("/api/variables", func(r chi.Router) {
 		r.Get("/", s.Handler.GetAllVariables)
 		r.Get("/{id}", s.Handler.GetVariableWithValuationByID)

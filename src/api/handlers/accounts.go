@@ -114,19 +114,19 @@ func (h *Handler) SyncAccount(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request
 	if syncRequest.AccountID == "" {
-		h.HandleErrors(w, utils.BadRequest("account_id is required"))
+		h.HandleErrors(w, utils.BadRequest("accountID is required"))
 		return
 	}
 	if syncRequest.StartDate.IsZero() {
-		h.HandleErrors(w, utils.BadRequest("start_date is required"))
+		h.HandleErrors(w, utils.BadRequest("startDate is required"))
 		return
 	}
 	if syncRequest.EndDate.IsZero() {
-		h.HandleErrors(w, utils.BadRequest("end_date is required"))
+		h.HandleErrors(w, utils.BadRequest("endDate is required"))
 		return
 	}
-	if syncRequest.EndDate.Before(syncRequest.StartDate) {
-		h.HandleErrors(w, utils.BadRequest("end_date must be after start_date"))
+	if syncRequest.EndDate.Before(syncRequest.StartDate.ToTime()) {
+		h.HandleErrors(w, utils.BadRequest("endDate must be after startDate"))
 		return
 	}
 
@@ -138,7 +138,7 @@ func (h *Handler) SyncAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call controller to sync account
-	accountState, err := h.AccountsController.SyncAccount(context.Background(), token, syncRequest.AccountID, syncRequest.StartDate, syncRequest.EndDate)
+	accountState, err := h.AccountsController.SyncAccount(context.Background(), token, syncRequest.AccountID, syncRequest.StartDate.ToTime(), syncRequest.EndDate.ToTime())
 	if err != nil {
 		h.HandleErrors(w, err)
 		return

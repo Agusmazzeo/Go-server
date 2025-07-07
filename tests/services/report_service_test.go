@@ -65,7 +65,7 @@ func TestGenerateReport(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	startDate := time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)
 	interval := 24 * time.Hour
 
@@ -92,17 +92,19 @@ func TestGenerateReport(t *testing.T) {
 	}
 	for i := range mockHoldings {
 		mockHoldings[i].AssetID = mockAssets[0].ID
+		mockHoldings[i].ClientID = "test-client"
 		err := holdingRepo.Create(ctx, &mockHoldings[i], nil)
 		require.NoError(t, err)
 	}
 	for i := range mockTransactions {
+		mockTransactions[i].ClientID = "test-client"
 		mockTransactions[i].AssetID = mockAssets[0].ID
 		err := transactionRepo.Create(ctx, &mockTransactions[i], nil)
 		require.NoError(t, err)
 	}
 
 	// Execute
-	report, err := service.GenerateReport(ctx, startDate, endDate, interval)
+	report, err := service.GenerateReport(ctx, "test-client", startDate, endDate, interval)
 
 	// Assert
 	assert.NoError(t, err)

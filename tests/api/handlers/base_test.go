@@ -83,11 +83,6 @@ func TestMain(m *testing.M) {
 		r.Get("/{id}", h.GetAccountState)
 	})
 
-	r.Route("/api/currencies", func(r chi.Router) {
-		r.Get("/", h.GetAllCurrencies)
-		r.Get("/{id}", h.GetCurrencyWithValuationByID)
-	})
-
 	r.Route("/api/variables", func(r chi.Router) {
 		r.Get("/", h.GetAllVariables)
 		r.Get("/{id}", h.GetVariableWithValuationByID)

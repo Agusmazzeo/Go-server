@@ -30,7 +30,7 @@ func (c *Controller) GetVariableWithValuationByID(ctx context.Context, id string
 	if err != nil {
 		return nil, err
 	}
-	response, err := c.BCRAClient.GetVariablePorFecha(ctx, id, date.Format("2006-01-02"), date.AddDate(0, 0, 1).Format("2006-01-02"))
+	response, err := c.BCRAClient.GetVariablesPorFecha(ctx, id, date.Format("2006-01-02"), date.AddDate(0, 0, 1).Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (c *Controller) GetVariableWithValuationDateRangeByID(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	response, err := c.BCRAClient.GetVariablePorFecha(ctx, id, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	response, err := c.BCRAClient.GetVariablesPorFecha(ctx, id, startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}

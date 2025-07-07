@@ -14,11 +14,6 @@ type IController interface {
 	GetDBClient() *gorm.DB
 	GetESCOClient() esco.ESCOServiceClientI
 
-	// Currencies
-	GetAllCurrencies(ctx context.Context) ([]schemas.Currency, error)
-	GetCurrencyWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.CurrencyWithValuationResponse, error)
-	GetCurrencyWithValuationDateRangeByID(ctx context.Context, id string, startDate, endDate time.Time) (*schemas.CurrencyWithValuationResponse, error)
-
 	// Variables
 	GetAllVariables(ctx context.Context) ([]schemas.Variable, error)
 	GetVariableWithValuationByID(ctx context.Context, id string, date time.Time) (*schemas.VariableWithValuationResponse, error)

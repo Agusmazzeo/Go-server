@@ -171,10 +171,10 @@ func TestIsDataSynced(t *testing.T) {
 func TestSyncDataFromAccount(t *testing.T) {
 	db := init_test.SetupTestDB(t)
 	ctx := context.Background()
-	accountID := "4014D4EFDD5DE27B"
+	accountID := "test-client"
 	token := "test-token"
-	startDate := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
-	endDate := time.Date(2024, 3, 3, 0, 0, 0, 0, time.UTC)
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 
 	// Initialize repositories
 	holdingRepo := repositories.NewHoldingRepository(db)
@@ -234,19 +234,19 @@ func TestSyncDataFromAccount(t *testing.T) {
 		assert.Equal(t, category.ID, foundAsset.CategoryID)
 
 		// Verify holdings were created
-		holdings, err := holdingRepo.GetByClientID(ctx, accountID)
+		holdings, err := holdingRepo.GetByClientID(ctx, accountID, startDate, endDate)
 		require.NoError(t, err)
 		assert.Len(t, holdings, 4)
 
 		// Verify transactions were created
-		transactions, err := transactionRepo.GetByClientID(ctx, accountID)
+		transactions, err := transactionRepo.GetByClientID(ctx, accountID, startDate, endDate)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 2)
 
 		// Verify sync logs were created
 		syncedDates, err := syncLogRepo.GetSyncedDates(ctx, accountID, startDate, endDate)
 		require.NoError(t, err)
-		assert.Len(t, syncedDates, 2) // Should have all dates from start to end
+		assert.Len(t, syncedDates, 19) // Should have all dates from start to end
 	})
 
 	t.Run("skips sync when data is already synced", func(t *testing.T) {

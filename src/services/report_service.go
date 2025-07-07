@@ -34,7 +34,7 @@ func NewReportService(
 	}
 }
 
-func (rs *ReportService) GenerateReport(ctx context.Context, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error) {
+func (rs *ReportService) GenerateReport(ctx context.Context, clientID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error) {
 	// Get all assets with their categories
 	assets, err := rs.assetRepo.GetAll(ctx)
 	if err != nil {
@@ -53,14 +53,14 @@ func (rs *ReportService) GenerateReport(ctx context.Context, startDate, endDate 
 		categoryMap[category.ID] = category.Name
 	}
 
-	// Get all holdings within the date range
-	holdings, err := rs.holdingRepo.GetByDateRange(ctx, startDate, endDate)
+	// Get all holdings within the date range for all clients
+	holdings, err := rs.holdingRepo.GetByClientID(ctx, clientID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get all transactions within the date range
-	transactions, err := rs.transactionRepo.GetByDateRange(ctx, startDate, endDate)
+	// Get all transactions within the date range for all clients
+	transactions, err := rs.transactionRepo.GetByClientID(ctx, clientID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +161,7 @@ func (rs *ReportService) GenerateReport(ctx context.Context, startDate, endDate 
 	}
 
 	// Generate the report using the report generator
-	report, err := rs.generateAccountReports(accountStateByCategory, startDate, endDate, interval)
-	if err != nil {
-		return nil, err
-	}
-
-	return report, nil
+	return rs.generateAccountReports(accountStateByCategory, startDate, endDate, interval)
 }
 
 // generateAccountReports calculates the return for each asset per category and returns an AccountsReports struct.

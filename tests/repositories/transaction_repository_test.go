@@ -83,7 +83,7 @@ func TestTransactionRepository(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test GetByClientID
-		transactions, err := repo.GetByClientID(ctx, clientID)
+		transactions, err := repo.GetByClientID(ctx, clientID, time.Now().Add(-time.Hour*24), time.Now())
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(transactions), 2)
 		assert.Equal(t, clientID, transactions[0].ClientID)
@@ -98,7 +98,7 @@ func TestTransactionRepository(t *testing.T) {
 		ctx := context.Background()
 		nonExistentClientID := "non-existent-client"
 
-		transactions, err := repo.GetByClientID(ctx, nonExistentClientID)
+		transactions, err := repo.GetByClientID(ctx, nonExistentClientID, time.Now().Add(-time.Hour*24), time.Now())
 		require.NoError(t, err)
 		assert.Empty(t, transactions)
 	})

@@ -55,7 +55,11 @@ func (r *assetRepo) Create(ctx context.Context, asset *models.Asset, tx pgx.Tx) 
 	query := `
 		INSERT INTO assets (external_id, name, asset_type, category_id, currency)
 		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (external_id) DO NOTHING
+		ON CONFLICT (external_id) DO UPDATE SET
+			name = EXCLUDED.name,
+			asset_type = EXCLUDED.asset_type,
+			category_id = EXCLUDED.category_id,
+			currency = EXCLUDED.currency
 		RETURNING id`
 
 	var err error

@@ -11,8 +11,7 @@ import (
 )
 
 type HoldingRepository interface {
-	GetByClientID(ctx context.Context, clientID string) ([]models.Holding, error)
-	GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Holding, error)
+	GetByClientID(ctx context.Context, clientID string, startDate, endDate time.Time) ([]models.Holding, error)
 	Create(ctx context.Context, h *models.Holding, tx pgx.Tx) error
 }
 
@@ -24,8 +23,13 @@ func NewHoldingRepository(db *pgxpool.Pool) HoldingRepository {
 	return &holdingRepo{db: db}
 }
 
-func (r *holdingRepo) GetByClientID(ctx context.Context, clientID string) ([]models.Holding, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE client_id = $1 order by date desc`, clientID)
+func (r *holdingRepo) GetByClientID(ctx context.Context, clientID string, startDate, endDate time.Time) ([]models.Holding, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, client_id, asset_id, units, value, date, created_at, deleted, deleted_at
+		FROM holdings
+		WHERE client_id = $1 AND date BETWEEN $2 AND $3
+		ORDER BY date DESC`,
+		clientID, startDate, endDate)
 	if err != nil {
 		return nil, err
 	}
@@ -34,31 +38,14 @@ func (r *holdingRepo) GetByClientID(ctx context.Context, clientID string) ([]mod
 	var holdings []models.Holding
 	for rows.Next() {
 		var h models.Holding
-		var date time.Time
-		if err := rows.Scan(&h.ID, &h.ClientID, &h.AssetID, &h.Units, &h.Value, &date); err != nil {
+		var date, createdAt time.Time
+		var deletedAt *time.Time
+		if err := rows.Scan(&h.ID, &h.ClientID, &h.AssetID, &h.Units, &h.Value, &date, &createdAt, &h.Deleted, &deletedAt); err != nil {
 			return nil, err
 		}
 		h.Date = date
-		holdings = append(holdings, h)
-	}
-	return holdings, rows.Err()
-}
-
-func (r *holdingRepo) GetByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.Holding, error) {
-	rows, err := r.db.Query(ctx, `SELECT id, client_id, asset_id, units, value, date FROM holdings WHERE date BETWEEN $1 AND $2 ORDER BY date DESC`, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var holdings []models.Holding
-	for rows.Next() {
-		var h models.Holding
-		var date time.Time
-		if err := rows.Scan(&h.ID, &h.ClientID, &h.AssetID, &h.Units, &h.Value, &date); err != nil {
-			return nil, err
-		}
-		h.Date = date
+		h.CreatedAt = createdAt
+		h.DeletedAt = deletedAt
 		holdings = append(holdings, h)
 	}
 	return holdings, rows.Err()

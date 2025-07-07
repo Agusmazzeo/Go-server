@@ -59,9 +59,6 @@ func (s *ESCOServiceClient) PostToken(_ context.Context, username, password stri
 	data := url.Values{}
 	data.Set("grant_type", "password")
 	data.Set("username", username)
-	if username == "icastagno" {
-		password = "Ccl2025bc!"
-	}
 	data.Set("password", password)
 	data.Set("client_id", "Unisync")
 
