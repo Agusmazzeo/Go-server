@@ -3,164 +3,22 @@ package services
 import (
 	"context"
 	"fmt"
-	"server/src/repositories"
 	"server/src/schemas"
 	"sort"
 	"time"
 )
 
 type ReportServiceI interface {
-	GenerateReport(ctx context.Context, clientID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
+	GenerateReport(ctx context.Context, accountStateByCategory *schemas.AccountStateByCategory, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
 }
 
-type ReportService struct {
-	holdingRepo       repositories.HoldingRepository
-	assetRepo         repositories.AssetRepository
-	assetCategoryRepo repositories.AssetCategoryRepository
-	transactionRepo   repositories.TransactionRepository
+type ReportService struct{}
+
+func NewReportService() *ReportService {
+	return &ReportService{}
 }
 
-func NewReportService(
-	holdingRepo repositories.HoldingRepository,
-	assetRepo repositories.AssetRepository,
-	assetCategoryRepo repositories.AssetCategoryRepository,
-	transactionRepo repositories.TransactionRepository,
-) *ReportService {
-	return &ReportService{
-		holdingRepo:       holdingRepo,
-		assetRepo:         assetRepo,
-		assetCategoryRepo: assetCategoryRepo,
-		transactionRepo:   transactionRepo,
-	}
-}
-
-func (rs *ReportService) GenerateReport(ctx context.Context, clientID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error) {
-	// Get all assets with their categories
-	assets, err := rs.assetRepo.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all asset categories
-	categories, err := rs.assetCategoryRepo.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a map of category IDs to category names
-	categoryMap := make(map[int]string)
-	for _, category := range categories {
-		categoryMap[category.ID] = category.Name
-	}
-
-	// Get all holdings within the date range for all clients
-	holdings, err := rs.holdingRepo.GetByClientID(ctx, clientID, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get all transactions within the date range for all clients
-	transactions, err := rs.transactionRepo.GetByClientID(ctx, clientID, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
-
-	// Group assets by category
-	assetsByCategory := make(map[string][]schemas.Asset)
-	categoryAssets := make(map[string]schemas.Asset)
-
-	for _, asset := range assets {
-		categoryName := categoryMap[asset.CategoryID]
-		if categoryName == "" {
-			continue
-		}
-
-		// Convert model.Asset to schemas.Asset
-		schemaAsset := schemas.Asset{
-			ID:           fmt.Sprintf("%d", asset.ID),
-			Category:     categoryName,
-			Type:         asset.AssetType,
-			Denomination: asset.Currency,
-			Holdings:     make([]schemas.Holding, 0),
-		}
-
-		// Add to assets by category
-		assetsByCategory[categoryName] = append(assetsByCategory[categoryName], schemaAsset)
-
-		// Create category asset if it doesn't exist
-		if _, exists := categoryAssets[categoryName]; !exists {
-			categoryAssets[categoryName] = schemas.Asset{
-				ID:           categoryName,
-				Category:     categoryName,
-				Type:         "CATEGORY",
-				Denomination: asset.Currency,
-				Holdings:     make([]schemas.Holding, 0),
-			}
-		}
-	}
-
-	// Group holdings by asset
-	holdingsByAsset := make(map[string][]schemas.Holding)
-	for _, holding := range holdings {
-		assetID := fmt.Sprintf("%d", holding.AssetID)
-		holdingsByAsset[assetID] = append(holdingsByAsset[assetID], schemas.Holding{
-			DateRequested: &holding.Date,
-			Value:         holding.Value,
-			Units:         holding.Units,
-		})
-	}
-
-	// Group transactions by asset
-	transactionsByAsset := make(map[string][]schemas.Transaction)
-	for _, transaction := range transactions {
-		assetID := fmt.Sprintf("%d", transaction.AssetID)
-		transactionsByAsset[assetID] = append(transactionsByAsset[assetID], schemas.Transaction{
-			Date:  &transaction.Date,
-			Value: transaction.TotalValue,
-			Units: transaction.Units,
-		})
-	}
-
-	// Attach holdings and transactions to assets
-	for category, assets := range assetsByCategory {
-		for i := range assets {
-			assets[i].Holdings = holdingsByAsset[assets[i].ID]
-			assets[i].Transactions = transactionsByAsset[assets[i].ID]
-		}
-		assetsByCategory[category] = assets
-	}
-
-	// Calculate total holdings by date
-	totalHoldingsByDate := make(map[string]schemas.Holding)
-	for _, holding := range holdings {
-		dateStr := holding.Date.Format("2006-01-02")
-		totalHoldingsByDate[dateStr] = schemas.Holding{
-			DateRequested: &holding.Date,
-			Value:         holding.Value,
-			Units:         holding.Units,
-		}
-	}
-
-	// Convert transactions to schema format
-	schemaTransactions := make(map[string]schemas.Transaction)
-	for _, transaction := range transactions {
-		dateStr := transaction.Date.Format("2006-01-02")
-		schemaTransactions[dateStr] = schemas.Transaction{
-			Date:  &transaction.Date,
-			Value: transaction.TotalValue,
-			Units: transaction.Units,
-		}
-	}
-
-	// Create account state by category
-	accountStateByCategory := &schemas.AccountStateByCategory{
-		AssetsByCategory:        &assetsByCategory,
-		CategoryAssets:          &categoryAssets,
-		TotalHoldingsByDate:     &totalHoldingsByDate,
-		TotalTransactionsByDate: &schemaTransactions,
-	}
-
-	// Generate the report using the report generator
+func (rs *ReportService) GenerateReport(ctx context.Context, accountStateByCategory *schemas.AccountStateByCategory, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error) {
 	return rs.generateAccountReports(accountStateByCategory, startDate, endDate, interval)
 }
 

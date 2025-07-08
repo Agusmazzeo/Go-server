@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 	"reflect"
-	"server/src/api/controllers"
 	"server/src/models"
 	"server/src/schemas"
+	"server/src/services"
 	"server/src/utils"
 	"time"
 
@@ -26,8 +26,10 @@ func TestGenerateAccountReports(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		// Generate the report
-		accountReport, err := controllers.GenerateAccountReports(
+		// Generate the report using the service
+		reportService := services.NewReportService()
+		accountReport, err := reportService.GenerateReport(
+			context.Background(),
 			&accountData,
 			time.Date(2024, 5, 3, 0, 0, 0, 0, time.UTC),
 			time.Date(2024, 6, 3, 0, 0, 0, 0, time.UTC),
@@ -157,7 +159,8 @@ func TestCalculateHoldingsReturn(t *testing.T) {
 		t.Fatalf("error loading file")
 	}
 
-	totalReturns := controllers.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour, false)
+	reportService := services.NewReportService()
+	totalReturns := reportService.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, 24*time.Hour, false)
 
 	for _, total := range totalReturns {
 		if total.ReturnPercentage > 200 {

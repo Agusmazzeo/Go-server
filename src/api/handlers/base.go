@@ -34,7 +34,11 @@ func NewHandler(
 ) (*Handler, error) {
 	controller := controllers.NewController(escoClient, bcraClient)
 	accountsController := controllers.NewAccountsController(escoClient, escoService, syncService, accountService)
-	reportsController := controllers.NewReportsController(escoClient, bcraClient)
+
+	// Create report service
+	reportService := services.NewReportService()
+
+	reportsController := controllers.NewReportsController(escoClient, bcraClient, reportService, accountService)
 	reportScheduleController := controllers.NewReportScheduleController(db)
 	return &Handler{
 		Logger:                   logger,

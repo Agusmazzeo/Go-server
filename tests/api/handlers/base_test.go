@@ -68,7 +68,11 @@ func TestMain(m *testing.M) {
 	}
 
 	r := chi.NewRouter()
-	h, err := handlers.NewHandler(logger, db, escoClient, bcraClient, escoService, syncService)
+
+	// Create account service
+	accountService := services.NewAccountService(holdingRepository, transactionRepository, assetRepository)
+
+	h, err := handlers.NewHandler(logger, db, escoClient, bcraClient, escoService, syncService, accountService)
 	if err != nil {
 		log.Println(err, "Error while starting handler")
 		os.Exit(1)

@@ -55,8 +55,6 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dailyInterval, _ := utils.ParseTimeInterval("0w:1d")
-
 	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
 		h.Logger.Warning(err)
@@ -72,19 +70,13 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 	//Set +26 hours since we use ARG timezone (UTC-3)
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
-	accountsStates, err := h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, dailyInterval.ToDuration())
-	if err != nil {
-		h.Logger.Warning(err)
-		h.HandleErrors(w, err)
-		return
-	}
 	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
-	accountsReports, err := h.ReportsController.GetReport(ctx, accountsStates, referenceVariables, startDate, endDate, interval.ToDuration())
+	accountsReports, err := h.ReportsController.GetReport(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
@@ -132,8 +124,6 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dailyInterval, _ := utils.ParseTimeInterval("0w:1d")
-
 	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
@@ -147,19 +137,14 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	//Set +26 hours since we use ARG timezone (UTC-3)
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
-	accountsStates, err := h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, dailyInterval.ToDuration())
-	if err != nil {
-		h.Logger.Warning(err)
-		h.HandleErrors(w, err)
-		return
-	}
+
 	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
-	accountsReports, err := h.ReportsController.GetReport(ctx, accountsStates, referenceVariables, startDate, endDate, interval.ToDuration())
+	accountsReports, err := h.ReportsController.GetReport(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)

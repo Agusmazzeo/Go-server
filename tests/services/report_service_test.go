@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"server/src/models"
@@ -57,12 +58,7 @@ func TestGenerateReport(t *testing.T) {
 	assetCategoryRepo := repositories.NewAssetCategoryRepository(db)
 	transactionRepo := repositories.NewTransactionRepository(db)
 
-	service := services.NewReportService(
-		holdingRepo,
-		assetRepo,
-		assetCategoryRepo,
-		transactionRepo,
-	)
+	service := services.NewReportService()
 
 	ctx := context.Background()
 	startDate := time.Date(2023, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -103,8 +99,81 @@ func TestGenerateReport(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Create AccountStateByCategory from the test data
+	assetsByCategory := make(map[string][]schemas.Asset)
+	categoryAssets := make(map[string]schemas.Asset)
+	totalHoldingsByDate := make(map[string]schemas.Holding)
+	totalTransactionsByDate := make(map[string]schemas.Transaction)
+
+	// Create schema assets from the test data
+	schemaAsset := schemas.Asset{
+		ID:           fmt.Sprintf("%d", mockAssets[0].ID),
+		Category:     mockCategories[0].Name,
+		Type:         mockAssets[0].AssetType,
+		Denomination: mockAssets[0].Currency,
+		Holdings:     make([]schemas.Holding, 0),
+		Transactions: make([]schemas.Transaction, 0),
+	}
+
+	// Add holdings to the asset
+	for _, holding := range mockHoldings {
+		schemaAsset.Holdings = append(schemaAsset.Holdings, schemas.Holding{
+			DateRequested: &holding.Date,
+			Value:         holding.Value,
+			Units:         holding.Units,
+		})
+	}
+
+	// Add transactions to the asset
+	for _, transaction := range mockTransactions {
+		schemaAsset.Transactions = append(schemaAsset.Transactions, schemas.Transaction{
+			Date:  &transaction.Date,
+			Value: transaction.TotalValue,
+			Units: transaction.Units,
+		})
+	}
+
+	assetsByCategory[mockCategories[0].Name] = append(assetsByCategory[mockCategories[0].Name], schemaAsset)
+
+	// Create category asset
+	categoryAssets[mockCategories[0].Name] = schemas.Asset{
+		ID:           mockCategories[0].Name,
+		Category:     mockCategories[0].Name,
+		Type:         "CATEGORY",
+		Denomination: mockAssets[0].Currency,
+		Holdings:     make([]schemas.Holding, 0),
+		Transactions: make([]schemas.Transaction, 0),
+	}
+
+	// Create total holdings by date
+	for _, holding := range mockHoldings {
+		dateStr := holding.Date.Format("2006-01-02")
+		totalHoldingsByDate[dateStr] = schemas.Holding{
+			DateRequested: &holding.Date,
+			Value:         holding.Value,
+			Units:         holding.Units,
+		}
+	}
+
+	// Create total transactions by date
+	for _, transaction := range mockTransactions {
+		dateStr := transaction.Date.Format("2006-01-02")
+		totalTransactionsByDate[dateStr] = schemas.Transaction{
+			Date:  &transaction.Date,
+			Value: transaction.TotalValue,
+			Units: transaction.Units,
+		}
+	}
+
+	accountStateByCategory := &schemas.AccountStateByCategory{
+		AssetsByCategory:        &assetsByCategory,
+		CategoryAssets:          &categoryAssets,
+		TotalHoldingsByDate:     &totalHoldingsByDate,
+		TotalTransactionsByDate: &totalTransactionsByDate,
+	}
+
 	// Execute
-	report, err := service.GenerateReport(ctx, "test-client", startDate, endDate, interval)
+	report, err := service.GenerateReport(ctx, accountStateByCategory, startDate, endDate, interval)
 
 	// Assert
 	assert.NoError(t, err)
