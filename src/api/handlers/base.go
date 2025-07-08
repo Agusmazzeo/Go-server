@@ -30,9 +30,10 @@ func NewHandler(
 	bcraClient bcra.BCRAServiceClientI,
 	escoService services.ESCOServiceI,
 	syncService services.SyncServiceI,
+	accountService services.AccountServiceI,
 ) (*Handler, error) {
 	controller := controllers.NewController(escoClient, bcraClient)
-	accountsController := controllers.NewAccountsController(escoClient, escoService, syncService)
+	accountsController := controllers.NewAccountsController(escoClient, escoService, syncService, accountService)
 	reportsController := controllers.NewReportsController(escoClient, bcraClient)
 	reportScheduleController := controllers.NewReportScheduleController(db)
 	return &Handler{

@@ -10,7 +10,7 @@ import (
 )
 
 type ReportServiceI interface {
-	GenerateReport(ctx context.Context, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
+	GenerateReport(ctx context.Context, clientID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
 }
 
 type ReportService struct {

@@ -17,26 +17,26 @@ type AccountsControllerI interface {
 	GetAllAccounts(ctx context.Context, token, filter string) ([]*schemas.AccountReponse, error)
 	GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error)
 	GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error)
-	GetAccountStateWithTransactionsDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
 	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
 	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
-	GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error)
 	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
 	SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) (*schemas.AccountState, error)
 }
 
 type AccountsController struct {
-	ESCOClient  esco.ESCOServiceClientI
-	ESCOService services.ESCOServiceI
-	SyncService services.SyncServiceI
+	ESCOClient     esco.ESCOServiceClientI
+	ESCOService    services.ESCOServiceI
+	SyncService    services.SyncServiceI
+	AccountService services.AccountServiceI
 }
 
-func NewAccountsController(escoClient esco.ESCOServiceClientI, escoService services.ESCOServiceI, syncService services.SyncServiceI) *AccountsController {
+func NewAccountsController(escoClient esco.ESCOServiceClientI, escoService services.ESCOServiceI, syncService services.SyncServiceI, accountService services.AccountServiceI) *AccountsController {
 	return &AccountsController{
-		ESCOClient:  escoClient,
-		ESCOService: escoService,
-		SyncService: syncService,
+		ESCOClient:     escoClient,
+		ESCOService:    escoService,
+		SyncService:    syncService,
+		AccountService: accountService,
 	}
 }
 
@@ -63,10 +63,6 @@ func (c *AccountsController) GetAccountState(ctx context.Context, token, id stri
 	return c.ESCOService.GetAccountState(ctx, token, id, date)
 }
 
-func (c *AccountsController) GetAccountStateWithTransactionsDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
-	return c.ESCOService.GetAccountStateWithTransactions(ctx, token, id, startDate, endDate, interval)
-}
-
 func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
 	return c.ESCOService.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval)
 }
@@ -79,12 +75,8 @@ func (c *AccountsController) GetBoletosDateRange(ctx context.Context, token, id 
 	return c.ESCOService.GetBoletosDateRange(ctx, token, id, startDate, endDate)
 }
 
-func (c *AccountsController) GetMultiAccountStateWithTransactionsDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error) {
-	return c.ESCOService.GetMultiAccountStateWithTransactions(ctx, token, ids, startDate, endDate, interval)
-}
-
 func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
-	return c.ESCOService.GetMultiAccountStateByCategory(ctx, token, ids, startDate, endDate, interval)
+	return c.AccountService.GetMultiAccountStateByCategory(ctx, ids, startDate, endDate, interval)
 }
 
 func (c *AccountsController) GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {

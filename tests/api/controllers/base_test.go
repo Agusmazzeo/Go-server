@@ -74,8 +74,9 @@ func TestMain(m *testing.M) {
 		syncLogRepository,
 		escoService,
 	)
+	accountService := services.NewAccountService(holdingRepository, transactionRepository, assetRepository)
 	ctrl = controllers.NewController(escoClient, bcraClient)
-	accountsController = controllers.NewAccountsController(escoClient, escoService, syncService)
+	accountsController = controllers.NewAccountsController(escoClient, escoService, syncService, accountService)
 	reportsController = controllers.NewReportsController(escoClient, bcraClient)
 	reportsScheduleController = controllers.NewReportScheduleController(testDB)
 

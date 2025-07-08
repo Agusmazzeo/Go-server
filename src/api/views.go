@@ -64,6 +64,7 @@ func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
 		syncLogRepository,
 		escoService,
 	)
+	accountService := services.NewAccountService(holdingRepository, transactionRepository, assetRepository)
 
 	handler, err := handlers.NewHandler(
 		logger,
@@ -72,6 +73,7 @@ func NewServer(cfg *config.Config, logger *logrus.Logger) (*Server, error) {
 		bcraClient,
 		escoService,
 		syncService,
+		accountService,
 	)
 	if err != nil {
 		return nil, err

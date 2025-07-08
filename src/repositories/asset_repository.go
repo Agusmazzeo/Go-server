@@ -12,6 +12,8 @@ import (
 type AssetRepository interface {
 	GetAll(ctx context.Context) ([]models.Asset, error)
 	GetByID(ctx context.Context, id int) (*models.Asset, error)
+	GetByIDs(ctx context.Context, ids []int) ([]models.Asset, error)
+	GetWithCategories(ctx context.Context) ([]models.AssetWithCategory, error)
 	Create(ctx context.Context, asset *models.Asset, tx pgx.Tx) error
 }
 
@@ -49,6 +51,62 @@ func (r *assetRepo) GetByID(ctx context.Context, id int) (*models.Asset, error) 
 		return nil, err
 	}
 	return &asset, nil
+}
+
+func (r *assetRepo) GetByIDs(ctx context.Context, ids []int) ([]models.Asset, error) {
+	if len(ids) == 0 {
+		return []models.Asset{}, nil
+	}
+
+	query := `SELECT id, external_id, name, asset_type, category_id, currency FROM assets WHERE id = ANY($1)`
+	rows, err := r.db.Query(ctx, query, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var assets []models.Asset
+	for rows.Next() {
+		var asset models.Asset
+		if err := rows.Scan(&asset.ID, &asset.ExternalID, &asset.Name, &asset.AssetType, &asset.CategoryID, &asset.Currency); err != nil {
+			return nil, err
+		}
+		assets = append(assets, asset)
+	}
+	return assets, rows.Err()
+}
+
+func (r *assetRepo) GetWithCategories(ctx context.Context) ([]models.AssetWithCategory, error) {
+	query := `
+		SELECT
+			a.id, a.external_id, a.name, a.asset_type, a.category_id, a.currency,
+			ac.name as category_name, ac.description as category_description
+		FROM assets a
+		LEFT JOIN asset_categories ac ON a.category_id = ac.id
+		ORDER BY a.external_id`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var assets []models.AssetWithCategory
+	for rows.Next() {
+		var asset models.AssetWithCategory
+		var categoryName, categoryDescription *string
+		if err := rows.Scan(&asset.ID, &asset.ExternalID, &asset.Name, &asset.AssetType, &asset.CategoryID, &asset.Currency, &categoryName, &categoryDescription); err != nil {
+			return nil, err
+		}
+		if categoryName != nil {
+			asset.CategoryName = *categoryName
+		}
+		if categoryDescription != nil {
+			asset.CategoryDescription = *categoryDescription
+		}
+		assets = append(assets, asset)
+	}
+	return assets, rows.Err()
 }
 
 func (r *assetRepo) Create(ctx context.Context, asset *models.Asset, tx pgx.Tx) error {
