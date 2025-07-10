@@ -80,7 +80,11 @@ func TestMain(m *testing.M) {
 
 	// Create report service
 	reportService := services.NewReportService()
-	reportsController = controllers.NewReportsController(escoClient, bcraClient, reportService, accountService)
+
+	// Create report parser service
+	reportParserService := services.NewReportParserService()
+
+	reportsController = controllers.NewReportsController(escoClient, bcraClient, reportService, reportParserService, accountService)
 	reportsScheduleController = controllers.NewReportScheduleController(testDB)
 
 	os.Exit(m.Run())

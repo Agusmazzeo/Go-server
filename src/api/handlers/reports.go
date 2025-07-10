@@ -28,26 +28,23 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnauthorized, "auth token not detected"))
 		return
 	}
-	var err error
-	idsStr := chi.URLParam(r, "ids")
-	// Split the comma-separated ids into a slice
-	ids := strings.Split(idsStr, ",")
 
+	// Parse request parameters
+	idsStr := chi.URLParam(r, "ids")
+	ids := strings.Split(idsStr, ",")
 	if len(ids) == 0 {
 		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)
 		return
 	}
+
 	startDateStr := r.URL.Query().Get("startDate")
-	var startDate time.Time
-
 	endDateStr := r.URL.Query().Get("endDate")
-	var endDate time.Time
-
 	intervalStr := r.URL.Query().Get("interval")
 	if intervalStr == "" {
-		// Set interval per day as default
 		intervalStr = "0w:1d"
 	}
+
+	// Parse dates and interval
 	interval, err := utils.ParseTimeInterval(intervalStr)
 	if err != nil {
 		h.Logger.Warning(err)
@@ -55,33 +52,39 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
+	startDate, err := time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
-	endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
+	endDate, err := time.Parse(utils.ShortDashDateLayout, endDateStr)
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
-	//Set +26 hours since we use ARG timezone (UTC-3)
+
+	// Adjust for timezone
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
+
+	// Get reference variables
 	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
+
+	// Get report data
 	accountsReports, err := h.ReportsController.GetReport(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
+
 	h.respond(w, r, accountsReports, 200)
 }
 
@@ -96,102 +99,86 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnauthorized, "auth token not detected"))
 		return
 	}
-	var err error
-	idsStr := chi.URLParam(r, "ids")
-	// Split the comma-separated ids into a slice
-	ids := strings.Split(idsStr, ",")
 
+	// Parse request parameters
+	idsStr := chi.URLParam(r, "ids")
+	ids := strings.Split(idsStr, ",")
 	if len(ids) == 0 {
 		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)
 		return
 	}
+
 	startDateStr := r.URL.Query().Get("startDate")
-	var startDate time.Time
-
 	endDateStr := r.URL.Query().Get("endDate")
-	var endDate time.Time
-
 	format := r.URL.Query().Get("format")
-
 	intervalStr := r.URL.Query().Get("interval")
 	if intervalStr == "" {
-		// Set interval per day as default
 		intervalStr = "0w:1d"
 	}
+
+	// Parse dates and interval
 	interval, err := utils.ParseTimeInterval(intervalStr)
 	if err != nil {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
 
-	startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
+	startDate, err := time.Parse(utils.ShortDashDateLayout, startDateStr)
 	if err != nil {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
-	endDate, err = time.Parse(utils.ShortDashDateLayout, endDateStr)
+	endDate, err := time.Parse(utils.ShortDashDateLayout, endDateStr)
 	if err != nil {
 		h.HandleErrors(w, utils.NewHTTPError(http.StatusUnprocessableEntity, err.Error()))
 		return
 	}
-	//Set +26 hours since we use ARG timezone (UTC-3)
+
+	// Adjust for timezone
 	startDate = (startDate.Add(26 * time.Hour)).In(location)
 	endDate = (endDate.Add(26 * time.Hour)).In(location)
 
+	// Get reference variables
 	referenceVariables, err := h.Controller.GetReferenceVariablesWithValuationDateRange(ctx, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
 		return
 	}
-	accountsReports, err := h.ReportsController.GetReport(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
-	if err != nil {
-		h.Logger.Warning(err)
-		h.HandleErrors(w, err)
-		return
-	}
 
-	dataframes, err := h.ReportsController.ParseAccountsReportToDataFrames(ctx, accountsReports, startDate, endDate, interval.ToDuration())
-	if err != nil {
-		h.Logger.Warning(err)
-		h.HandleErrors(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	// Generate file based on format
 	if format == "XLSX" {
-
-		xlsxFile, err := h.ReportsController.ParseAccountsReportToXLSX(ctx, dataframes)
+		xlsxFile, err := h.ReportsController.GenerateXLSXReportFromClientIDs(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
 
-		// Write the XLSX file to the HTTP response
+		w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
+
 		err = xlsxFile.Write(w)
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
-		// Set response headers to download the file
-		w.Header().Set("Content-Disposition", "attachment; filename=holdings.xlsx")
 	} else {
-		pdfData, err := h.ReportsController.ParseAccountsReportToPDF(ctx, dataframes)
+		pdfData, err := h.ReportsController.GeneratePDFReportFromClientIDs(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
-		// Set headers for PDF download
+
 		w.Header().Set("Content-Type", "application/pdf")
 		w.Header().Set("Content-Disposition", "attachment; filename=report.pdf")
 		w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfData)))
-		// Write the PDF data to the response
+
 		_, err = w.Write(pdfData)
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
 		}
 	}
-
 }
 
 func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) {

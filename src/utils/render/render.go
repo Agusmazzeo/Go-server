@@ -196,7 +196,7 @@ func SaveHTMLToFile(htmlContent, filePath string) error {
 func FormatMonetaryValue(v string) string {
 	value, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		return v
+		return ""
 	}
 	if value >= 1_000_000_000 {
 		return fmt.Sprintf("$ %.3f MM", float64(value/1_000_000_000))
@@ -211,7 +211,7 @@ func FormatMonetaryValue(v string) string {
 func FormatPercentageValue(v string) string {
 	value, err := strconv.ParseFloat(v, 64)
 	if err != nil {
-		return v
+		return ""
 	}
 	if value == 0 {
 		return ""

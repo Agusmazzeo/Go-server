@@ -1,0 +1,290 @@
+package services
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+	"server/src/schemas"
+	"server/src/utils"
+	"server/src/utils/render"
+	"slices"
+	"strconv"
+	"strings"
+	"text/template"
+
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/go-gota/gota/dataframe"
+)
+
+type ReportConfig struct {
+	name             string
+	df               *dataframe.DataFrame
+	graphType        string
+	columnsToInclude []string
+	columnsToExclude []string
+	isPercentage     bool
+	includeTable     bool
+}
+
+type ReportParserServiceI interface {
+	ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error)
+}
+
+type ReportParserService struct{}
+
+func NewReportParserService() *ReportParserService {
+	return &ReportParserService{}
+}
+
+// ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
+func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
+	var htmlContents []string
+	returnWithReferencesDF := utils.UnionDataFramesByIndex(*dataframesAndCharts.ReturnDF, *dataframesAndCharts.ReferenceVariablesDF, "DateRequested")
+	// Generate bar graphs for each dataframe
+	for _, report := range []*ReportConfig{
+		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
+		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
+		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
+		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
+	} {
+		if report.df == nil {
+			continue
+		}
+		var htmlContent string
+		var err error
+
+		// Generate bar graph and embed in HTML
+		switch report.graphType {
+		case "bar":
+			htmlContent, err = rc.generateStackBarGraphHTML(report.name, report)
+		case "pie":
+			htmlContent, err = rc.generatePieChartHTML(report.name, report)
+		case "line":
+			htmlContent, err = rc.generateLineGraphHTML(report.name, report)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate graph for %s: %w", report.name, err)
+		}
+		htmlContents = append(htmlContents, htmlContent)
+
+		if !report.includeTable {
+			continue
+		}
+
+		htmlContent, err = render.GetTableHTML(report.df)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate table for %s: %w", report.name, err)
+		}
+		htmlContents = append(htmlContents, htmlContent)
+	}
+
+	// Convert all HTML content into a PDF
+	pdfBuffer, err := render.GeneratePDF(htmlContents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate PDF: %w", err)
+	}
+
+	return pdfBuffer.Bytes(), nil
+}
+
+func (rc *ReportParserService) generateLineGraphHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
+	// Create a bar chart
+	line := charts.NewLine()
+	line.SetGlobalOptions(
+		charts.WithAnimation(false),
+		charts.WithYAxisOpts(opts.YAxis{
+			SplitLine: &opts.SplitLine{
+				Show: opts.Bool(true),
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
+	)
+
+	// Extract labels (dates) and data
+	labels := df.Col("DateRequested").Records()
+	line.SetXAxis(labels)
+
+	for _, asset := range df.Names()[1:] {
+		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
+			continue
+		}
+		data := make([]opts.LineData, 0)
+		for _, value := range df.Col(asset).Records() {
+			v, _ := strconv.ParseFloat(value, 32)
+			var label string
+			if report.isPercentage {
+				label = render.FormatPercentageValue(value)
+			} else {
+				label = render.FormatMonetaryValue(value)
+			}
+			data = append(data, opts.LineData{Name: label, Value: int(v)})
+		}
+		line.AddSeries(asset, data,
+			charts.WithLabelOpts(opts.Label{
+				Show:      opts.Bool(true),
+				Formatter: "{b}",
+			}),
+			charts.WithAreaStyleOpts(opts.AreaStyle{
+				Opacity: 0.2,
+			}),
+			charts.WithLineChartOpts(opts.LineChart{
+				Smooth: opts.Bool(true),
+			}),
+		)
+	}
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load bar graph template: %w", err)
+	}
+
+	// Render HTML embedding the chart image
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(line.RenderContent()), "let ", "var "),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func (rc *ReportParserService) generateStackBarGraphHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
+	// Create a bar chart
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithAnimation(false),
+		charts.WithYAxisOpts(opts.YAxis{
+			SplitLine: &opts.SplitLine{
+				Show: opts.Bool(true),
+			},
+		}),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
+		// Add stacking configuration
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show: opts.Bool(true),
+		}),
+	)
+
+	// Extract labels (dates) and data
+	labels := df.Col("DateRequested").Records()
+	bar.SetXAxis(labels)
+
+	for _, asset := range df.Names()[1:] {
+		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
+			continue
+		}
+		data := make([]opts.BarData, 0)
+		for _, value := range df.Col(asset).Records() {
+			v, _ := strconv.ParseFloat(value, 32)
+			var label string
+			if report.isPercentage {
+				label = render.FormatPercentageValue(value)
+			} else {
+				label = render.FormatMonetaryValue(value)
+			}
+			data = append(data, opts.BarData{Name: label, Value: int(v)})
+		}
+		bar.AddSeries(asset, data,
+			charts.WithLabelOpts(opts.Label{
+				Show:      opts.Bool(true),
+				Formatter: "{c}",
+			}),
+			// Enable stacking for this series
+			charts.WithBarChartOpts(opts.BarChart{
+				Stack: "total",
+			}),
+		)
+	}
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load bar graph template: %w", err)
+	}
+
+	// Render HTML embedding the chart image
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
+
+func (rc *ReportParserService) generatePieChartHTML(name string, report *ReportConfig) (string, error) {
+	df := report.df
+	// Create a pie chart
+	pie := charts.NewPie()
+	pie.SetGlobalOptions(
+		charts.WithAnimation(false),
+		charts.WithInitializationOpts(opts.Initialization{
+			Width:  "1600px",
+			Height: "900px",
+		}),
+	)
+
+	// Get the last row of data for pie chart
+	lastRowIndex := df.Nrow() - 1
+	if lastRowIndex < 0 {
+		return "", fmt.Errorf("no data available for pie chart")
+	}
+
+	// Extract data from the last row
+	var pieData []opts.PieData
+	for _, asset := range df.Names()[1:] {
+		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
+			continue
+		}
+		value := df.Col(asset).Elem(lastRowIndex).String()
+		v, _ := strconv.ParseFloat(value, 32)
+		if v > 0 {
+			pieData = append(pieData, opts.PieData{Name: asset, Value: int(v)})
+		}
+	}
+
+	pie.AddSeries("", pieData,
+		charts.WithLabelOpts(opts.Label{
+			Show:      opts.Bool(true),
+			Formatter: "{b}: {c}",
+		}),
+	)
+
+	baseDir, _ := os.Getwd()
+	// Load HTML template
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
+	if err != nil {
+		return "", fmt.Errorf("failed to load pie graph template: %w", err)
+	}
+
+	// Render HTML embedding the chart image
+	var htmlBuffer bytes.Buffer
+	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
+		"Title": name,
+		"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to render pie graph HTML: %w", err)
+	}
+
+	return htmlBuffer.String(), nil
+}
