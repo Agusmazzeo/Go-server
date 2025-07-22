@@ -63,7 +63,7 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 	var err error
 	logger := utils.LoggerFromContext(ctx)
 	var wg sync.WaitGroup
-	wg.Add(4)
+	wg.Add(2)
 
 	var accountState *schemas.AccountState
 	var liquidaciones *schemas.AccountState
@@ -78,41 +78,41 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 		wg.Done()
 	}()
 
-	go func() {
-		retries := 3
-		for {
-			liquidaciones, err = s.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate)
-			if err != nil {
-				logger.Errorf("error while on GetLiquidacionesDateRange: %v. Retrying...", err)
-				retries--
-			} else {
-				break
-			}
-			if retries == 0 {
-				logger.Errorf("exhausted retries on GetLiquidacionesDateRange: %v", err)
-				break
-			}
-		}
-		wg.Done()
-	}()
+	// go func() {
+	// 	retries := 3
+	// 	for {
+	// 		liquidaciones, err = s.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate)
+	// 		if err != nil {
+	// 			logger.Errorf("error while on GetLiquidacionesDateRange: %v. Retrying...", err)
+	// 			retries--
+	// 		} else {
+	// 			break
+	// 		}
+	// 		if retries == 0 {
+	// 			logger.Errorf("exhausted retries on GetLiquidacionesDateRange: %v", err)
+	// 			break
+	// 		}
+	// 	}
+	// 	wg.Done()
+	// }()
 
-	go func() {
-		retries := 3
-		for {
-			boletos, err = s.GetBoletosDateRange(ctx, token, id, startDate, endDate)
-			if err != nil {
-				logger.Errorf("error while on GetBoletosDateRange: %v. Retrying...", err)
-				retries--
-			} else {
-				break
-			}
-			if retries == 0 {
-				logger.Errorf("exhausted retries on GetBoletosDateRange: %v", err)
-				break
-			}
-		}
-		wg.Done()
-	}()
+	// go func() {
+	// 	retries := 3
+	// 	for {
+	// 		boletos, err = s.GetBoletosDateRange(ctx, token, id, startDate, endDate)
+	// 		if err != nil {
+	// 			logger.Errorf("error while on GetBoletosDateRange: %v. Retrying...", err)
+	// 			retries--
+	// 		} else {
+	// 			break
+	// 		}
+	// 		if retries == 0 {
+	// 			logger.Errorf("exhausted retries on GetBoletosDateRange: %v", err)
+	// 			break
+	// 		}
+	// 	}
+	// 	wg.Done()
+	// }()
 
 	go func() {
 		retries := 3
@@ -472,6 +472,24 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.C
 			value = ins.N
 			categoryKey = "CCL"
+		} else if strings.Contains(ins.D, "Liquidación de Suscripción") {
+			id = strings.Split(ins.I, " - ")[1]
+			if id == "$" {
+				continue
+			}
+			currencySign = "$"
+			units = -ins.C
+			value = ins.N
+			categoryKey = id
+		} else if strings.Contains(ins.D, "Liquidación de Rescate") {
+			id = strings.Split(ins.I, " - ")[1]
+			if id == "$" {
+				continue
+			}
+			currencySign = "$"
+			units = -ins.C
+			value = ins.N
+			categoryKey = id
 		} else {
 			continue
 		}
@@ -630,12 +648,14 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 					Currency:      "Pesos",
 					CurrencySign:  "$",
 					Value:         0,
+					Units:         0,
 					DateRequested: &date,
 					Date:          &date,
 				}
 			}
 			total := totalHoldingsByDate[dateStr]
 			total.Value += holding.Value
+			total.Units += holding.Units
 			totalHoldingsByDate[dateStr] = total
 
 			if _, exists := categoryHoldingsByDate[category][dateStr]; !exists {
@@ -643,18 +663,36 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 					Currency:      "Pesos",
 					CurrencySign:  "$",
 					Value:         0,
+					Units:         0,
 					DateRequested: &date,
 					Date:          &date,
 				}
 			}
 			categoryHolding := categoryHoldingsByDate[category][dateStr]
 			categoryHolding.Value += holding.Value
+			categoryHolding.Units += holding.Units
 			categoryHoldingsByDate[category][dateStr] = categoryHolding
 		}
 
 		for _, transaction := range asset.Transactions {
 			date := *transaction.Date
 			dateStr := date.Format("2006-01-02")
+
+			// Calculate transaction value - if value is 0 but units are not, calculate from units
+			transactionValue := transaction.Value
+			if transaction.Value == 0 && transaction.Units != 0 {
+				// Find the holding for this asset on this date to get value per unit
+				for _, holding := range asset.Holdings {
+					if holding.DateRequested != nil && holding.DateRequested.Format("2006-01-02") == dateStr {
+						if holding.Units != 0 {
+							valuePerUnit := holding.Value / holding.Units
+							transactionValue = transaction.Units * valuePerUnit
+						}
+						break
+					}
+				}
+			}
+
 			if _, exists := totalTransactionsByDate[dateStr]; !exists {
 				totalTransactionsByDate[dateStr] = schemas.Transaction{
 					Currency:     "Pesos",
@@ -664,7 +702,7 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 				}
 			}
 			total := totalTransactionsByDate[dateStr]
-			total.Value += transaction.Value
+			total.Value += transactionValue
 			totalTransactionsByDate[dateStr] = total
 
 			if _, exists := categoryTransactionsByDate[category][dateStr]; !exists {
@@ -677,7 +715,7 @@ func (s *ESCOService) groupTotalHoldingsAndTransactionsByDate(state *schemas.Acc
 				}
 			}
 			categoryTransaction := categoryTransactionsByDate[category][dateStr]
-			categoryTransaction.Value += transaction.Value
+			categoryTransaction.Value += transactionValue
 			categoryTransactionsByDate[category][dateStr] = categoryTransaction
 		}
 	}

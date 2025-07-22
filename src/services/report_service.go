@@ -29,12 +29,9 @@ func NewReportService() *ReportService {
 	return &ReportService{}
 }
 
-func (rs *ReportService) GenerateReport(ctx context.Context, accountStateByCategory *schemas.AccountStateByCategory, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error) {
-	return rs.generateAccountReports(accountStateByCategory, startDate, endDate, interval)
-}
-
 // generateAccountReports calculates the return for each asset per category and returns an AccountsReports struct.
-func (rs *ReportService) generateAccountReports(
+func (rs *ReportService) GenerateReport(
+	ctx context.Context,
 	accountStateByCategory *schemas.AccountStateByCategory,
 	startDate, endDate time.Time,
 	interval time.Duration) (*schemas.AccountsReports, error) {
@@ -91,7 +88,6 @@ func (rs *ReportService) CalculateAssetReturn(asset schemas.Asset, interval time
 	if len(asset.Holdings) < 2 {
 		return schemas.AssetReturn{}, fmt.Errorf("insufficient holdings data to calculate return for asset %s", asset.ID)
 	}
-
 	returnsByInterval := rs.CalculateHoldingsReturn(asset.Holdings, asset.Transactions, interval, false)
 
 	// Return the result
@@ -117,61 +113,106 @@ func (rs *ReportService) CalculateHoldingsReturn(holdings []schemas.Holding, tra
 	sortedHoldings := rs.sortHoldingsByDate(holdings)
 	var dailyReturns []schemas.ReturnByDate
 
-	// Iterate through each pair of consecutive holdings
-	for i := 0; i < len(sortedHoldings)-1; i++ {
-		startingHolding := sortedHoldings[i]
-		endingHolding := sortedHoldings[i+1]
+	// If no holdings, return empty slice
+	if len(sortedHoldings) == 0 {
+		return dailyReturns
+	}
 
-		startDate := *startingHolding.DateRequested
-		endDate := *endingHolding.DateRequested
-		if endDate.Sub(startDate) > 24*time.Hour {
-			continue
+	// Find the overall date range
+	startDate := *sortedHoldings[0].DateRequested
+	endDate := *sortedHoldings[len(sortedHoldings)-1].DateRequested
+
+	// Create a map of holdings by date for easy lookup
+	holdingsByDate := make(map[string]schemas.Holding)
+	for _, holding := range sortedHoldings {
+		dateStr := holding.DateRequested.Format("2006-01-02")
+		holdingsByDate[dateStr] = holding
+	}
+
+	// Generate returns for each day in the range, filling missing dates with zero holdings
+	for currentDate := startDate; !currentDate.After(endDate); currentDate = currentDate.Add(24 * time.Hour) {
+		nextDate := currentDate.Add(interval)
+		dateStr := currentDate.Format("2006-01-02")
+		nextDateStr := nextDate.Format("2006-01-02")
+
+		// Get holdings for current and next date, or create zero holdings if missing
+		var startingHolding, endingHolding schemas.Holding
+
+		if holding, exists := holdingsByDate[dateStr]; exists {
+			startingHolding = holding
+		} else {
+			// Create zero holding for missing date
+			startingHolding = schemas.Holding{}
 		}
+
+		if holding, exists := holdingsByDate[nextDateStr]; exists {
+			endingHolding = holding
+		} else {
+			// Create zero holding for missing date
+			endingHolding = schemas.Holding{}
+		}
+
 		startingValue := startingHolding.Value
 		endingValue := endingHolding.Value
 
 		// Calculate the net transactions within the date range
-		var netStartDateTransactions, netEndDateTransactions float64
+		var netEndDateTransactions float64
 
 		for _, transaction := range transactions {
 			if transaction.Date == nil {
 				continue
 			}
-			if transaction.Date.Equal(startDate) {
-				if !multiAsset && startingHolding.Units != 0 {
-					startingValuePerUnit := startingHolding.Value / startingHolding.Units
-					transaction.Value = transaction.Units * startingValuePerUnit
-				}
-				netStartDateTransactions -= transaction.Value
-			} else if transaction.Date.Equal(endDate) {
-				if !multiAsset && endingHolding.Units != 0 {
-					endingValuePerUnit := endingHolding.Value / endingHolding.Units
-					transaction.Value = transaction.Units * endingValuePerUnit
-				}
-				netEndDateTransactions -= transaction.Value
+
+			if !rs.isSameDate(*transaction.Date, nextDate) {
+				continue
 			}
-		}
-		// netStartValue := startingValue + netStartDateTransactions
-		netStartValue := startingValue
-		netEndValue := endingValue + netEndDateTransactions
-		// Calculate return for this date range
-		if startingValue < 1 && startingValue > -1 {
-			continue
+
+			var transactionValue float64
+			if transaction.Value != 0 {
+				// Use the transaction value directly if it's not zero
+				transactionValue = transaction.Value
+			} else if !multiAsset && endingHolding.Units != 0 && transaction.Units != 0 {
+				// Calculate value from units using the end holding's value per unit
+				endingValuePerUnit := endingHolding.Value / endingHolding.Units
+				transactionValue = transaction.Units * endingValuePerUnit
+			} else {
+				// For zero-value transactions without units, use a small default value
+				transactionValue = 0.0
+			}
+			netEndDateTransactions -= transactionValue
 		}
 
-		returnPercentage := ((netEndValue - netStartValue) / netStartValue) * 100
+		// Calculate return for this date range
+		// The correct formula is: (End value - Start value - Net transactions) / Start value
+		// This gives us the market return excluding the impact of transactions
+		var returnPercentage, netEndValue float64
+		netEndValue = endingValue + netEndDateTransactions
+		if startingValue < 1 && startingValue > -1 || (netEndValue < 1 && netEndValue > -1) {
+			// If start value is too small, treat as 0% return
+			returnPercentage = 0.0
+		} else {
+			// Calculate market return: (End value - Start value - Net transactions) / Start value
+			returnPercentage = ((netEndValue - startingValue) / startingValue) * 100
+
+		}
+
 		// Append the return for this date range
 		dailyReturns = append(dailyReturns, schemas.ReturnByDate{
-			StartDate:        startDate,
-			EndDate:          endDate,
+			StartDate:        currentDate,
+			EndDate:          nextDate,
 			ReturnPercentage: returnPercentage,
 		})
 	}
+
 	// Collapse daily returns into intervals
-	return rs.collapseReturnsByInterval(dailyReturns, interval)
+	return rs.CollapseReturnsByInterval(dailyReturns, interval)
 }
 
-func (rs *ReportService) collapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval time.Duration) []schemas.ReturnByDate {
+func (rs *ReportService) CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval time.Duration) []schemas.ReturnByDate {
+	if len(dailyReturns) == 0 {
+		return []schemas.ReturnByDate{}
+	}
+
 	var returnsByInterval []schemas.ReturnByDate
 	var (
 		currentIntervalStart time.Time
@@ -179,41 +220,41 @@ func (rs *ReportService) collapseReturnsByInterval(dailyReturns []schemas.Return
 		compoundReturn       float64 = 1.0
 	)
 
-	for _, dailyReturn := range dailyReturns {
-		if currentIntervalStart.IsZero() {
-			currentIntervalStart = dailyReturn.StartDate
-			currentIntervalEnd = currentIntervalStart.Add(interval)
-		}
+	// Initialize the first interval
+	currentIntervalStart = dailyReturns[0].StartDate
+	currentIntervalEnd = currentIntervalStart.Add(interval)
 
-		if dailyReturn.EndDate.Before(currentIntervalEnd) {
-			// Apply compound calculation
+	for _, dailyReturn := range dailyReturns {
+		// Check if this daily return belongs to the current interval
+		if dailyReturn.StartDate.Before(currentIntervalEnd) {
+			// This daily return belongs to the current interval
 			compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
 		} else {
-			if interval == 24*time.Hour {
-				compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
-			}
-			// Close the current interval
+			// This daily return belongs to a new interval
+			// First, close the current interval
+			intervalReturnPercentage := (compoundReturn - 1) * 100
+
 			returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
 				StartDate:        currentIntervalStart,
 				EndDate:          currentIntervalEnd,
-				ReturnPercentage: (compoundReturn - 1) * 100,
+				ReturnPercentage: intervalReturnPercentage,
 			})
 
-			// Reset for the new interval
+			// Start a new interval
 			currentIntervalStart = currentIntervalEnd
 			currentIntervalEnd = currentIntervalStart.Add(interval)
-			// compoundReturn = 1 + (dailyReturn.ReturnPercentage / 100)
+			compoundReturn = 1.0 + (dailyReturn.ReturnPercentage / 100)
 		}
 	}
 
 	// Append the last interval
-	if !currentIntervalStart.IsZero() {
-		returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
-			StartDate:        currentIntervalStart,
-			EndDate:          currentIntervalEnd,
-			ReturnPercentage: (compoundReturn - 1) * 100,
-		})
-	}
+	intervalReturnPercentage := (compoundReturn - 1) * 100
+
+	returnsByInterval = append(returnsByInterval, schemas.ReturnByDate{
+		StartDate:        currentIntervalStart,
+		EndDate:          currentIntervalEnd,
+		ReturnPercentage: intervalReturnPercentage,
+	})
 
 	return returnsByInterval
 }
