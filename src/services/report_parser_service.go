@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"server/src/schemas"
 	"server/src/utils"
@@ -45,8 +46,8 @@ func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dat
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
 		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
-		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
-		{name: "TENENCIA", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		// {name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
 		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
@@ -133,7 +134,7 @@ func (rc *ReportParserService) generateLineGraphHTML(name string, report *Report
 				Formatter: "{b}",
 			}),
 			charts.WithAreaStyleOpts(opts.AreaStyle{
-				Opacity: 0.2,
+				Opacity: opts.Float(0.2),
 			}),
 			charts.WithLineChartOpts(opts.LineChart{
 				Smooth: opts.Bool(true),
@@ -198,16 +199,19 @@ func (rc *ReportParserService) generateStackBarGraphHTML(name string, report *Re
 			} else {
 				label = render.FormatMonetaryValue(value)
 			}
-			data = append(data, opts.BarData{Name: label, Value: int(v)})
-		}
-		bar.AddSeries(asset, data,
-			charts.WithLabelOpts(opts.Label{
+			if v <= 0 {
+				data = append(data, opts.BarData{Name: label, Value: 0})
+				continue
+			}
+			data = append(data, opts.BarData{Name: label, Value: roundFloat(v), Label: &opts.Label{
 				Show:      opts.Bool(true),
 				Formatter: "{c}",
-			}),
+			}})
+		}
+		bar.AddSeries(asset, data,
 			// Enable stacking for this series
 			charts.WithBarChartOpts(opts.BarChart{
-				Stack: "total",
+				Stack: "Total",
 			}),
 		)
 	}
@@ -287,4 +291,9 @@ func (rc *ReportParserService) generatePieChartHTML(name string, report *ReportC
 	}
 
 	return htmlBuffer.String(), nil
+}
+
+// Function for rounding float to float with 2 decimal places
+func roundFloat(value float64) float64 {
+	return math.Round(value*100) / 100
 }
