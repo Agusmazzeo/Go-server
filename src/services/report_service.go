@@ -20,7 +20,6 @@ type ReportServiceI interface {
 	GenerateReport(ctx context.Context, accountStateByCategory *schemas.AccountStateByCategory, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
 	GenerateReportDataframes(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*schemas.ReportDataframes, error)
 	GenerateXLSXReport(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) (*excelize.File, error)
-	GeneratePDFReport(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error)
 }
 
 type ReportService struct{}
@@ -511,6 +510,20 @@ func (rs *ReportService) GenerateReportDataframes(ctx context.Context, accountsR
 		return nil, err
 	}
 
+	// Order dataframes columns by defined order
+	firstColumns := []string{
+		"DateRequested",
+	}
+	finalColumns := []string{
+		"TOTAL",
+	}
+	reportDf = utils.SortDataFrameColumns(reportDf, firstColumns, finalColumns)
+	returnsDf = utils.SortDataFrameColumns(returnsDf, firstColumns, finalColumns)
+	reportPercentageDf = utils.SortDataFrameColumns(reportPercentageDf, firstColumns, finalColumns)
+	referenceVariablesDf = utils.SortDataFrameColumns(referenceVariablesDf, firstColumns, finalColumns)
+	categoryDf = utils.SortDataFrameColumns(categoryDf, firstColumns, finalColumns)
+	categoryPercentageDf = utils.SortDataFrameColumns(categoryPercentageDf, firstColumns, finalColumns)
+
 	return &schemas.ReportDataframes{
 		ReportDF:             reportDf,
 		ReportPercentageDf:   reportPercentageDf,
@@ -554,15 +567,6 @@ func (rs *ReportService) GenerateXLSXReport(ctx context.Context, dataframesAndCh
 	}
 	return file, nil
 }
-
-func (rs *ReportService) GeneratePDFReport(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
-	// Implementation for PDF generation
-	// This would typically involve creating charts and converting to PDF
-	// For now, returning a placeholder
-	return []byte("PDF report placeholder"), nil
-}
-
-// Helper functions moved from controller
 
 // isSameDate compares only the date part (day, month, year) of two time.Time values
 func (rs *ReportService) isSameDate(date1, date2 time.Time) bool {
@@ -652,7 +656,7 @@ func (rs *ReportService) parseAccountsReportToDataFrame(ctx context.Context, acc
 	}
 	df = *updatedDf
 
-	return rs.sortDataFrameColumns(&df), nil
+	return &df, nil
 }
 
 func (rs *ReportService) parseAccountsReturnToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
@@ -715,7 +719,7 @@ func (rs *ReportService) parseAccountsReturnToDataFrame(ctx context.Context, acc
 		df = *updatedDf
 	}
 
-	return rs.sortDataFrameColumns(&df), nil
+	return &df, nil
 }
 
 func (rs *ReportService) parseReferenceVariablesToDataFrame(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
@@ -780,7 +784,7 @@ func (rs *ReportService) parseReferenceVariablesToDataFrame(ctx context.Context,
 		df = *updatedDf
 	}
 
-	return rs.sortDataFrameColumns(&df), nil
+	return &df, nil
 }
 
 func (rs *ReportService) parseAccountsCategoryToDataFrame(_ context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*dataframe.DataFrame, error) {
@@ -833,7 +837,7 @@ func (rs *ReportService) parseAccountsCategoryToDataFrame(_ context.Context, acc
 		df = *updatedDf
 	}
 
-	return rs.sortDataFrameColumns(&df), nil
+	return &df, nil
 }
 
 func (rs *ReportService) divideByTotal(df *dataframe.DataFrame) *dataframe.DataFrame {
@@ -906,31 +910,6 @@ func (rs *ReportService) updateDataFrame(df dataframe.DataFrame, columnName stri
 	newDf := df.Mutate(newSeries)
 
 	return &newDf, nil
-}
-
-func (rs *ReportService) sortDataFrameColumns(df *dataframe.DataFrame) *dataframe.DataFrame {
-	if df == nil || df.Ncol() <= 1 {
-		return df
-	}
-
-	// Get column names
-	colNames := df.Names()
-
-	// Sort column names (keeping DateRequested first)
-	sort.Slice(colNames, func(i, j int) bool {
-		if colNames[i] == "DateRequested" {
-			return true
-		}
-		if colNames[j] == "DateRequested" {
-			return false
-		}
-		return colNames[i] < colNames[j]
-	})
-
-	// Create new DataFrame with sorted columns
-	sortedDf := df.Select(colNames)
-
-	return &sortedDf
 }
 
 func (rs *ReportService) convertReportDataframeToExcel(

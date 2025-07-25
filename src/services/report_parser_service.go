@@ -45,9 +45,10 @@ func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dat
 	returnsDF := *dataframesAndCharts.ReturnDF
 	referenceVariablesDF := *dataframesAndCharts.ReferenceVariablesDF
 	returnWithReferencesDF := utils.UnionDataFramesByIndex(returnsDF, referenceVariablesDF, "DateRequested")
+	orderedReturnWithReferencesDF := utils.SortDataFrameColumns(&returnWithReferencesDF, []string{"DateRequested"}, []string{"TOTAL"})
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
-		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
+		{name: "RETORNO", df: orderedReturnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		// {name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},

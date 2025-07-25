@@ -2,6 +2,7 @@ package utils
 
 //nolint:depguard
 import (
+	"slices"
 	"sort"
 
 	"github.com/go-gota/gota/dataframe"
@@ -84,6 +85,38 @@ func UnionDataFramesByIndex(df1, df2 dataframe.DataFrame, indexCol string) dataf
 	}
 
 	return dataframe.New(colSeries...)
+}
+
+func SortDataFrameColumns(df *dataframe.DataFrame, firstColumns []string, finalColumns []string) *dataframe.DataFrame {
+	if df == nil || df.Ncol() <= 1 {
+		return df
+	}
+
+	// Get column names
+	colNames := df.Names()
+
+	// Sort column names (keeping first columns first and final columns last)
+	// Middle columns are sorted alphabetically
+	sort.Slice(colNames, func(i, j int) bool {
+		if slices.Contains(firstColumns, colNames[i]) {
+			return true
+		}
+		if slices.Contains(firstColumns, colNames[j]) {
+			return false
+		}
+		if slices.Contains(finalColumns, colNames[i]) {
+			return false
+		}
+		if slices.Contains(finalColumns, colNames[j]) {
+			return true
+		}
+		return colNames[i] < colNames[j]
+	})
+
+	// Create new DataFrame with sorted columns
+	sortedDf := df.Select(colNames)
+
+	return &sortedDf
 }
 
 // ensureColumns adds missing columns to the DataFrame with nil values
