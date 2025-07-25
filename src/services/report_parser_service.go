@@ -51,9 +51,9 @@ func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dat
 		{name: "RETORNO", df: orderedReturnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		// {name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
+		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", columnsToExclude: []string{"TOTAL"}, isPercentage: true},
 		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
-		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
 	} {
 		if report.df == nil {
 			continue
