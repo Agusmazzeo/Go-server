@@ -42,15 +42,17 @@ func NewReportParserService() *ReportParserService {
 // ParseAccountsReportToPDF generates bar graphs and pie charts, embeds them in HTML, and creates a PDF.
 func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dataframesAndCharts *schemas.ReportDataframes) ([]byte, error) {
 	var htmlContents []string
-	returnWithReferencesDF := utils.UnionDataFramesByIndex(*dataframesAndCharts.ReturnDF, *dataframesAndCharts.ReferenceVariablesDF, "DateRequested")
+	returnsDF := *dataframesAndCharts.ReturnDF
+	referenceVariablesDF := *dataframesAndCharts.ReferenceVariablesDF
+	returnWithReferencesDF := utils.UnionDataFramesByIndex(returnsDF, referenceVariablesDF, "DateRequested")
 	// Generate bar graphs for each dataframe
 	for _, report := range []*ReportConfig{
+		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 		{name: "TENENCIA POR CATEGORIAS", df: dataframesAndCharts.CategoryDF, columnsToExclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		// {name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.CategoryPercentageDF, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA POR CATEGORIAS PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, columnsToExclude: []string{"TOTAL"}, graphType: "bar", isPercentage: true},
 		{name: "TENENCIA TOTAL", df: dataframesAndCharts.ReportDF, columnsToInclude: []string{"TOTAL"}, graphType: "line", includeTable: true},
 		{name: "TENENCIA PORCENTAJE", df: dataframesAndCharts.ReportPercentageDf, graphType: "pie", isPercentage: true},
-		{name: "RETORNO", df: &returnWithReferencesDF, columnsToInclude: []string{"Inflacion Mensual", "USD A3500 Variacion", "TOTAL"}, graphType: "line", isPercentage: true, includeTable: true},
 	} {
 		if report.df == nil {
 			continue
@@ -58,27 +60,25 @@ func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dat
 		var htmlContent string
 		var err error
 
+		if report.includeTable {
+			htmlContent, err = render.GetTableHTML(report.name, report.df)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate table for %s: %w", report.name, err)
+			}
+			htmlContents = append(htmlContents, htmlContent)
+		}
+
 		// Generate bar graph and embed in HTML
 		switch report.graphType {
 		case "bar":
-			htmlContent, err = rc.generateStackBarGraphHTML(report.name, report)
+			htmlContent, err = rc.generateStackBarGraphHTML(report)
 		case "pie":
-			htmlContent, err = rc.generatePieChartHTML(report.name, report)
+			htmlContent, err = rc.generatePieChartHTML(report)
 		case "line":
-			htmlContent, err = rc.generateLineGraphHTML(report.name, report)
+			htmlContent, err = rc.generateLineGraphHTML(report)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate graph for %s: %w", report.name, err)
-		}
-		htmlContents = append(htmlContents, htmlContent)
-
-		if !report.includeTable {
-			continue
-		}
-
-		htmlContent, err = render.GetTableHTML(report.df)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate table for %s: %w", report.name, err)
 		}
 		htmlContents = append(htmlContents, htmlContent)
 	}
@@ -92,7 +92,7 @@ func (rc *ReportParserService) ParseAccountsReportToPDF(ctx context.Context, dat
 	return pdfBuffer.Bytes(), nil
 }
 
-func (rc *ReportParserService) generateLineGraphHTML(name string, report *ReportConfig) (string, error) {
+func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (string, error) {
 	df := report.df
 	// Create a bar chart
 	line := charts.NewLine()
@@ -151,7 +151,6 @@ func (rc *ReportParserService) generateLineGraphHTML(name string, report *Report
 	// Render HTML embedding the chart image
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-		"Title": name,
 		"Graph": strings.ReplaceAll(string(line.RenderContent()), "let ", "var "),
 	})
 	if err != nil {
@@ -161,7 +160,7 @@ func (rc *ReportParserService) generateLineGraphHTML(name string, report *Report
 	return htmlBuffer.String(), nil
 }
 
-func (rc *ReportParserService) generateStackBarGraphHTML(name string, report *ReportConfig) (string, error) {
+func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (string, error) {
 	df := report.df
 	// Create a bar chart
 	bar := charts.NewBar()
@@ -225,7 +224,6 @@ func (rc *ReportParserService) generateStackBarGraphHTML(name string, report *Re
 	// Render HTML embedding the chart image
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-		"Title": name,
 		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
 	})
 	if err != nil {
@@ -235,7 +233,7 @@ func (rc *ReportParserService) generateStackBarGraphHTML(name string, report *Re
 	return htmlBuffer.String(), nil
 }
 
-func (rc *ReportParserService) generatePieChartHTML(name string, report *ReportConfig) (string, error) {
+func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (string, error) {
 	df := report.df
 	// Create a pie chart
 	pie := charts.NewPie()
@@ -283,7 +281,6 @@ func (rc *ReportParserService) generatePieChartHTML(name string, report *ReportC
 	// Render HTML embedding the chart image
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
-		"Title": name,
 		"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
 	})
 	if err != nil {

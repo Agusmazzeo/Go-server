@@ -12,7 +12,7 @@ import (
 )
 
 type SyncServiceI interface {
-	IsDataSynced(ctx context.Context, token, accountID string, startDate, endDate time.Time) (bool, error)
+	GetDatesToSync(ctx context.Context, token, accountID string, startDate, endDate time.Time) ([]time.Time, error)
 	SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) error
 }
 
@@ -48,11 +48,11 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Starting sync for account %s from %s to %s", accountID, startDate, endDate)
 
-	isSynced, err := s.IsDataSynced(ctx, token, accountID, startDate, endDate)
+	datesToSync, err := s.GetDatesToSync(ctx, token, accountID, startDate, endDate)
 	if err != nil {
 		return err
 	}
-	if isSynced {
+	if len(datesToSync) == 0 {
 		logger.Infof("Data is already synced for account %s from %s to %s", accountID, startDate, endDate)
 		return nil
 	}
@@ -63,7 +63,12 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 		return err
 	}
 
-	err = s.storeAccountState(ctx, accountID, accountState)
+	if accountState == nil {
+		logger.Infof("No account state returned for account %s", accountID)
+		return nil
+	}
+
+	err = s.StoreAccountState(ctx, accountID, accountState, datesToSync)
 	if err != nil {
 		logger.Error(err)
 		return err
@@ -72,57 +77,89 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 	return nil
 }
 
-func (s *SyncService) IsDataSynced(ctx context.Context, token, accountID string, startDate, endDate time.Time) (bool, error) {
+func (s *SyncService) GetDatesToSync(ctx context.Context, token, accountID string, startDate, endDate time.Time) ([]time.Time, error) {
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Checking if data is synced for account %s from %s to %s", accountID, startDate, endDate)
 	syncedDates, err := s.syncLogRepository.GetSyncedDates(ctx, accountID, startDate, endDate)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
-	expectedDates := make([]time.Time, 0)
+	datesToSync := make([]time.Time, 0)
 	for date := startDate; date.Before(endDate); date = date.AddDate(0, 0, 1) {
-		expectedDates = append(expectedDates, date)
-	}
-	if len(syncedDates) != len(expectedDates) {
-		return false, nil
+		alreadySynced := false
+		for _, syncedDate := range syncedDates {
+			if date.Equal(syncedDate) {
+				alreadySynced = true
+				break
+			}
+		}
+		if !alreadySynced {
+			datesToSync = append(datesToSync, date)
+		}
 	}
 
-	return true, nil
+	return datesToSync, nil
 }
 
-func (s *SyncService) storeAccountState(ctx context.Context, accountID string, accountState *schemas.AccountState) error {
+func (s *SyncService) StoreAccountState(ctx context.Context, accountID string, accountState *schemas.AccountState, datesToSync []time.Time) error {
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Storing account state for account %s", accountID)
 	var err error
 	dates := make(map[time.Time]bool)
+
+	// Create a map for quick lookup of dates to sync
+	datesToSyncMap := make(map[string]bool)
+	for _, date := range datesToSync {
+		datesToSyncMap[date.Format("2006-01-02")] = true
+	}
+
 	for _, asset := range *accountState.Assets {
 		err = s.storeAsset(ctx, &asset)
 		if err != nil {
 			return fmt.Errorf("error storing asset %s: %w", asset.ID, err)
 		}
-		err = s.storeHoldings(ctx, accountID, asset.ID, asset.Holdings)
-		if err != nil {
-			return fmt.Errorf("error storing holdings for asset %s: %w", asset.ID, err)
+
+		// Filter holdings to only include dates in datesToSync
+		filteredHoldings := s.filterHoldingsByDates(asset.Holdings, datesToSyncMap)
+		logger.Infof("Filtered holdings for asset %s: %d out of %d", asset.ID, len(filteredHoldings), len(asset.Holdings))
+		if len(filteredHoldings) > 0 {
+			err = s.storeHoldings(ctx, accountID, asset.ID, filteredHoldings)
+			if err != nil {
+				return fmt.Errorf("error storing holdings for asset %s: %w", asset.ID, err)
+			}
 		}
-		err = s.storeTransactions(ctx, accountID, asset.ID, asset.Transactions)
-		if err != nil {
-			return fmt.Errorf("error storing transactions for asset %s: %w", asset.ID, err)
+
+		// Filter transactions to only include dates in datesToSync
+		filteredTransactions := s.filterTransactionsByDates(asset.Transactions, datesToSyncMap)
+		logger.Infof("Filtered transactions for asset %s: %d out of %d", asset.ID, len(filteredTransactions), len(asset.Transactions))
+		if len(filteredTransactions) > 0 {
+			err = s.storeTransactions(ctx, accountID, asset.ID, filteredTransactions)
+			if err != nil {
+				return fmt.Errorf("error storing transactions for asset %s: %w", asset.ID, err)
+			}
 		}
-		for _, holding := range asset.Holdings {
+
+		// Only collect dates that are in datesToSync
+		for _, holding := range filteredHoldings {
 			dates[*holding.DateRequested] = true
 		}
-		for _, transaction := range asset.Transactions {
+		for _, transaction := range filteredTransactions {
 			dates[*transaction.Date] = true
 		}
 	}
+
 	datesList := make([]time.Time, 0)
 	for date := range dates {
 		datesList = append(datesList, date)
 	}
-	err = s.markDatesAsSynced(ctx, accountID, datesList)
-	if err != nil {
-		return fmt.Errorf("error marking dates as synced: %w", err)
+
+	if len(datesList) > 0 {
+		err = s.markDatesAsSynced(ctx, accountID, datesList)
+		if err != nil {
+			return fmt.Errorf("error marking dates as synced: %w", err)
+		}
 	}
+
 	return nil
 }
 
@@ -206,4 +243,32 @@ func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID 
 		}
 	}
 	return nil
+}
+
+// filterHoldingsByDates filters holdings to only include those with dates in the datesToSync map
+func (s *SyncService) filterHoldingsByDates(holdings []schemas.Holding, datesToSync map[string]bool) []schemas.Holding {
+	var filteredHoldings []schemas.Holding
+	for _, holding := range holdings {
+		if holding.DateRequested != nil {
+			dateStr := holding.DateRequested.Format("2006-01-02")
+			if datesToSync[dateStr] {
+				filteredHoldings = append(filteredHoldings, holding)
+			}
+		}
+	}
+	return filteredHoldings
+}
+
+// filterTransactionsByDates filters transactions to only include those with dates in the datesToSync map
+func (s *SyncService) filterTransactionsByDates(transactions []schemas.Transaction, datesToSync map[string]bool) []schemas.Transaction {
+	var filteredTransactions []schemas.Transaction
+	for _, transaction := range transactions {
+		if transaction.Date != nil {
+			dateStr := transaction.Date.Format("2006-01-02")
+			if datesToSync[dateStr] {
+				filteredTransactions = append(filteredTransactions, transaction)
+			}
+		}
+	}
+	return filteredTransactions
 }

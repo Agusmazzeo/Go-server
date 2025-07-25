@@ -79,7 +79,7 @@ func GetReportCoverHTML(title, subtitle, imagePath string) (string, error) {
 	return htmlBuffer.String(), nil
 }
 
-func GetTableHTML(df *dataframe.DataFrame) (string, error) {
+func GetTableHTML(title string, df *dataframe.DataFrame) (string, error) {
 	if df == nil || df.Nrow() == 0 {
 		return "", fmt.Errorf("dataframe is empty or nil")
 	}
@@ -113,6 +113,7 @@ func GetTableHTML(df *dataframe.DataFrame) (string, error) {
 
 	// Define the template data
 	data := map[string]interface{}{
+		"Title":   title,
 		"Headers": headers,
 		"Rows":    rows,
 	}

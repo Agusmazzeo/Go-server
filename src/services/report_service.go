@@ -61,25 +61,21 @@ func (rs *ReportService) GenerateReport(
 	for _, holding := range *accountStateByCategory.TotalHoldingsByDate {
 		totalHoldingsByDate = append(totalHoldingsByDate, holding)
 	}
-	totalTransactionsByDate := make([]schemas.Transaction, 0, len(*accountStateByCategory.TotalTransactionsByDate))
-	for _, transaction := range *accountStateByCategory.TotalTransactionsByDate {
-		totalTransactionsByDate = append(totalTransactionsByDate, transaction)
-	}
 
-	totalReturns := rs.CalculateHoldingsReturn(totalHoldingsByDate, totalTransactionsByDate, interval, true)
+	// Calculate total returns using weighted asset returns instead of total holdings/transactions
+	totalReturns := rs.CalculateWeightedTotalReturns(assetReturnsByCategory, *accountStateByCategory.AssetsByCategory, totalHoldingsByDate, interval)
 	finalIntervalReturn := rs.CalculateFinalIntervalReturn(totalReturns)
 	filteredAssets := rs.FilterAssetsByCategoryHoldingsByInterval(accountStateByCategory.AssetsByCategory, startDate, endDate, interval)
 	filteredCategoryAssets := rs.FilterAssetsHoldingsByInterval(accountStateByCategory.CategoryAssets, startDate, endDate, interval)
 	filteredTotalHoldings := rs.FilterHoldingsByInterval(totalHoldingsByDate, startDate, endDate, interval)
 	return &schemas.AccountsReports{
-		AssetsByCategory:        &filteredAssets,
-		AssetsReturnByCategory:  &assetReturnsByCategory,
-		CategoryAssets:          &filteredCategoryAssets,
-		CategoryAssetsReturn:    &categoryAssetReturns,
-		TotalHoldingsByDate:     filteredTotalHoldings,
-		TotalTransactionsByDate: totalTransactionsByDate,
-		TotalReturns:            totalReturns,
-		FinalIntervalReturn:     finalIntervalReturn,
+		AssetsByCategory:       &filteredAssets,
+		AssetsReturnByCategory: &assetReturnsByCategory,
+		CategoryAssets:         &filteredCategoryAssets,
+		CategoryAssetsReturn:   &categoryAssetReturns,
+		TotalHoldingsByDate:    filteredTotalHoldings,
+		TotalReturns:           totalReturns,
+		FinalIntervalReturn:    finalIntervalReturn,
 	}, nil
 }
 
@@ -130,8 +126,9 @@ func (rs *ReportService) CalculateHoldingsReturn(holdings []schemas.Holding, tra
 	}
 
 	// Generate returns for each day in the range, filling missing dates with zero holdings
-	for currentDate := startDate; !currentDate.After(endDate); currentDate = currentDate.Add(24 * time.Hour) {
-		nextDate := currentDate.Add(interval)
+	dailyInterval := 24 * time.Hour
+	for currentDate := startDate; !currentDate.After(endDate); currentDate = currentDate.Add(dailyInterval) {
+		nextDate := currentDate.Add(dailyInterval)
 		dateStr := currentDate.Format("2006-01-02")
 		nextDateStr := nextDate.Format("2006-01-02")
 
@@ -208,10 +205,134 @@ func (rs *ReportService) CalculateHoldingsReturn(holdings []schemas.Holding, tra
 	return rs.CollapseReturnsByInterval(dailyReturns, interval)
 }
 
+// CalculateWeightedTotalReturns calculates total portfolio returns by weighting individual asset returns
+// by their percentage of the total portfolio value, properly handling intervals
+func (rs *ReportService) CalculateWeightedTotalReturns(assetReturnsByCategory map[string][]schemas.AssetReturn, assetsByCategory map[string][]schemas.Asset, totalHoldingsByDate []schemas.Holding, interval time.Duration) []schemas.ReturnByDate {
+	// Create a map of total holdings by date for easy lookup
+	totalHoldingsByDateMap := make(map[string]float64)
+	for _, holding := range totalHoldingsByDate {
+		if holding.DateRequested != nil {
+			dateStr := holding.DateRequested.Format("2006-01-02")
+			totalHoldingsByDateMap[dateStr] = holding.Value
+		}
+	}
+
+	// Create a map of assets by ID for easy lookup
+	assetsByID := make(map[string]schemas.Asset)
+	for _, assets := range assetsByCategory {
+		for _, asset := range assets {
+			assetsByID[asset.ID] = asset
+		}
+	}
+
+	// Create a map to store weighted returns by interval end date
+	weightedReturnsByInterval := make(map[string]float64)
+	intervalWeights := make(map[string]float64)
+
+	// Iterate through each category and its asset returns
+	for _, assetReturns := range assetReturnsByCategory {
+		for _, assetReturn := range assetReturns {
+			// Find the corresponding asset data
+			asset, exists := assetsByID[assetReturn.ID]
+			if !exists {
+				continue // Skip if asset not found
+			}
+
+			// For each asset return period, calculate its contribution to total returns
+			for _, returnPeriod := range assetReturn.ReturnsByDateRange {
+				// Get the asset's value at the start of this return period
+				assetStartValue := rs.getAssetValueAtDate(asset, returnPeriod.StartDate)
+
+				// Get total portfolio value at the start date
+				startDateStr := returnPeriod.StartDate.Format("2006-01-02")
+				totalPortfolioValue := totalHoldingsByDateMap[startDateStr]
+
+				// Calculate the asset's weight in the portfolio
+				var assetWeight float64
+				if totalPortfolioValue > 0 {
+					assetWeight = assetStartValue / totalPortfolioValue
+				} else {
+					assetWeight = 0
+				}
+
+				// Calculate weighted return contribution
+				weightedReturn := returnPeriod.ReturnPercentage * assetWeight
+
+				// Use the end date as the key for this interval
+				endDateStr := returnPeriod.EndDate.Format("2006-01-02")
+				weightedReturnsByInterval[endDateStr] += weightedReturn
+				intervalWeights[endDateStr] += assetWeight
+			}
+		}
+	}
+
+	// Convert the map to a slice of ReturnByDate and normalize by weights
+	var totalReturns []schemas.ReturnByDate
+	for endDateStr, weightedReturn := range weightedReturnsByInterval {
+		endDate, err := time.Parse("2006-01-02", endDateStr)
+		if err != nil {
+			continue // Skip invalid dates
+		}
+
+		// Calculate the start date based on the interval
+		startDate := endDate.Add(-interval)
+
+		// Normalize by total weight for this interval
+		var finalReturn float64
+		if weight := intervalWeights[endDateStr]; weight > 0 {
+			finalReturn = weightedReturn / weight
+		} else {
+			finalReturn = weightedReturn
+		}
+
+		totalReturns = append(totalReturns, schemas.ReturnByDate{
+			StartDate:        startDate,
+			EndDate:          endDate,
+			ReturnPercentage: finalReturn,
+		})
+	}
+
+	// Sort by start date
+	sort.Slice(totalReturns, func(i, j int) bool {
+		return totalReturns[i].StartDate.Before(totalReturns[j].StartDate)
+	})
+
+	return totalReturns
+}
+
+// getAssetValueAtDate returns the asset's value at a specific date
+func (rs *ReportService) getAssetValueAtDate(asset schemas.Asset, date time.Time) float64 {
+	// Find the holding for the given date
+	for _, holding := range asset.Holdings {
+		if holding.DateRequested != nil && rs.isSameDate(*holding.DateRequested, date) {
+			return holding.Value
+		}
+	}
+
+	// If no exact match found, find the closest previous holding
+	var closestHolding *schemas.Holding
+	for _, holding := range asset.Holdings {
+		if holding.DateRequested != nil && (*holding.DateRequested).Before(date) || rs.isSameDate(*holding.DateRequested, date) {
+			if closestHolding == nil || (*holding.DateRequested).After(*closestHolding.DateRequested) {
+				closestHolding = &holding
+			}
+		}
+	}
+
+	if closestHolding != nil {
+		return closestHolding.Value
+	}
+
+	return 0.0
+}
+
 func (rs *ReportService) CollapseReturnsByInterval(dailyReturns []schemas.ReturnByDate, interval time.Duration) []schemas.ReturnByDate {
 	if len(dailyReturns) == 0 {
 		return []schemas.ReturnByDate{}
 	}
+
+	// Sort daily returns by start date to ensure proper order
+	sortedReturns := rs.sortReturnsByDate(dailyReturns)
 
 	var returnsByInterval []schemas.ReturnByDate
 	var (
@@ -221,10 +342,10 @@ func (rs *ReportService) CollapseReturnsByInterval(dailyReturns []schemas.Return
 	)
 
 	// Initialize the first interval
-	currentIntervalStart = dailyReturns[0].StartDate
+	currentIntervalStart = sortedReturns[0].StartDate
 	currentIntervalEnd = currentIntervalStart.Add(interval)
 
-	for _, dailyReturn := range dailyReturns {
+	for _, dailyReturn := range sortedReturns {
 		// Check if this daily return belongs to the current interval
 		if dailyReturn.StartDate.Before(currentIntervalEnd) {
 			// This daily return belongs to the current interval
@@ -316,6 +437,14 @@ func (rs *ReportService) sortHoldingsByDate(holdings []schemas.Holding) []schema
 		return holdings[i].DateRequested.Before(*holdings[j].DateRequested)
 	})
 	return holdings
+}
+
+// sortReturnsByDate sorts the returns by StartDate.
+func (rs *ReportService) sortReturnsByDate(returns []schemas.ReturnByDate) []schemas.ReturnByDate {
+	sort.Slice(returns, func(i, j int) bool {
+		return returns[i].StartDate.Before(returns[j].StartDate)
+	})
+	return returns
 }
 
 func (rs *ReportService) GenerateReportDataframes(ctx context.Context, accountsReport *schemas.AccountsReports, startDate, endDate time.Time, interval time.Duration) (*schemas.ReportDataframes, error) {
@@ -570,6 +699,20 @@ func (rs *ReportService) parseAccountsReturnToDataFrame(ctx context.Context, acc
 			}
 			df = *updatedDf
 		}
+	}
+	totalReturnValues := make([]string, len(dates))
+	for _, totalReturn := range accountsReport.TotalReturns {
+		for i, date := range dates {
+			if rs.isSameDate(date, totalReturn.EndDate) {
+				totalReturnValues[i] = fmt.Sprintf("%.2f", totalReturn.ReturnPercentage)
+				continue
+			}
+		}
+		updatedDf, err := rs.updateDataFrame(df, "TOTAL", totalReturnValues)
+		if err != nil {
+			return nil, err
+		}
+		df = *updatedDf
 	}
 
 	return rs.sortDataFrameColumns(&df), nil
