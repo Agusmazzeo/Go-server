@@ -463,7 +463,7 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.C
 			value = ins.N
 			categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
-		} else if strings.Contains(ins.D, "Renta") || strings.Contains(ins.D, "Boleto") {
+		} else if strings.Contains(ins.D, "Renta") {
 			id = strings.Split(ins.I, " - ")[1]
 			if id == "$" {
 				continue
@@ -472,6 +472,16 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.C
 			value = ins.N
 			categoryKey = "CCL"
+		} else if strings.Contains(ins.D, "Boleto") && ins.TI == "Instrumentos" {
+			denominationSplit := strings.Split(ins.D, " / ")
+			if len(denominationSplit) < 5 {
+				continue
+			}
+			id = denominationSplit[4]
+			currencySign = "$"
+			units = -ins.C
+			value = ins.N
+			categoryKey = id
 		} else if strings.Contains(ins.D, "Liquidación de Suscripción") {
 			id = strings.Split(ins.I, " - ")[1]
 			if id == "$" {
@@ -490,6 +500,15 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.C
 			value = ins.N
 			categoryKey = id
+		} else if strings.Contains(ins.D, "Interest payment") {
+			id = strings.Split(ins.I, " - ")[1]
+			if id != "USD" {
+				continue
+			}
+			currencySign = "USD"
+			units = -ins.N
+			value = 0
+			categoryKey = "MEP"
 		} else {
 			continue
 		}

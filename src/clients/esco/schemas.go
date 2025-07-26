@@ -148,4 +148,5 @@ type Instrumentos struct {
 	TA     string  `json:"TA"`
 	TPCP   string  `json:"TPCP"`
 	CTCNCD string  `json:"CTCNCD"`
+	TI     string  `json:"TI"`
 }
