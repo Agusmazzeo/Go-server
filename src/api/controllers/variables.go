@@ -253,7 +253,7 @@ func ComputeValuationVariations(input *schemas.VariableWithValuationResponse, in
 		currVal := valuationMap[date]
 
 		if ok {
-			delta := currVal - prevVal
+			delta := (currVal - prevVal) / prevVal
 			variations = append(variations, schemas.VariableValuation{
 				Date:  date.Format("2006-01-02"),
 				Value: delta,
