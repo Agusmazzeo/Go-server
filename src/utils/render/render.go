@@ -32,10 +32,22 @@ func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {
 	page := wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(html)))
 	page.EnableLocalFileAccess.Set(true)
 
+	// Add page-level optimizations to prevent segmentation faults
+	page.NoStopSlowScripts.Set(true)
+	page.JavascriptDelay.Set(1000)
+	page.LoadErrorHandling.Set("ignore")
+	page.LoadMediaErrorHandling.Set("ignore")
+	page.DisableSmartShrinking.Set(true)
+	page.PrintMediaType.Set(true)
+
 	pdfg.AddPage(page)
 
 	pdfg.Orientation.Set(wkhtmltopdf.OrientationLandscape)
 	pdfg.PageSize.Set(wkhtmltopdf.PageSizeA4)
+	pdfg.MarginTop.Set(2)
+	pdfg.MarginBottom.Set(2)
+	pdfg.MarginLeft.Set(2)
+	pdfg.MarginRight.Set(2)
 
 	err = pdfg.Create()
 	if err != nil {
@@ -155,9 +167,24 @@ func GetSeparatorPageHTML(title string) (string, error) {
 }
 
 func joinHTMLPages(htmlContents []string) string {
-	// Define the CSS to enforce page breaks between sections
+	// Define the CSS to enforce page breaks between sections and ensure proper content flow
 	pageBreakCSS := `<style>
 		.page-break { page-break-before: always; }
+		body { margin: 0; padding: 0; }
+		* { box-sizing: border-box; }
+		table { width: 100% !important; table-layout: fixed !important; }
+		.table-container { overflow-x: auto !important; max-width: 100% !important; }
+		.chart-container, .table-container {
+			page-break-inside: avoid;
+			margin-bottom: 15px;
+		}
+		@media print {
+			.page-break { page-break-before: always; }
+			.chart-container, .table-container {
+				page-break-inside: avoid;
+				margin-bottom: 10px;
+			}
+		}
 	</style>`
 
 	// Start building the final HTML document

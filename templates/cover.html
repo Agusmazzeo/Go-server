@@ -3,46 +3,125 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reporte de Rendimientos</title>
+    <title>{{ .Title }}</title>
     <style>
       body {
         font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        margin: 0;
+        padding: 40px 20px;
+        color: #1e293b;
         text-align: center;
+        min-height: 100vh;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cover-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 40px;
+        margin: 0 auto;
+        max-width: 800px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e2e8f0;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cover-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+      }
+
+      .logo-container {
+        margin-bottom: 40px;
+        display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
-        margin: 0;
-        padding: 20px;
-      }
-
-      h1 {
-        font-size: 36px;
-        margin-bottom: 10px;
-      }
-
-      h2 {
-        font-size: 24px;
-        font-weight: normal;
-        color: gray;
-        margin-bottom: 40px;
       }
 
       .cover-image {
-        max-width: 60%;
+        max-width: 180px;
         height: auto;
-        border: 2px solid #ddd;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+      }
+
+      .title-section {
+        margin-bottom: 40px;
+        text-align: center;
+      }
+
+      .main-title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 12px;
+        letter-spacing: -0.5px;
+        line-height: 1.2;
+      }
+
+      .subtitle {
+        font-size: 20px;
+        color: #64748b;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .report-info {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: #f8fafc;
         border-radius: 8px;
-        padding: 10px;
-        box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.2);
+        border: 1px solid #e2e8f0;
+      }
+
+      .report-type {
+        font-size: 16px;
+        color: #475569;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .date-info {
+        font-size: 14px;
+        color: #94a3b8;
+        font-style: italic;
+      }
+
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+        font-size: 12px;
+        color: #94a3b8;
       }
     </style>
   </head>
   <body>
-    <h1>{{.Title}}</h1>
-    <h2>{{.Subtitle}}</h2>
+    <div class="cover-container">
+      <div class="logo-container">
+        <img src="{{.ImagePath}}" alt="Criteria Logo" class="cover-image" />
+      </div>
 
-    <img src="{{.ImagePath}}" alt="Cover Image" class="cover-image" />
+      <div class="title-section">
+        <h1 class="main-title">{{.Title}}</h1>
+        <h2 class="subtitle">{{.Subtitle}}</h2>
+      </div>
+
+      <div class="report-info">
+        <div class="report-type">Reporte Financiero Profesional</div>
+        <div class="date-info">Generado automáticamente</div>
+      </div>
+
+      <div class="footer">© 2025 Criteria - Análisis Financiero</div>
+    </div>
   </body>
 </html>

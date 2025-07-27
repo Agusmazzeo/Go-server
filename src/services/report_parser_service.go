@@ -105,8 +105,8 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 			},
 		}),
 		charts.WithInitializationOpts(opts.Initialization{
-			Width:  "1600px",
-			Height: "900px",
+			Width:  "1100px",
+			Height: "600px",
 		}),
 	)
 
@@ -153,6 +153,7 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
 		"Graph": strings.ReplaceAll(string(line.RenderContent()), "let ", "var "),
+		"Title": report.name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
@@ -173,8 +174,8 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 			},
 		}),
 		charts.WithInitializationOpts(opts.Initialization{
-			Width:  "1600px",
-			Height: "900px",
+			Width:  "1100px",
+			Height: "600px",
 		}),
 		// Add stacking configuration
 		charts.WithTooltipOpts(opts.Tooltip{
@@ -226,6 +227,7 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
 		"Graph": strings.ReplaceAll(string(bar.RenderContent()), "let ", "var "),
+		"Title": report.name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render bar graph HTML: %w", err)
@@ -241,8 +243,8 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 	pie.SetGlobalOptions(
 		charts.WithAnimation(false),
 		charts.WithInitializationOpts(opts.Initialization{
-			Width:  "1600px",
-			Height: "900px",
+			Width:  "1100px",
+			Height: "600px",
 		}),
 	)
 
@@ -283,6 +285,7 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 	var htmlBuffer bytes.Buffer
 	err = tmpl.Execute(&htmlBuffer, map[string]interface{}{
 		"Graph": strings.ReplaceAll(string(pie.RenderContent()), "let ", "var "),
+		"Title": report.name,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to render pie graph HTML: %w", err)

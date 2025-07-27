@@ -1,79 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
-  <h1>{{ .Title }}</h1>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ .Title }}</title>
     <style>
       body {
         font-family: Arial, sans-serif;
-        font-size: 12px; /* Adjust font size for better fit */
+        background: white;
         margin: 0;
         padding: 0;
+        color: #1e293b;
       }
 
-      /* ✅ Ensures the table fits within the PDF width */
-      .table-container {
+      .chart-container {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+        margin-bottom: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .chart-header {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        width: 100%;
+      }
+
+      .chart-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .chart-subtitle {
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      .chart-content {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
         width: 100%;
         max-width: 100%;
+        overflow-x: auto;
+      }
+
+      .page-header {
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .page-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 2px;
+      }
+
+      .page-subtitle {
+        font-size: 10px;
+        color: #64748b;
+      }
+
+      .table-container {
+        width: 100%;
+        border: 1px solid #e2e8f0;
+        overflow-x: auto;
+        max-width: 100%;
+        background: white;
       }
 
       table {
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed; /* ✅ Distributes columns evenly */
-      }
-
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 6px;
-        text-align: left;
-        vertical-align: middle;
-        word-wrap: break-word; /* ✅ Allow text wrapping */
-        white-space: normal; /* ✅ Ensures content fits inside */
-        overflow: hidden;
+        background: white;
+        table-layout: fixed;
+        min-width: 100%;
+        max-width: 100%;
+        font-size: 7px;
       }
 
       th {
-        background-color: #f2f2f2;
+        background: #f8fafc;
+        color: #1e293b;
         font-weight: bold;
+        font-size: 7px;
+        padding: 3px 2px;
+        text-align: left;
+        border: 1px solid #cbd5e1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      /* ✅ Dynamically adjust column widths */
-      th,
       td {
-        width: auto;
+        padding: 2px 2px;
+        border: 1px solid #f1f5f9;
+        font-size: 6px;
+        color: #334155;
+        vertical-align: middle;
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      /* ✅ Adjust font size for better PDF fit */
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+
+      .number-cell {
+        text-align: right;
+        font-family: "Courier New", monospace;
+        font-weight: bold;
+        font-size: 6px;
+        white-space: nowrap;
+      }
+
+      .date-cell {
+        font-weight: bold;
+        color: #475569;
+        font-size: 6px;
+        white-space: nowrap;
+      }
+
+      /* Responsive adjustments */
       @media print {
         body {
+          padding: 5px;
+        }
+
+        .chart-container {
+          padding: 5px;
+          margin-bottom: 5px;
+        }
+
+        .chart-header {
+          margin-bottom: 5px;
+          padding-bottom: 5px;
+        }
+
+        .chart-title {
+          font-size: 14px;
+        }
+
+        .chart-subtitle {
           font-size: 10px;
+        }
+
+        .chart-content {
+          padding: 5px;
+        }
+
+        th,
+        td {
+          padding: 2px 2px;
+          font-size: 6px;
         }
       }
     </style>
   </head>
   <body>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            {{ range .Headers }}
-            <th>{{ . }}</th>
-            {{ end }}
-          </tr>
-        </thead>
-        <tbody>
-          {{ range .Rows }}
-          <tr>
-            {{ range . }}
-            <td>{{ . }}</td>
-            {{ end }}
-          </tr>
-          {{ end }}
-        </tbody>
-      </table>
+    <div class="chart-container">
+      <div class="chart-header">
+        <h2 class="chart-title">{{ .Title }}</h2>
+        <p class="chart-subtitle">Datos financieros detallados</p>
+      </div>
+
+      <div class="chart-content">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                {{ range .Headers }}
+                <th>{{ . }}</th>
+                {{ end }}
+              </tr>
+            </thead>
+            <tbody>
+              {{ range .Rows }}
+              <tr>
+                {{ range $index, $cell := . }}
+                <td
+                  class="{{ if eq $index 0 }}date-cell{{ else }}number-cell{{ end }}"
+                >
+                  {{ $cell }}
+                </td>
+                {{ end }}
+              </tr>
+              {{ end }}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </body>
 </html>
