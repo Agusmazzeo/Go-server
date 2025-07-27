@@ -114,6 +114,7 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 	labels := df.Col("DateRequested").Records()
 	line.SetXAxis(labels)
 
+	colorIndex := 0
 	for _, asset := range df.Names()[1:] {
 		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
 			continue
@@ -127,7 +128,7 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 			} else {
 				label = render.FormatMonetaryValue(value)
 			}
-			data = append(data, opts.LineData{Name: label, Value: int(v)})
+			data = append(data, opts.LineData{Name: label, Value: v})
 		}
 		line.AddSeries(asset, data,
 			charts.WithLabelOpts(opts.Label{
@@ -140,7 +141,12 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 			charts.WithLineChartOpts(opts.LineChart{
 				Smooth: opts.Bool(true),
 			}),
+			// Add distinct color for this series
+			charts.WithItemStyleOpts(opts.ItemStyle{
+				Color: utils.GetChartColor(colorIndex),
+			}),
 		)
+		colorIndex++
 	}
 	baseDir, _ := os.Getwd()
 	// Load HTML template
@@ -187,6 +193,7 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 	labels := df.Col("DateRequested").Records()
 	bar.SetXAxis(labels)
 
+	colorIndex := 0
 	for _, asset := range df.Names()[1:] {
 		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
 			continue
@@ -206,7 +213,7 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 			}
 			data = append(data, opts.BarData{Name: label, Value: roundFloat(v), Label: &opts.Label{
 				Show:      opts.Bool(true),
-				Formatter: "{c}",
+				Formatter: "{c}%",
 			}})
 		}
 		bar.AddSeries(asset, data,
@@ -214,7 +221,12 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 			charts.WithBarChartOpts(opts.BarChart{
 				Stack: "Total",
 			}),
+			// Add distinct color for this series
+			charts.WithItemStyleOpts(opts.ItemStyle{
+				Color: utils.GetChartColor(colorIndex),
+			}),
 		)
+		colorIndex++
 	}
 	baseDir, _ := os.Getwd()
 	// Load HTML template
@@ -256,6 +268,7 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 
 	// Extract data from the last row
 	var pieData []opts.PieData
+	colorIndex := 0
 	for _, asset := range df.Names()[1:] {
 		if (len(report.columnsToInclude) != 0 && !slices.Contains(report.columnsToInclude, asset)) || slices.Contains(report.columnsToExclude, asset) {
 			continue
@@ -263,14 +276,21 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 		value := df.Col(asset).Elem(lastRowIndex).String()
 		v, _ := strconv.ParseFloat(value, 32)
 		if v > 0 {
-			pieData = append(pieData, opts.PieData{Name: asset, Value: int(v)})
+			pieData = append(pieData, opts.PieData{
+				Name:  asset,
+				Value: roundFloat(v),
+				ItemStyle: &opts.ItemStyle{
+					Color: utils.GetChartColor(colorIndex),
+				},
+			})
+			colorIndex++
 		}
 	}
 
 	pie.AddSeries("", pieData,
 		charts.WithLabelOpts(opts.Label{
 			Show:      opts.Bool(true),
-			Formatter: "{b}: {c}",
+			Formatter: "{b}: {c}%",
 		}),
 	)
 
