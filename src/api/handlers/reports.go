@@ -101,7 +101,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request parameters
-	idsStr := chi.URLParam(r, "ids")
+	idsStr := chi.URLParam(r, "id")
 	ids := strings.Split(idsStr, ",")
 	if len(ids) == 0 {
 		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)

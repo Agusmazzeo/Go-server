@@ -90,7 +90,7 @@ func (r *assetCategoryRepo) Create(ctx context.Context, ac *models.AssetCategory
 	query := `
 		INSERT INTO asset_categories (name, description)
 		VALUES ($1, $2)
-		ON CONFLICT (name) DO NOTHING
+		ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
 		RETURNING id`
 
 	var err error

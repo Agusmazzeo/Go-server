@@ -50,7 +50,6 @@ func loadTestData(t *testing.T, filename string, v interface{}) {
 func TestGenerateReport(t *testing.T) {
 	// Setup test database connection
 	db := init_test.SetupTestDB(t)
-	defer init_test.TruncateTables(t, db)
 
 	// Create repository instances
 	holdingRepo := repositories.NewHoldingRepository(db)
@@ -75,6 +74,11 @@ func TestGenerateReport(t *testing.T) {
 	loadTestData(t, "categories.json", &mockCategories)
 	loadTestData(t, "holdings.json", &mockHoldings)
 	loadTestData(t, "transactions.json", &mockTransactions)
+
+	// Make category names unique to avoid conflicts
+	for i := range mockCategories {
+		mockCategories[i].Name = fmt.Sprintf("Test_%s_%d", mockCategories[i].Name, time.Now().UnixNano())
+	}
 
 	// Insert test data into the real database
 	for i := range mockCategories {
@@ -182,8 +186,9 @@ func TestGenerateReport(t *testing.T) {
 	assert.NotNil(t, report.CategoryAssets)
 	assert.NotNil(t, report.TotalHoldingsByDate)
 
-	// Verify the report structure
-	stocks, exists := (*report.AssetsByCategory)["STOCKS"]
+	// Verify the report structure - use the actual category name
+	categoryName := mockCategories[0].Name
+	stocks, exists := (*report.AssetsByCategory)[categoryName]
 	assert.True(t, exists)
 	assert.Len(t, stocks, 1)
 	assert.Equal(t, "STOCK", stocks[0].Type)
@@ -197,6 +202,9 @@ func TestGenerateReport(t *testing.T) {
 	// Verify transactions
 	assert.Len(t, stocks[0].Transactions, 1)
 	assert.Equal(t, 100.0, stocks[0].Transactions[0].Value)
+
+	// Cleanup after test
+	init_test.CleanupTestData(t, db, "test-client")
 }
 
 func TestCalculateAssetReturn(t *testing.T) {

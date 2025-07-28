@@ -45,7 +45,9 @@ func TestMain(m *testing.M) {
 	}
 
 	db := init_test.SetupTestDB(nil)
-	defer init_test.TruncateTables(nil, db)
+
+	// Note: Individual tests should handle their own cleanup
+	// No global truncate here as each test is responsible for its data
 
 	holdingRepository := repositories.NewHoldingRepository(db)
 	transactionRepository := repositories.NewTransactionRepository(db)

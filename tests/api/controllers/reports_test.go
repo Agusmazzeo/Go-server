@@ -206,6 +206,14 @@ func TestGetAllReportSchedules(t *testing.T) {
 	ctx := context.Background()
 	var err error
 
+	// Cleanup test data after test
+	defer func() {
+		_, err := testDB.Exec(ctx, "DELETE FROM report_schedules WHERE sender_id IN (1, 4)")
+		if err != nil {
+			t.Logf("Warning: Failed to cleanup test data: %v", err)
+		}
+	}()
+
 	// Create some test data
 	_, err = testDB.Exec(ctx,
 		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
@@ -234,6 +242,16 @@ func TestGetReportScheduleByID(t *testing.T) {
 	var err error
 	var rs models.ReportSchedule
 
+	// Cleanup test data after test
+	defer func() {
+		if rs.ID != 0 {
+			_, err := testDB.Exec(ctx, "DELETE FROM report_schedules WHERE id = $1", rs.ID)
+			if err != nil {
+				t.Logf("Warning: Failed to cleanup test data: %v", err)
+			}
+		}
+	}()
+
 	// Create a test record
 	err = testDB.QueryRow(ctx,
 		"INSERT INTO report_schedules (sender_id, recipient_organization_id, report_template_id, cron_time, active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id",
@@ -258,6 +276,16 @@ func TestUpdateReportSchedule(t *testing.T) {
 	ctx := context.Background()
 	var err error
 	var rs models.ReportSchedule
+
+	// Cleanup test data after test
+	defer func() {
+		if rs.ID != 0 {
+			_, err := testDB.Exec(ctx, "DELETE FROM report_schedules WHERE id = $1", rs.ID)
+			if err != nil {
+				t.Logf("Warning: Failed to cleanup test data: %v", err)
+			}
+		}
+	}()
 
 	// Create a test record
 	err = testDB.QueryRow(ctx,

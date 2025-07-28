@@ -17,7 +17,6 @@ import (
 func TestAccountService(t *testing.T) {
 	// Setup test database connection
 	db := init_test.SetupTestDB(t)
-	defer init_test.TruncateTables(t, db)
 
 	// Create repositories
 	holdingRepo := repositories.NewHoldingRepository(db)
@@ -27,6 +26,11 @@ func TestAccountService(t *testing.T) {
 
 	// Create service instance
 	accountService := services.NewAccountService(holdingRepo, transactionRepo, assetRepo)
+
+	// Cleanup test data after test
+	defer func() {
+		init_test.CleanupTestData(t, db, "test-client-1")
+	}()
 
 	// Test cases
 	t.Run("GetAccountState", func(t *testing.T) {

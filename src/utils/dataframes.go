@@ -2,6 +2,7 @@ package utils
 
 //nolint:depguard
 import (
+	"fmt"
 	"slices"
 	"sort"
 
@@ -37,7 +38,7 @@ func UnionDataFramesByIndex(df1, df2 dataframe.DataFrame, indexCol string) dataf
 
 	// Combine df1 and df2
 	for k, row := range df1Rows {
-		kStr, _ := k.(string)
+		kStr := fmt.Sprintf("%v", k)
 		merged := make(map[string]interface{})
 		for _, col := range allCols {
 			merged[col] = row[col]
@@ -46,7 +47,7 @@ func UnionDataFramesByIndex(df1, df2 dataframe.DataFrame, indexCol string) dataf
 		indexKeys[kStr] = true
 	}
 	for k, row := range df2Rows {
-		kStr, _ := k.(string)
+		kStr := fmt.Sprintf("%v", k)
 		if existing, ok := mergedRows[kStr]; ok {
 			for col, val := range row {
 				if val != nil && val != "" {

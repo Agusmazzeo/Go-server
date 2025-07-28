@@ -15,18 +15,24 @@ import (
 func TestAssetRepository(t *testing.T) {
 	// Setup test database connection
 	db := init_test.SetupTestDB(t)
-	defer init_test.TruncateTables(t, db)
 
 	// Create repository instance
 	repo := repositories.NewAssetRepository(db)
 	categoryRepo := repositories.NewAssetCategoryRepository(db)
 	ctx := context.Background()
+
+	// Create test category
 	category := &models.AssetCategory{
 		Name:        "Test Category",
 		Description: "Test Description",
 	}
 	err := categoryRepo.Create(ctx, category, nil)
 	require.NoError(t, err)
+
+	// Cleanup test data after test
+	defer func() {
+		init_test.CleanupTestData(t, db, "test-client")
+	}()
 	// Test cases
 	t.Run("Create and GetByID", func(t *testing.T) {
 

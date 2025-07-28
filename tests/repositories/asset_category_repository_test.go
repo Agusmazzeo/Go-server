@@ -15,7 +15,6 @@ import (
 func TestAssetCategoryRepository(t *testing.T) {
 	// Setup test database connection
 	db := init_test.SetupTestDB(t)
-	defer init_test.TruncateTables(t, db)
 
 	// Create repository instance
 	repo := repositories.NewAssetCategoryRepository(db)
@@ -37,6 +36,9 @@ func TestAssetCategoryRepository(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, category.Name, retrievedCategory.Name)
 		assert.Equal(t, category.Description, retrievedCategory.Description)
+
+		// Cleanup after this subtest
+		init_test.CleanupTestData(t, db, "test-client")
 	})
 
 	t.Run("Create and GetByName", func(t *testing.T) {
@@ -55,6 +57,9 @@ func TestAssetCategoryRepository(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, category.Name, retrievedCategory.Name)
 		assert.Equal(t, category.Description, retrievedCategory.Description)
+
+		// Cleanup after this subtest
+		init_test.CleanupTestData(t, db, "test-client")
 	})
 
 	t.Run("GetAll", func(t *testing.T) {
@@ -75,6 +80,9 @@ func TestAssetCategoryRepository(t *testing.T) {
 		retrievedCategories, err := repo.GetAll(ctx)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(retrievedCategories), len(categories))
+
+		// Cleanup after this subtest
+		init_test.CleanupTestData(t, db, "test-client")
 	})
 
 	t.Run("GetByID for non-existent category", func(t *testing.T) {
@@ -84,5 +92,8 @@ func TestAssetCategoryRepository(t *testing.T) {
 		category, err := repo.GetByID(ctx, nonExistentID)
 		require.Nil(t, err)
 		assert.Nil(t, category)
+
+		// Cleanup after this subtest
+		init_test.CleanupTestData(t, db, "test-client")
 	})
 }

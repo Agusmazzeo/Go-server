@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"server/src/schemas"
 	"server/src/utils"
 	"server/src/utils/render"
@@ -18,6 +19,29 @@ import (
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-gota/gota/dataframe"
 )
+
+// findProjectRoot finds the project root directory by looking for go.mod file
+func findProjectRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		// Check if go.mod exists in current directory
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir, nil
+		}
+
+		// Move up one directory
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached root directory without finding go.mod
+			return "", fmt.Errorf("could not find go.mod file in any parent directory")
+		}
+		dir = parent
+	}
+}
 
 type ReportConfig struct {
 	name             string
@@ -148,7 +172,10 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 		)
 		colorIndex++
 	}
-	baseDir, _ := os.Getwd()
+	baseDir, err := findProjectRoot()
+	if err != nil {
+		return "", fmt.Errorf("failed to find project root: %w", err)
+	}
 	// Load HTML template
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
 	if err != nil {
@@ -228,7 +255,10 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 		)
 		colorIndex++
 	}
-	baseDir, _ := os.Getwd()
+	baseDir, err := findProjectRoot()
+	if err != nil {
+		return "", fmt.Errorf("failed to find project root: %w", err)
+	}
 	// Load HTML template
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", baseDir))
 	if err != nil {
@@ -294,7 +324,10 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 		}),
 	)
 
-	baseDir, _ := os.Getwd()
+	baseDir, err := findProjectRoot()
+	if err != nil {
+		return "", fmt.Errorf("failed to find project root: %w", err)
+	}
 	// Load HTML template
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", baseDir))
 	if err != nil {

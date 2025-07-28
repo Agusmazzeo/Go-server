@@ -16,6 +16,15 @@ import (
 func setupTest(t *testing.T) (*pgxpool.Pool, repositories.SyncLogRepository) {
 	db := init_test.SetupTestDB(t)
 	repo := repositories.NewSyncLogRepository(db)
+
+	// Cleanup test data after test
+	t.Cleanup(func() {
+		init_test.CleanupTestData(t, db, "test-client-1")
+		init_test.CleanupTestData(t, db, "test-client-2")
+		init_test.CleanupTestData(t, db, "test-client-3")
+		init_test.CleanupTestData(t, db, "test-client-4")
+	})
+
 	return db, repo
 }
 

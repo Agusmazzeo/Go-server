@@ -59,9 +59,6 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("Failed to ping database: %v\nPlease check your database configuration and ensure it's running.", err)
 	}
 
-	// Truncate tables before starting tests
-	TruncateTables(t, pool)
-
 	TestDB = pool
 	return pool
 }
@@ -132,6 +129,65 @@ func TruncateTables(t *testing.T, pool *pgxpool.Pool) {
 		_, err := pool.Exec(context.Background(), fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
 		if err != nil {
 			t.Fatalf("Failed to truncate table %s: %v", table, err)
+		}
+	}
+}
+
+// CleanupTestData deletes specific test data by client ID or other identifiers
+// This allows each test to clean up only its own data
+func CleanupTestData(t *testing.T, pool *pgxpool.Pool, clientID string) {
+	if pool == nil {
+		t.Fatal("Database connection not initialized")
+	}
+
+	ctx := context.Background()
+
+	// Delete in reverse order of dependencies to avoid foreign key constraints
+	queries := []string{
+		fmt.Sprintf("DELETE FROM transactions WHERE client_id = $1"),
+		fmt.Sprintf("DELETE FROM holdings WHERE client_id = $1"),
+		fmt.Sprintf("DELETE FROM assets WHERE external_id LIKE $1"),
+		fmt.Sprintf("DELETE FROM asset_categories WHERE name LIKE $1"),
+	}
+
+	for _, query := range queries {
+		var err error
+		if query == "DELETE FROM assets WHERE external_id LIKE $1" {
+			_, err = pool.Exec(ctx, query, "EXT-%")
+		} else if query == "DELETE FROM asset_categories WHERE name LIKE $1" {
+			// More specific cleanup for categories - only delete exact matches
+			_, err = pool.Exec(ctx, "DELETE FROM asset_categories WHERE name IN ('Test Category', 'Test Category By Name', 'Category 1', 'Category 2')")
+		} else {
+			_, err = pool.Exec(ctx, query, clientID)
+		}
+		if err != nil {
+			t.Logf("Warning: Failed to cleanup test data with query '%s': %v", query, err)
+		}
+	}
+}
+
+// CleanupAllTestData removes all test data from all tables
+// Use this only when you need to clean up everything
+func CleanupAllTestData(t *testing.T, pool *pgxpool.Pool) {
+	if pool == nil {
+		t.Fatal("Database connection not initialized")
+	}
+
+	ctx := context.Background()
+
+	// Delete in reverse order of dependencies
+	tables := []string{
+		"sync_logs",
+		"transactions",
+		"holdings",
+		"assets",
+		"asset_categories",
+	}
+
+	for _, table := range tables {
+		_, err := pool.Exec(ctx, fmt.Sprintf("DELETE FROM %s", table))
+		if err != nil {
+			t.Logf("Warning: Failed to delete from table %s: %v", table, err)
 		}
 	}
 }
