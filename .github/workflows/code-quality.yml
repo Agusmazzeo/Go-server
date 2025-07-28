@@ -56,7 +56,9 @@ jobs:
           sudo chmod +x /usr/local/bin/docker-compose
 
       - name: Set up Docker Postgres Database
-        run: make dc-postgres-up
+        run: |
+          make dc-postgres-up
+          make dc-migrate-up
 
       - name: Set up Docker Redis Database
         run: make dc-redis-up
