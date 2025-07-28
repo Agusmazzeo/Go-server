@@ -1,0 +1,14 @@
+[
+  {
+    "externalid": "AAPL",
+    "assettype": "STOCK",
+    "name": "Apple",
+    "currency": "USD"
+  },
+  {
+    "externalid": "BOND",
+    "assettype": "BOND",
+    "name": "Bond",
+    "currency": "ARS"
+  }
+]

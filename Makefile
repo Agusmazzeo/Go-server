@@ -3,6 +3,12 @@
 GO_CMD=go
 BIN_NAME=Carvana.VDI.DescriptionMapperAndValuations
 COVERAGE_FILE=profile.cov
+DOCKER_COMPOSE=docker compose
+POSTGRES_DB=postgres-db
+REDIS=redis
+API=api
+GOOSE=goose
+MIGRATIONS_DIR=$(shell pwd)/migrations
 
 default: build
 
@@ -38,7 +44,7 @@ clean:
 	@test ! -e ${COVERAGE_FILE} || rm ${COVERAGE_FILE}
 
 test:
-	${GO_CMD} test ./...
+	${GO_CMD} test ./tests/...
 
 coverage:
 	${GO_CMD} test -cover -coverpkg=./... -covermode=count -coverprofile=${COVERAGE_FILE} ./...
@@ -54,3 +60,30 @@ lint:
 generate:
 	${GO_CMD} get github.com/99designs/gqlgen@v0.17.30
 	go generate ./...
+
+dc-logs:
+	${DOCKER_COMPOSE} logs -f
+
+dc-api-up:
+	${DOCKER_COMPOSE} up -d ${API}
+
+dc-db-up:
+	${DOCKER_COMPOSE} up -d ${POSTGRES_DB}
+
+dc-redis-up:
+	${DOCKER_COMPOSE} up -d ${REDIS}
+
+dc-down:
+	${DOCKER_COMPOSE} down
+
+db-migrate-up:
+	$(GOOSE) -dir $(MIGRATIONS_DIR) up
+
+db-migrate-down:
+	$(GOOSE) -dir $(MIGRATIONS_DIR) down
+
+db-migrate-create:
+ifndef name
+	$(error Usage: make migrations-create name=create_assets_table)
+endif
+	$(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql

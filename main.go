@@ -7,57 +7,48 @@ import (
 	"os"
 	"server/src/api"
 	"server/src/config"
+	"server/src/utils"
 	"server/src/worker"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig("./settings", os.Getenv("ENV"))
 	if err != nil {
-		log.Println(err, "Error while loading config")
-		return
+		panic(err)
 	}
-	errC, err := run(cfg)
+	logger := utils.NewLogger(logrus.InfoLevel, false, cfg.Logger.File)
+	errC, err := run(cfg, logger)
 	if err != nil {
-		log.Println(err, "Couldn't run")
+		logger.Error(err, "Error while starting runner")
 		return
 	}
 
 	if err := <-errC; err != nil {
-		log.Println(err, "Error while running")
+		logger.Error(err, "Error while running")
 	}
 }
 
-func run(cfg *config.Config) (<-chan error, error) {
+func run(cfg *config.Config, logger *logrus.Logger) (<-chan error, error) {
 	errC := make(chan error, 1)
+	var err error
 
-	// Setup GORM
-	dsn := "host=" + cfg.Databases.SQL.Host + " user=" + cfg.Databases.SQL.Username + " password=" + cfg.Databases.SQL.Password + " dbname=" + cfg.Databases.SQL.Database + " port=" + cfg.Databases.SQL.Port + " sslmode=disable"
-	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	serviceType := cfg.Service.Type
+	port := cfg.Service.Port
+	var httpServer *http.Server
+	switch serviceType {
+	case config.API:
+		httpServer, err = api.NewHTTPServer(cfg, logger)
+	case config.WORKER:
+		httpServer, err = worker.NewHTTPServer(cfg, logger)
 	}
-	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceType := os.Getenv("SERVICE_TYPE")
-	var httpServer *http.Server
-	if serviceType == "API" {
-		// Initialize the API server with GORM DB
-		server := api.NewServer(db)
-		httpServer = api.NewHTTPServer(server)
-	} else {
-		// Initialize the Worker server with GORM DB
-		server := worker.NewServer(db)
-		httpServer = worker.NewHTTPServer(server)
-	}
-
 	go func() {
-		log.Println("Starting server on port", 8000)
+		logger.Infoln("Starting server on port", port)
 
 		// "ListenAndServe always returns a non-nil error. After Shutdown or Close, the returned error is
 		// ErrServerClosed."
@@ -66,5 +57,5 @@ func run(cfg *config.Config) (<-chan error, error) {
 			errC <- err
 		}
 	}()
-	return errC, nil
+	return errC, err
 }

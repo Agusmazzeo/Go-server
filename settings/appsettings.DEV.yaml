@@ -1,0 +1,9 @@
+externalClients:
+  esco:
+    categoryMapFile: /settings/configFiles/denominaciones.csv
+databases:
+  redis:
+    host: db-caching-nyc3-14243-do-user-16224847-0.m.db.ondigitalocean.com
+    port: 25061
+    database: 0
+    password: AVNS_cWgzxtJH-W8FyeGZGpV

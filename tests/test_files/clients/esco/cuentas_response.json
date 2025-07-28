@@ -1,0 +1,41 @@
+[
+  {
+    "SC": [],
+    "FI": "38B198EB5EB4A638",
+    "BY": true,
+    "RF": false,
+    "AT": true,
+    "CH": true,
+    "ID": "4014D4EFDD5DE27B",
+    "D": "1 TOON S.A.",
+    "N": 10569,
+    "F": "0001/01/01",
+    "EF": false
+  },
+  {
+    "SC": [],
+    "FI": "38B198EB5EB4A638",
+    "BY": true,
+    "RF": false,
+    "AT": true,
+    "CH": true,
+    "ID": "BDA5925528BFB432",
+    "D": "10 PINES SRL",
+    "N": 10984,
+    "F": "0001/01/01",
+    "EF": false
+  },
+  {
+    "SC": [],
+    "FI": "38B198EB5EB4A638",
+    "BY": true,
+    "RF": false,
+    "AT": true,
+    "CH": true,
+    "ID": "7A04355FA7B0D9EE",
+    "D": "4K S.A.",
+    "N": 109175,
+    "F": "0001/01/01",
+    "EF": false
+  }
+]

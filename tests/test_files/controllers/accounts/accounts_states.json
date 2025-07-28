@@ -1,0 +1,1075 @@
+[
+  {
+    "Assets": {
+      "$": {
+        "ID": "$",
+        "Type": "Pesos",
+        "Denomination": "Pesos",
+        "Category": "ARS",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -0.5,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -82119103.07,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -0.07,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -0.07,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -0.07,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -39147.19,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -39147.19,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": null
+          }
+        ],
+        "Transactions": null
+      },
+      "QUINQUELA P_554": {
+        "ID": "QUINQUELA P_554",
+        "Type": "Fondos / Pesos",
+        "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
+        "Category": "M. MARKET",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1616418485.77,
+            "DateRequested": "2024-04-26T23:00:00-03:00",
+            "Date": "2024-04-26T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1633757970.18,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": "2024-05-03T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 195304095.33,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 196992001.75,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 116042279.6,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 116920481.52,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 117787015.15,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 78622325.48,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 79010209.21,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 991664827.33,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1450001086,
+            "Date": "2024-05-08T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 82119103,
+            "Date": "2024-05-20T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 40000000,
+            "Date": "2024-06-14T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 10,
+            "Date": "2024-06-14T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -911960643.37,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "S26L4": {
+        "ID": "S26L4",
+        "Type": "Letes / Pesos",
+        "Denomination": "9261 / LECAP VTO. 26JUL24",
+        "Category": "S / C",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 0,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 82809018,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 84232668.74,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 84445398.16,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 85664501.38,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 86122687.82,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 86890968.31,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -82115601.91,
+            "Date": "2024-05-16T23:00:00-03:00"
+          }
+        ]
+      },
+      "S29N4": {
+        "ID": "S29N4",
+        "Type": "Letes / Pesos",
+        "Denomination": "9255 / LECAP VTO. 29NOV24",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1457720425,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1486888400,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1463825350,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1480240815,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1440626635,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1482140125,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1482818450,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 565199544,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -1450001086.5,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 911999790.56,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "USD": {
+        "ID": "USD",
+        "Type": "Dolar Estadounidense",
+        "Denomination": "Dolar Estadounidense",
+        "Category": "MEP",
+        "Holdings": [
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 9052.71,
+            "DateRequested": "2024-04-26T23:00:00-03:00",
+            "Date": "2024-04-26T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 9419.39,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": "2024-05-03T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 9103.08,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 9392.83,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 10558.73,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 10564.21,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 11234.77,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 10890.38,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 11134.86,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 11799.24,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": null
+      }
+    }
+  },
+  {
+    "Assets": {
+      "$": {
+        "ID": "$",
+        "Type": "Pesos",
+        "Denomination": "Pesos",
+        "Category": "ARS",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -987253644.45,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -10306.72,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 3.78,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 0.78,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 0.78,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -115144.72,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -115144.72,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": null
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -3752552561.44,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": null
+          }
+        ],
+        "Transactions": null
+      },
+      "AL30": {
+        "ID": "AL30",
+        "Type": "Título Públicos / Dolar Estadounidense",
+        "Denomination": "5921 / BONO REP. ARGENTINA STEP UP 2030 - AL30",
+        "Category": "BONOS H. D.",
+        "Holdings": [
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 984681900,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": "2024-05-03T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1372501850,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1426227250,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1494294600,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1563955500,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1503400600,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1599468900,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 1632022850,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Dolar Estadounidense",
+            "CurrencySign": "$",
+            "Value": 473174100,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -987253644.45,
+            "Date": "2024-05-02T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -437287830,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1206917328,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "QUINQUELA A_489": {
+        "ID": "QUINQUELA A_489",
+        "Type": "Fondos / Pesos",
+        "Denomination": "MEGAQM AHORRO FCI CLASE B / PJ / QUINQUELA A_489",
+        "Category": "M. MARKET",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 463120082.79,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 463766053.33,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 471469904.14,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 471496477.1,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 474308440.57,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -461608937,
+            "Date": "2024-05-30T23:00:00-03:00"
+          }
+        ]
+      },
+      "QUINQUELA P_554": {
+        "ID": "QUINQUELA P_554",
+        "Type": "Fondos / Pesos",
+        "Denomination": "MEGAQM PESOS CLASE B / MEGAQM PESOS CLASE B PJ DESDE $1.000 / QUINQUELA P_554",
+        "Category": "M. MARKET",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 7831167461.61,
+            "DateRequested": "2024-04-26T23:00:00-03:00",
+            "Date": "2024-04-26T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 7694537186.18,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": "2024-05-03T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1055165699.75,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 1064284919.47,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 459101290.92,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 475870.52,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 479397.34,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 482797.12,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 485179.01,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 3749129969.29,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 290945431.85,
+            "Date": "2024-04-26T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 220636000,
+            "Date": "2024-05-03T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 987253644.45,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 437287830,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 5270217733,
+            "Date": "2024-05-08T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 534080233,
+            "Date": "2024-05-20T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 10310,
+            "Date": "2024-05-20T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 76740519.95,
+            "Date": "2024-05-21T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 461608934,
+            "Date": "2024-05-30T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -7784105921.8,
+            "Date": "2024-04-26T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -4460017.44,
+            "Date": "2024-05-10T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -3748640528.78,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "S14O4": {
+        "ID": "S14O4",
+        "Type": "Letes / Pesos",
+        "Denomination": "9252 / LECAP VTO. 14OCT24",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 220800000,
+            "DateRequested": "2024-05-03T23:00:00-03:00",
+            "Date": "2024-05-03T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 223000000,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 224802000,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 222400000,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 226620000,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 223900000,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 227800000,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 227780000,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -220636000,
+            "Date": "2024-05-03T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 228000000,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "S28F5": {
+        "ID": "S28F5",
+        "Type": "Letes / Pesos",
+        "Denomination": "9253 / LECAP VTO. 28FEB25",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2421434250,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2480390910,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2410906275,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2387323611,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2269831410,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2384586337.5,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2381427945,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -2385112736.25,
+            "Date": "2024-05-06T23:00:00-03:00"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2313838345.5,
+            "Date": "2024-06-28T23:00:00-03:00"
+          }
+        ]
+      },
+      "S30S4": {
+        "ID": "S30S4",
+        "Type": "Letes / Pesos",
+        "Denomination": "9268 / LECAP VTO. 30SEP24",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 3752083551,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -3752552561.44,
+            "Date": "2024-06-26T23:00:00-03:00"
+          }
+        ]
+      },
+      "S31E5": {
+        "ID": "S31E5",
+        "Type": "Letes / Pesos",
+        "Denomination": "9251 / LECAP VTO. 31ENE25",
+        "Category": "TASA FIJA",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2398890685,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2462363279,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2406918101.3,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2395530371.2,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2291547327.5,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2398890685,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2389556480,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 2352219660,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -2385113398.42,
+            "Date": "2024-05-06T23:00:00-03:00"
+          }
+        ]
+      },
+      "TX26": {
+        "ID": "TX26",
+        "Type": "Título Públicos / Pesos",
+        "Denomination": "5925 / BONO DEL TESORO BONCER 2% 2026",
+        "Category": "CER",
+        "Holdings": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 497883600,
+            "DateRequested": "2024-05-10T23:00:00-03:00",
+            "Date": "2024-05-10T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 505017020,
+            "DateRequested": "2024-05-17T23:00:00-03:00",
+            "Date": "2024-05-17T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 515353200,
+            "DateRequested": "2024-05-24T23:00:00-03:00",
+            "Date": "2024-05-24T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 507928620,
+            "DateRequested": "2024-05-31T23:00:00-03:00",
+            "Date": "2024-05-31T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 499339400,
+            "DateRequested": "2024-06-07T23:00:00-03:00",
+            "Date": "2024-06-07T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 501668680,
+            "DateRequested": "2024-06-14T23:00:00-03:00",
+            "Date": "2024-06-14T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 505599340,
+            "DateRequested": "2024-06-21T23:00:00-03:00",
+            "Date": "2024-06-19T00:00:00Z"
+          },
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": 503415640,
+            "DateRequested": "2024-06-28T23:00:00-03:00",
+            "Date": "2024-06-28T00:00:00Z"
+          }
+        ],
+        "Transactions": [
+          {
+            "Currency": "Pesos",
+            "CurrencySign": "$",
+            "Value": -499991598.4,
+            "Date": "2024-05-06T23:00:00-03:00"
+          }
+        ]
+      }
+    }
+  }
+]

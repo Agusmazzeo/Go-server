@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Separador</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: white;
+        margin: 0;
+        padding: 0;
+        color: #1e293b;
+      }
+
+      .separator-container {
+        background: white;
+        border: 2px solid #e2e8f0;
+        padding: 60px 40px;
+        max-width: 600px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      .separator-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: #3b82f6;
+      }
+
+      .separator-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 16px;
+      }
+
+      .separator-subtitle {
+        font-size: 16px;
+        color: #64748b;
+      }
+
+      .separator-icon {
+        margin: 30px 0;
+        font-size: 48px;
+        color: #3b82f6;
+      }
+
+      .chart-container {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+        margin-bottom: 15px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .chart-header {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        width: 100%;
+      }
+
+      .chart-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .chart-subtitle {
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      .chart-content {
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chart-container">
+      <div class="chart-header">
+        <h2 class="chart-title">{{ .Title }}</h2>
+        <p class="chart-subtitle">Separador de sección</p>
+      </div>
+
+      <div class="chart-content">
+        <div class="separator-container">
+          <div class="separator-icon">📊</div>
+          <div class="separator-title">{{ .Title }}</div>
+          <div class="separator-subtitle">Nueva sección del reporte</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

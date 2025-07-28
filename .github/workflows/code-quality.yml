@@ -1,0 +1,81 @@
+name: Go CI
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  linter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9" # Specify the Python version you need
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.23.5
+
+      - name: Install pre-commit in a virtual environment
+        run: |
+          python3 -m venv venv            # Create a virtual environment
+          source venv/bin/activate         # Activate the virtual environment
+          pip install --upgrade pip        # Upgrade pip
+          pip install pre-commit           # Install pre-commit
+
+      - name: Run pre-commit
+        run: |
+          source venv/bin/activate         # Activate the virtual environment
+          pre-commit run --all-files       # Run pre-commit
+
+  tests:
+    needs: linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.23.5
+
+      - name: Install Goose Migration Tool
+        run: go install github.com/pressly/goose/v3/cmd/goose@latest
+
+      - name: Add Go bin to PATH
+        run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+
+      - name: Install CA certificates
+        run: sudo apt-get install -y ca-certificates
+
+      - name: Install wkhtmltopdf
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wkhtmltopdf
+
+      - name: Install Docker and Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install docker-ce docker-ce-cli containerd.io -y
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Set up Docker Postgres Database
+        run: |
+          make dc-db-up
+          sleep 5  # Wait for database to be ready
+
+      - name: Run Database Migrations
+        run: make db-migrate-up
+
+      - name: Set up Docker Redis Database
+        run: make dc-redis-up
+
+      - name: Test
+        run: make test

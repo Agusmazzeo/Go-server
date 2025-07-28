@@ -1,0 +1,44 @@
+[
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": 1450001086,
+    "Date": "2024-05-08T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": 82119103,
+    "Date": "2024-05-20T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": 40000010,
+    "Date": "2024-06-14T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": 911750000,
+    "Date": "2024-07-01T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": -82115601.91,
+    "Date": "2024-05-16T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": -1450001086.5,
+    "Date": "2024-05-06T23:00:00-03:00"
+  },
+  {
+    "Currency": "Pesos",
+    "CurrencySign": "$",
+    "Value": 39147.18999993801,
+    "Date": "2024-06-28T23:00:00-03:00"
+  }
+]
