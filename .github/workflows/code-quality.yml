@@ -58,7 +58,7 @@ jobs:
       - name: Set up Docker Postgres Database
         run: |
           make dc-db-up
-          make dc-migrate-up
+          make db-migrate-up
 
       - name: Set up Docker Redis Database
         run: make dc-redis-up
