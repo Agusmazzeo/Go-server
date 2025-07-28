@@ -8,7 +8,7 @@ POSTGRES_DB=postgres-db
 REDIS=redis
 API=api
 GOOSE=goose
-MIGRATIONS_DIR=migrations
+MIGRATIONS_DIR=./migrations
 
 default: build
 
