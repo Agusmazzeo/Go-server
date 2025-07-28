@@ -346,10 +346,7 @@ func (rs *ReportService) CollapseReturnsByInterval(dailyReturns []schemas.Return
 
 	for _, dailyReturn := range sortedReturns {
 		// Check if this daily return belongs to the current interval
-		if dailyReturn.StartDate.Before(currentIntervalEnd) {
-			// This daily return belongs to the current interval
-			compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
-		} else {
+		if !dailyReturn.StartDate.Before(currentIntervalEnd) {
 			// This daily return belongs to a new interval
 			// First, close the current interval
 			intervalReturnPercentage := (compoundReturn - 1) * 100
@@ -363,8 +360,8 @@ func (rs *ReportService) CollapseReturnsByInterval(dailyReturns []schemas.Return
 			// Start a new interval
 			currentIntervalStart = currentIntervalEnd
 			currentIntervalEnd = currentIntervalStart.Add(interval)
-			compoundReturn = 1.0 + (dailyReturn.ReturnPercentage / 100)
 		}
+		compoundReturn *= 1 + (dailyReturn.ReturnPercentage / 100)
 	}
 
 	// Append the last interval

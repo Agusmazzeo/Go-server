@@ -89,7 +89,7 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleGenerateXLSX is the HTTP handler to generate an Excel file
-func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetReportFileByIDs(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
@@ -101,7 +101,7 @@ func (h *Handler) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request parameters
-	idsStr := chi.URLParam(r, "id")
+	idsStr := chi.URLParam(r, "ids")
 	ids := strings.Split(idsStr, ",")
 	if len(ids) == 0 {
 		http.Error(w, "Missing id URL parameter", http.StatusBadRequest)

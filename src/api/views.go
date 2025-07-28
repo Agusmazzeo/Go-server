@@ -102,7 +102,7 @@ func (s *Server) InitRoutes() {
 
 	s.Router.Route("/api/reports", func(r chi.Router) {
 		r.Get("/{ids}", s.Handler.GetReportByIDs)
-		r.Get("/{ids}/file", s.Handler.GetReportFile)
+		r.Get("/{ids}/file", s.Handler.GetReportFileByIDs)
 		r.Get("/schedules", s.Handler.GetAllReportSchedules)
 		r.Get("/schedule/{id}", s.Handler.GetReportScheduleByID)
 		r.Post("/schedule/", s.Handler.CreateReportSchedule)

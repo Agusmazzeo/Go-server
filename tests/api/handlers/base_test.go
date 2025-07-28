@@ -81,7 +81,7 @@ func TestMain(m *testing.M) {
 	}
 
 	r.Route("/api/reports", func(r chi.Router) {
-		r.Get("/{id}", h.GetReportFile)
+		r.Get("/{ids}", h.GetReportFileByIDs)
 	})
 
 	r.Route("/api/accounts", func(r chi.Router) {
