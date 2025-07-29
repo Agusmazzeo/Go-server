@@ -48,11 +48,11 @@ func (rs *ReportService) GenerateReport(
 		}
 	}
 	// Iterate through each category assets
-	for category, asset := range *accountStateByCategory.CategoryAssets {
+	for category := range *accountStateByCategory.CategoryAssets {
 		if category == "ARS" {
 			continue
 		}
-		assetReturn, _ := rs.CalculateAssetReturn(asset, interval)
+		assetReturn, _ := rs.CalculateCategoryReturn(category, accountStateByCategory.AssetsByCategory, &assetReturnsByCategory, accountStateByCategory.CategoryAssets, interval)
 		categoryAssetReturns[category] = assetReturn
 	}
 
@@ -76,6 +76,66 @@ func (rs *ReportService) GenerateReport(
 		TotalReturns:           totalReturns,
 		FinalIntervalReturn:    finalIntervalReturn,
 	}, nil
+}
+
+// CalculateCategoryReturn calculates the return for a category by weighting the returns of its assets by the value of their holdings.
+func (rs *ReportService) CalculateCategoryReturn(
+	category string,
+	assetsByCategory *map[string][]schemas.Asset,
+	assetsReturnByCategory *map[string][]schemas.AssetReturn,
+	categoryAssets *map[string]schemas.Asset,
+	interval time.Duration,
+) (schemas.AssetReturn, error) {
+	categoryReturn := schemas.AssetReturn{
+		ID:                 category,
+		Type:               "Category",
+		Denomination:       (*categoryAssets)[category].Denomination,
+		Category:           category,
+		ReturnsByDateRange: []schemas.ReturnByDate{},
+	}
+
+	categoryTotalHoldingsByDate := make(map[string]schemas.Holding)
+
+	for _, categoryHolding := range (*categoryAssets)[category].Holdings {
+		categoryTotalHoldingsByDate[categoryHolding.DateRequested.Format("2006-01-02")] = categoryHolding
+	}
+
+	categoryReturnsByDate := make(map[string]schemas.ReturnByDate)
+	for _, asset := range (*assetsByCategory)[category] {
+		assetReturnsByDate := make(map[string]schemas.ReturnByDate)
+		assetReturns := (*assetsReturnByCategory)[asset.Category]
+		for _, assetReturn := range assetReturns {
+			for i, returnByDate := range assetReturn.ReturnsByDateRange {
+				assetReturnsByDate[returnByDate.EndDate.Format("2006-01-02")] = assetReturn.ReturnsByDateRange[i]
+			}
+		}
+		for _, holding := range asset.Holdings {
+			holdingDate := holding.DateRequested.Format("2006-01-02")
+			categoryHoldingByDate := categoryTotalHoldingsByDate[holdingDate]
+			if holding.Value == 0 || categoryHoldingByDate.Value == 0 {
+				continue
+			}
+			weight := holding.Value / categoryHoldingByDate.Value
+			assetReturn, ok := assetReturnsByDate[holdingDate]
+			if !ok {
+				continue
+			}
+			categoryReturnByDate, ok := categoryReturnsByDate[holdingDate]
+			if !ok {
+				categoryReturnByDate = schemas.ReturnByDate{
+					StartDate:        assetReturn.StartDate,
+					EndDate:          assetReturn.EndDate,
+					ReturnPercentage: assetReturn.ReturnPercentage * weight,
+				}
+			}
+			categoryReturnsByDate[holdingDate] = categoryReturnByDate
+		}
+	}
+	for _, returnByDate := range categoryReturnsByDate {
+		categoryReturn.ReturnsByDateRange = append(categoryReturn.ReturnsByDateRange, returnByDate)
+	}
+
+	return categoryReturn, nil
 }
 
 // CalculateAssetReturn calculates the return for a single asset by taking holdings in pairs and applying transactions within the date ranges.
