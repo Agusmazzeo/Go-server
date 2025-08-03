@@ -72,6 +72,8 @@ jobs:
           sleep 5  # Wait for database to be ready
 
       - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5440/db?sslmode=disable
         run: make db-migrate-up
 
       - name: Set up Docker Redis Database
