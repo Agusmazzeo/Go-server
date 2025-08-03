@@ -13,7 +13,7 @@ DOCKER_COMPOSE=docker compose
 POSTGRES_DB=postgres-db
 REDIS=redis
 API=api
-GOOSE=goose
+GOOSE=. .env && goose
 MIGRATIONS_DIR=$(shell pwd)/migrations
 
 default: build
@@ -101,16 +101,16 @@ dc-down:
 	${DOCKER_COMPOSE} down
 
 db-migrate-up:
-	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) up
+	$(GOOSE) -dir $(MIGRATIONS_DIR) up
 
 db-migrate-down:
-	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) down
+	$(GOOSE) -dir $(MIGRATIONS_DIR) down
 
 db-migrate-status:
-	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) status
+	$(GOOSE) -dir $(MIGRATIONS_DIR) status
 
 db-migrate-create:
 ifndef name
 	$(error Usage: make db-migrate-create name=create_assets_table)
 endif
-	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql
+	$(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql
