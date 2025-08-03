@@ -11,7 +11,7 @@ import (
 func SetupDB(cfg *config.Config) (*pgxpool.Pool, error) {
 	dsn := cfg.Databases.SQL.ConnectionString
 	if dsn == "" {
-		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
 			cfg.Databases.SQL.Host,
 			cfg.Databases.SQL.Username,
 			cfg.Databases.SQL.Password,

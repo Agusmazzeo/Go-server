@@ -3,10 +3,11 @@ externalClients:
     categoryMapFile: /settings/configFiles/denominaciones.csv
 databases:
   redis:
-    host: db-caching-nyc3-14243-do-user-16224847-0.m.db.ondigitalocean.com
+    host: db-valkey-nyc3-12653-do-user-16224847-0.f.db.ondigitalocean.com
     port: 25061
     database: 0
-    password: AVNS_cWgzxtJH-W8FyeGZGpV
+    username: default
+    password: AVNS_qabJhF6rX2DF9TBu3dC
   sql:
     host: db-postgresql-nyc3-64708-do-user-16224847-0.f.db.ondigitalocean.com
     port: 25060
