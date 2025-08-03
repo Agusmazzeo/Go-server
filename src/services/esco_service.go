@@ -456,6 +456,7 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 	var units, value float64
 	categoryMap := s.client.GetCategoryMap()
 	accStateRes := schemas.NewAccountState()
+
 	for _, ins := range *instrumentos {
 		if ins.C < float64(0) && strings.Contains(ins.D, "Retiro de Títulos") {
 			id = strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
@@ -463,6 +464,16 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.C
 			value = ins.N
 			categoryKey = fmt.Sprintf("%s / %s", ins.F, id)
+		} else if strings.Contains(ins.D, "Renta y Amortización") {
+			id = strings.Split(ins.I, " - ")[1]
+			if id == "$" {
+				continue
+			}
+			currencySign = "$"
+			units = -ins.N
+			value = 0
+			categoryKey = id
+
 		} else if strings.Contains(ins.D, "Renta") {
 			id = strings.Split(ins.I, " - ")[1]
 			if id == "$" {

@@ -7,3 +7,10 @@ databases:
     port: 25061
     database: 0
     password: AVNS_cWgzxtJH-W8FyeGZGpV
+  sql:
+    host: db-postgresql-nyc3-64708-do-user-16224847-0.f.db.ondigitalocean.com
+    port: 25060
+    database: defaultdb
+    username: doadmin
+    password: AVNS_d4IvgqZTx_R1nz19xTU
+    driver: postgres

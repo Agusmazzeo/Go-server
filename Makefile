@@ -1,3 +1,9 @@
+# Load environment variables from .env file if it exists
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
 .PHONY: build run deps tidy clean test coverage lint help default
 
 GO_CMD=go
@@ -25,6 +31,24 @@ help:
 	@echo '    make coverage        Run tests with a terminal coverage report.'
 	@echo '    make coverage/html   Run tests with an HTML coverage report.'
 	@echo '    make lint            Run linter.'
+	@echo '    make env-show        Show current environment variables.'
+	@echo
+	@echo 'Database Migration:'
+	@echo '    make db-migrate-up     Run database migrations up.'
+	@echo '    make db-migrate-down   Rollback database migrations.'
+	@echo '    make db-migrate-status Show migration status.'
+	@echo '    make db-migrate-create name=migration_name  Create new migration.'
+	@echo
+	@echo 'Docker Compose:'
+	@echo '    make dc-db-up        Start PostgreSQL database.'
+	@echo '    make dc-redis-up     Start Redis database.'
+	@echo '    make dc-api-up       Start API service.'
+	@echo '    make dc-down         Stop all services.'
+	@echo '    make dc-logs         Show service logs.'
+	@echo
+	@echo 'Environment variables can be set in .env file or overridden via command line:'
+	@echo '    make run APP_PORT=9090'
+	@echo '    make test DB_HOST=127.0.0.1'
 	@echo
 
 build:
@@ -77,13 +101,16 @@ dc-down:
 	${DOCKER_COMPOSE} down
 
 db-migrate-up:
-	$(GOOSE) -dir $(MIGRATIONS_DIR) up
+	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) up
 
 db-migrate-down:
-	$(GOOSE) -dir $(MIGRATIONS_DIR) down
+	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) down
+
+db-migrate-status:
+	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) status
 
 db-migrate-create:
 ifndef name
-	$(error Usage: make migrations-create name=create_assets_table)
+	$(error Usage: make db-migrate-create name=create_assets_table)
 endif
-	$(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql
+	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(DATABASE_URL)" $(GOOSE) -dir $(MIGRATIONS_DIR) create $(name) sql

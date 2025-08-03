@@ -12,9 +12,9 @@ import (
 )
 
 type ReportsControllerI interface {
-	GetReport(ctx context.Context, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
-	GenerateXLSXReportFromClientIDs(ctx context.Context, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
-	GeneratePDFReportFromClientIDs(ctx context.Context, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) ([]byte, error)
+	GetReport(ctx context.Context, token string, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountsReports, error)
+	GenerateXLSXReportFromClientIDs(ctx context.Context, token string, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error)
+	GeneratePDFReportFromClientIDs(ctx context.Context, token string, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) ([]byte, error)
 }
 
 type ReportsController struct {
@@ -23,6 +23,7 @@ type ReportsController struct {
 	ReportService       services.ReportServiceI
 	ReportParserService services.ReportParserServiceI
 	AccountService      services.AccountServiceI
+	SyncService         services.SyncServiceI
 }
 
 func NewReportsController(
@@ -31,6 +32,7 @@ func NewReportsController(
 	reportService services.ReportServiceI,
 	reportParserService services.ReportParserServiceI,
 	accountService services.AccountServiceI,
+	syncService services.SyncServiceI,
 ) *ReportsController {
 	return &ReportsController{
 		ESCOClient:          escoClient,
@@ -38,16 +40,26 @@ func NewReportsController(
 		ReportService:       reportService,
 		ReportParserService: reportParserService,
 		AccountService:      accountService,
+		SyncService:         syncService,
 	}
 }
 
 func (rc *ReportsController) GetReport(
 	ctx context.Context,
+	token string,
 	clientIDs []string,
 	variablesWithValuations map[string]*schemas.VariableWithValuationResponse,
 	startDate, endDate time.Time,
 	interval time.Duration,
 ) (*schemas.AccountsReports, error) {
+	// Sync data from client IDs
+	for _, id := range clientIDs {
+		err := rc.SyncService.SyncDataFromAccount(ctx, token, id, startDate, endDate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Build account state from client ID using existing AccountService
 	accountStateByCategory, err := rc.AccountService.GetMultiAccountStateByCategory(ctx, clientIDs, startDate, endDate, interval)
 	if err != nil {
@@ -63,9 +75,9 @@ func (rc *ReportsController) GetReport(
 	return accountReports, nil
 }
 
-func (rc *ReportsController) GenerateXLSXReportFromClientIDs(ctx context.Context, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
+func (rc *ReportsController) GenerateXLSXReportFromClientIDs(ctx context.Context, token string, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) (*excelize.File, error) {
 	// Get the report data
-	accountsReport, err := rc.GetReport(ctx, clientIDs, variablesWithValuations, startDate, endDate, interval)
+	accountsReport, err := rc.GetReport(ctx, token, clientIDs, variablesWithValuations, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +92,9 @@ func (rc *ReportsController) GenerateXLSXReportFromClientIDs(ctx context.Context
 	return rc.ReportService.GenerateXLSXReport(ctx, dataframes)
 }
 
-func (rc *ReportsController) GeneratePDFReportFromClientIDs(ctx context.Context, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) ([]byte, error) {
+func (rc *ReportsController) GeneratePDFReportFromClientIDs(ctx context.Context, token string, clientIDs []string, variablesWithValuations map[string]*schemas.VariableWithValuationResponse, startDate, endDate time.Time, interval time.Duration) ([]byte, error) {
 	// Get the report data
-	accountsReport, err := rc.GetReport(ctx, clientIDs, variablesWithValuations, startDate, endDate, interval)
+	accountsReport, err := rc.GetReport(ctx, token, clientIDs, variablesWithValuations, startDate, endDate, interval)
 	if err != nil {
 		return nil, err
 	}

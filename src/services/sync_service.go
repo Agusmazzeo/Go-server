@@ -88,7 +88,7 @@ func (s *SyncService) GetDatesToSync(ctx context.Context, token, accountID strin
 	for date := startDate; date.Before(endDate); date = date.AddDate(0, 0, 1) {
 		alreadySynced := false
 		for _, syncedDate := range syncedDates {
-			if date.Equal(syncedDate) {
+			if date.Format("2006-01-02") == syncedDate.Format("2006-01-02") {
 				alreadySynced = true
 				break
 			}

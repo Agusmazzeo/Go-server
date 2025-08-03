@@ -78,7 +78,7 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get report data
-	accountsReports, err := h.ReportsController.GetReport(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
+	accountsReports, err := h.ReportsController.GetReport(ctx, token, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 	if err != nil {
 		h.Logger.Warning(err)
 		h.HandleErrors(w, err)
@@ -148,7 +148,7 @@ func (h *Handler) GetReportFileByIDs(w http.ResponseWriter, r *http.Request) {
 
 	// Generate file based on format
 	if format == "XLSX" {
-		xlsxFile, err := h.ReportsController.GenerateXLSXReportFromClientIDs(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
+		xlsxFile, err := h.ReportsController.GenerateXLSXReportFromClientIDs(ctx, token, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return
@@ -163,7 +163,7 @@ func (h *Handler) GetReportFileByIDs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		pdfData, err := h.ReportsController.GeneratePDFReportFromClientIDs(ctx, ids, referenceVariables, startDate, endDate, interval.ToDuration())
+		pdfData, err := h.ReportsController.GeneratePDFReportFromClientIDs(ctx, token, ids, referenceVariables, startDate, endDate, interval.ToDuration())
 		if err != nil {
 			h.HandleErrors(w, err)
 			return

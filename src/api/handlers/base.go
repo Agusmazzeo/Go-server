@@ -41,7 +41,7 @@ func NewHandler(
 	// Create report parser service
 	reportParserService := services.NewReportParserService()
 
-	reportsController := controllers.NewReportsController(escoClient, bcraClient, reportService, reportParserService, accountService)
+	reportsController := controllers.NewReportsController(escoClient, bcraClient, reportService, reportParserService, accountService, syncService)
 	reportScheduleController := controllers.NewReportScheduleController(db)
 	return &Handler{
 		Logger:                   logger,
