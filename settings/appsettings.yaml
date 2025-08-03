@@ -17,7 +17,7 @@ databases:
   sql:
     host: 127.0.0.1
     port: 5440
-    database: postgres
+    database: db
     username: user
     password: pass
     driver: postgres

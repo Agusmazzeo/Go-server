@@ -76,8 +76,22 @@ jobs:
           DATABASE_URL: postgresql://user:pass@localhost:5440/db?sslmode=disable
         run: make db-migrate-up
 
+      - name: Verify Migrations
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5440/db?sslmode=disable
+        run: make db-migrate-status
+
+      - name: Verify Database Tables
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5440/db?sslmode=disable
+        run: |
+          psql postgresql://user:pass@localhost:5440/db -c "\dt"
+          psql postgresql://user:pass@localhost:5440/db -c "SELECT COUNT(*) FROM report_schedules;"
+
       - name: Set up Docker Redis Database
         run: make dc-redis-up
 
       - name: Test
+        env:
+          ENV: TESTING
         run: make test

@@ -28,6 +28,10 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("Failed to load test configuration: %v", err)
 	}
 
+	// Debug: Print the database configuration
+	fmt.Printf("Test DB Config: Host=%s, Port=%s, Database=%s, User=%s\n",
+		cfg.Databases.SQL.Host, cfg.Databases.SQL.Port, cfg.Databases.SQL.Database, cfg.Databases.SQL.Username)
+
 	dsn := cfg.Databases.SQL.ConnectionString
 	if dsn == "" {
 		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
@@ -37,6 +41,8 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 			cfg.Databases.SQL.Database,
 			cfg.Databases.SQL.Port)
 	}
+
+	fmt.Printf("DSN: %s\n", dsn)
 
 	// Create connection pool
 	config, err := pgxpool.ParseConfig(dsn)
@@ -57,6 +63,21 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 	// Test the connection
 	if err := pool.Ping(context.Background()); err != nil {
 		t.Fatalf("Failed to ping database: %v\nPlease check your database configuration and ensure it's running.", err)
+	}
+
+	// Verify that required tables exist
+	requiredTables := []string{"report_schedules", "assets", "holdings", "transactions", "asset_categories"}
+	for _, table := range requiredTables {
+		var exists bool
+		err := pool.QueryRow(context.Background(),
+			"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", table).Scan(&exists)
+		if err != nil {
+			t.Fatalf("Failed to check if table %s exists: %v", table, err)
+		}
+		if !exists {
+			t.Fatalf("Required table %s does not exist. Please run migrations.", table)
+		}
+		fmt.Printf("✓ Table %s exists\n", table)
 	}
 
 	TestDB = pool
@@ -123,6 +144,7 @@ func TruncateTables(t *testing.T, pool *pgxpool.Pool) {
 		"transactions",
 		"assets",
 		"holdings",
+		"report_schedules",
 	}
 
 	for _, table := range tables {
@@ -182,6 +204,7 @@ func CleanupAllTestData(t *testing.T, pool *pgxpool.Pool) {
 		"holdings",
 		"assets",
 		"asset_categories",
+		"report_schedules",
 	}
 
 	for _, table := range tables {
