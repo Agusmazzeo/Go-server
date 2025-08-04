@@ -19,10 +19,10 @@ func setupTest(t *testing.T) (*pgxpool.Pool, repositories.SyncLogRepository) {
 
 	// Cleanup test data after test
 	t.Cleanup(func() {
-		init_test.CleanupTestData(t, db, "test-client-1")
-		init_test.CleanupTestData(t, db, "test-client-2")
-		init_test.CleanupTestData(t, db, "test-client-3")
-		init_test.CleanupTestData(t, db, "test-client-4")
+		init_test.CleanupTestDataByClientID(t, db, "test-client-1")
+		init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+		init_test.CleanupTestDataByClientID(t, db, "test-client-3")
+		init_test.CleanupTestDataByClientID(t, db, "test-client-4")
 	})
 
 	return db, repo
@@ -350,4 +350,69 @@ func TestCleanupSyncLogs(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 2, count2, "Expected all records to remain for second client")
 	})
+}
+
+func TestSyncLogRepository_DeleteByClientIDAndDateRange(t *testing.T) {
+	pool := init_test.SetupTestDB(t)
+	defer init_test.CleanupTestDB()
+
+	repo := repositories.NewSyncLogRepository(pool)
+	ctx := context.Background()
+
+	// Create test data
+	clientID := "test-client-789"
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC)
+
+	// Cleanup after test
+	defer func() {
+		init_test.CleanupTestDataByClientID(t, pool, clientID)
+		init_test.CleanupTestDataByAssetName(t, pool, "Test Asset")
+		init_test.CleanupTestDataByAssetCategoryName(t, pool, "Test Category")
+	}()
+
+	// Insert test sync logs
+	syncDates := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), // Outside range
+	}
+
+	for _, date := range syncDates {
+		_, err := pool.Exec(ctx, "INSERT INTO sync_logs (client_id, sync_date) VALUES ($1, $2)",
+			clientID, date)
+		assert.NoError(t, err)
+	}
+
+	// Insert sync logs for different client (should not be deleted)
+	_, err := pool.Exec(ctx, "INSERT INTO sync_logs (client_id, sync_date) VALUES ($1, $2)",
+		"other-client", time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
+	assert.NoError(t, err)
+
+	// Verify initial data
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, count)
+
+	// Test deletion
+	err = repo.DeleteByClientIDAndDateRange(ctx, clientID, startDate, endDate)
+	assert.NoError(t, err)
+
+	// Verify deletions
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count) // Only the one outside the range should remain
+
+	// Verify other client's data is untouched
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", "other-client").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Verify the remaining sync log is the one outside the range
+	var remainingDate time.Time
+	err = pool.QueryRow(ctx, "SELECT sync_date FROM sync_logs WHERE client_id = $1", clientID).Scan(&remainingDate)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
 }

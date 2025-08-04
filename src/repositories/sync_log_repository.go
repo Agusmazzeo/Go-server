@@ -15,6 +15,7 @@ type SyncLogRepository interface {
 	MarkClientForDates(ctx context.Context, clientID string, syncDates []time.Time) error
 	GetSyncedDates(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) ([]time.Time, error)
 	CleanupSyncLogs(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) error
+	DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) error
 }
 
 type syncLogRepo struct {
@@ -137,4 +138,17 @@ func (r *syncLogRepo) GetSyncedDates(ctx context.Context, clientID string, start
 	}
 
 	return dates, nil
+}
+
+func (r *syncLogRepo) DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate time.Time, endDate time.Time) error {
+	_, err := r.DB.Exec(ctx, `
+		DELETE FROM sync_logs
+		WHERE client_id = $1
+		AND sync_date >= $2
+		AND sync_date <= $3
+	`, clientID, startDate, endDate)
+	if err != nil {
+		return err
+	}
+	return nil
 }

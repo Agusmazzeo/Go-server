@@ -31,7 +31,7 @@ func TestAssetRepository(t *testing.T) {
 
 	// Cleanup test data after test
 	defer func() {
-		init_test.CleanupTestData(t, db, "test-client")
+		init_test.CleanupTestDataByClientID(t, db, "test-client")
 	}()
 	// Test cases
 	t.Run("Create and GetByID", func(t *testing.T) {

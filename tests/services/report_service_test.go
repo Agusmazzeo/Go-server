@@ -204,7 +204,7 @@ func TestGenerateReport(t *testing.T) {
 	assert.Equal(t, 100.0, stocks[0].Transactions[0].Value)
 
 	// Cleanup after test
-	init_test.CleanupTestData(t, db, "test-client")
+	init_test.CleanupTestDataByClientID(t, db, "test-client")
 }
 
 func TestCalculateAssetReturn(t *testing.T) {

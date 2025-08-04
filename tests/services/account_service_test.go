@@ -27,15 +27,21 @@ func TestAccountService(t *testing.T) {
 	// Create service instance
 	accountService := services.NewAccountService(holdingRepo, transactionRepo, assetRepo)
 
-	// Cleanup test data after test
-	defer func() {
-		init_test.CleanupTestData(t, db, "test-client-1")
-	}()
+	init_test.CleanupTestDataByClientID(t, db, "test-client")
+	init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+	init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+	init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
 
 	// Test cases
 	t.Run("GetAccountState", func(t *testing.T) {
+		t.Cleanup(func() {
+			init_test.CleanupTestDataByClientID(t, db, "test-client")
+			init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+			init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+			init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
+		})
 		ctx := context.Background()
-		clientID := "test-client-1"
+		clientID := "test-client"
 
 		// Create test data
 		category := &models.AssetCategory{
@@ -108,20 +114,26 @@ func TestAccountService(t *testing.T) {
 	})
 
 	t.Run("GetMultiAccountStateWithTransactions", func(t *testing.T) {
+		t.Cleanup(func() {
+			init_test.CleanupTestDataByClientID(t, db, "test-client")
+			init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+			init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+			init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
+		})
 		ctx := context.Background()
-		clientIDs := []string{"test-client-4", "test-client-5"}
+		clientIDs := []string{"test-client", "test-client-2"}
 
 		// Create test data for multiple clients
 		category := &models.AssetCategory{
-			Name:        "Test Category 4",
-			Description: "Test Description 4",
+			Name:        "Test Category",
+			Description: "Test Description",
 		}
 		err := categoryRepo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		asset := &models.Asset{
 			ExternalID: "EXT-004",
-			Name:       "Test Asset 4",
+			Name:       "Test Asset",
 			AssetType:  "STOCK",
 			CategoryID: category.ID,
 			Currency:   "USD",
@@ -157,20 +169,26 @@ func TestAccountService(t *testing.T) {
 	})
 
 	t.Run("GetMultiAccountStateByCategory", func(t *testing.T) {
+		t.Cleanup(func() {
+			init_test.CleanupTestDataByClientID(t, db, "test-client")
+			init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+			init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+			init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
+		})
 		ctx := context.Background()
-		clientIDs := []string{"test-client-6", "test-client-7"}
+		clientIDs := []string{"test-client", "test-client-2"}
 
 		// Create test data for multiple clients
 		category := &models.AssetCategory{
-			Name:        "Test Category 5",
-			Description: "Test Description 5",
+			Name:        "Test Category",
+			Description: "Test Description",
 		}
 		err := categoryRepo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		asset := &models.Asset{
 			ExternalID: "EXT-005",
-			Name:       "Test Asset 5",
+			Name:       "Test Asset",
 			AssetType:  "BOND",
 			CategoryID: category.ID,
 			Currency:   "ARS",
@@ -209,20 +227,26 @@ func TestAccountService(t *testing.T) {
 	})
 
 	t.Run("Repository Grouping Methods", func(t *testing.T) {
+		t.Cleanup(func() {
+			init_test.CleanupTestDataByClientID(t, db, "test-client")
+			init_test.CleanupTestDataByClientID(t, db, "test-client-2")
+			init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+			init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
+		})
 		ctx := context.Background()
-		clientIDs := []string{"test-client-8", "test-client-9"}
+		clientIDs := []string{"test-client", "test-client-2"}
 
 		// Create test data
 		category := &models.AssetCategory{
-			Name:        "Test Category 6",
-			Description: "Test Description 6",
+			Name:        "Test Category",
+			Description: "Test Description",
 		}
 		err := categoryRepo.Create(ctx, category, nil)
 		require.NoError(t, err)
 
 		asset := &models.Asset{
 			ExternalID: "EXT-006",
-			Name:       "Test Asset 6",
+			Name:       "Test Asset",
 			AssetType:  "STOCK",
 			CategoryID: category.ID,
 			Currency:   "USD",

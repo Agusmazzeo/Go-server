@@ -16,6 +16,7 @@ type HoldingRepository interface {
 	GetGroupedByCategoryAndDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]map[string]float64, error)
 	GetTotalByDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]float64, error)
 	Create(ctx context.Context, h *models.Holding, tx pgx.Tx) error
+	DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error
 }
 
 type holdingRepo struct {
@@ -199,4 +200,35 @@ func (r *holdingRepo) Create(ctx context.Context, h *models.Holding, tx pgx.Tx) 
 	return tx.QueryRow(ctx, query,
 		h.ClientID, h.AssetID, h.Units, h.Value, h.Date,
 	).Scan(&h.ID)
+}
+
+func (r *holdingRepo) DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error {
+	query := `
+		DELETE FROM holdings
+		WHERE client_id = $1 AND date BETWEEN $2 AND $3`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, clientID, startDate, endDate)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, clientID, startDate, endDate)
+	return err
 }

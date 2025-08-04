@@ -19,6 +19,13 @@ func TestAssetCategoryRepository(t *testing.T) {
 	// Create repository instance
 	repo := repositories.NewAssetCategoryRepository(db)
 
+	// Cleanup after test
+	defer func() {
+		init_test.CleanupTestDataByClientID(t, db, "test-client")
+		init_test.CleanupTestDataByAssetName(t, db, "Test Asset")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Test Category")
+	}()
+
 	// Test cases
 	t.Run("Create and GetByID", func(t *testing.T) {
 		ctx := context.Background()
@@ -37,14 +44,12 @@ func TestAssetCategoryRepository(t *testing.T) {
 		assert.Equal(t, category.Name, retrievedCategory.Name)
 		assert.Equal(t, category.Description, retrievedCategory.Description)
 
-		// Cleanup after this subtest
-		init_test.CleanupTestData(t, db, "test-client")
 	})
 
 	t.Run("Create and GetByName", func(t *testing.T) {
 		ctx := context.Background()
 		category := &models.AssetCategory{
-			Name:        "Test Category By Name",
+			Name:        "Test Category",
 			Description: "Test Description",
 		}
 
@@ -59,7 +64,7 @@ func TestAssetCategoryRepository(t *testing.T) {
 		assert.Equal(t, category.Description, retrievedCategory.Description)
 
 		// Cleanup after this subtest
-		init_test.CleanupTestData(t, db, "test-client")
+		init_test.CleanupTestDataByClientID(t, db, "test-client")
 	})
 
 	t.Run("GetAll", func(t *testing.T) {
@@ -82,7 +87,7 @@ func TestAssetCategoryRepository(t *testing.T) {
 		assert.GreaterOrEqual(t, len(retrievedCategories), len(categories))
 
 		// Cleanup after this subtest
-		init_test.CleanupTestData(t, db, "test-client")
+		init_test.CleanupTestDataByClientID(t, db, "test-client")
 	})
 
 	t.Run("GetByID for non-existent category", func(t *testing.T) {
@@ -94,6 +99,6 @@ func TestAssetCategoryRepository(t *testing.T) {
 		assert.Nil(t, category)
 
 		// Cleanup after this subtest
-		init_test.CleanupTestData(t, db, "test-client")
+		init_test.CleanupTestDataByClientID(t, db, "test-client")
 	})
 }

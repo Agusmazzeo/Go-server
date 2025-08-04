@@ -16,6 +16,7 @@ type TransactionRepository interface {
 	GetGroupedByCategoryAndDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]map[string]float64, error)
 	GetTotalByDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]float64, error)
 	Create(ctx context.Context, t *models.Transaction, tx pgx.Tx) error
+	DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error
 }
 
 type transactionRepo struct {
@@ -196,4 +197,35 @@ func (r *transactionRepo) Create(ctx context.Context, t *models.Transaction, tx 
 	return tx.QueryRow(ctx, query,
 		t.ClientID, t.AssetID, t.TransactionType, t.Units, t.PricePerUnit, t.TotalValue, t.Date,
 	).Scan(&t.ID)
+}
+
+func (r *transactionRepo) DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error {
+	query := `
+		DELETE FROM transactions
+		WHERE client_id = $1 AND date BETWEEN $2 AND $3`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, clientID, startDate, endDate)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, clientID, startDate, endDate)
+	return err
 }

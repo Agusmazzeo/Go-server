@@ -137,8 +137,11 @@ func (h *Handler) SyncAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for force refresh header
+	forceRefresh := r.Header.Get("x-force-refresh") == "true"
+
 	// Call controller to sync account
-	accountState, err := h.AccountsController.SyncAccount(context.Background(), token, syncRequest.AccountID, syncRequest.StartDate.ToTime(), syncRequest.EndDate.ToTime())
+	accountState, err := h.AccountsController.SyncAccount(context.Background(), token, syncRequest.AccountID, syncRequest.StartDate.ToTime(), syncRequest.EndDate.ToTime(), forceRefresh)
 	if err != nil {
 		h.HandleErrors(w, err)
 		return

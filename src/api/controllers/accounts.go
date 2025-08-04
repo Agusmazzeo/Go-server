@@ -21,7 +21,7 @@ type AccountsControllerI interface {
 	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
 	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
-	SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) (*schemas.AccountState, error)
+	SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time, forceRefresh bool) (*schemas.AccountState, error)
 }
 
 type AccountsController struct {
@@ -417,7 +417,15 @@ func generateCategoryAssets(
 }
 
 // SyncAccount syncs account data for a given account ID and date range
-func (c *AccountsController) SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (c *AccountsController) SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time, forceRefresh bool) (*schemas.AccountState, error) {
+
+	// If force refresh is requested, delete existing data first
+	if forceRefresh {
+		err := c.SyncService.ForceRefreshData(ctx, accountID, startDate, endDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to force refresh data: %w", err)
+		}
+	}
 
 	// Use syncService to sync the data
 	err := c.SyncService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)

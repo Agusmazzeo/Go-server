@@ -88,7 +88,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		// Setup mock ESCO service that returns error
@@ -117,7 +117,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		// Setup test with mock ESCO service
@@ -170,7 +170,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		// Mark all dates in the range as already synced
@@ -241,7 +241,7 @@ func TestStoreAccountStateWithDateFiltering(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		// Create test dates
@@ -294,7 +294,7 @@ func TestStoreAccountStateWithDateFiltering(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		// Create test account state
@@ -335,7 +335,7 @@ func TestStoreAccountStateWithDateFiltering(t *testing.T) {
 
 		// Cleanup after test
 		defer func() {
-			init_test.CleanupTestData(t, db, accountID)
+			init_test.CleanupTestDataByClientID(t, db, accountID)
 		}()
 
 		date1 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -374,4 +374,162 @@ func TestStoreAccountStateWithDateFiltering(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, transactions, 1, "Should only have 1 transaction with valid date")
 	})
+}
+
+func TestSyncService_ForceRefreshData(t *testing.T) {
+	pool := init_test.SetupTestDB(t)
+	defer init_test.CleanupTestDB()
+
+	// Create repositories
+	holdingRepo := repositories.NewHoldingRepository(pool)
+	transactionRepo := repositories.NewTransactionRepository(pool)
+	assetRepo := repositories.NewAssetRepository(pool)
+	assetCategoryRepo := repositories.NewAssetCategoryRepository(pool)
+	syncLogRepo := repositories.NewSyncLogRepository(pool)
+
+	// Create mock ESCO service
+	mockEscoService := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+		return nil, nil
+	})
+
+	// Create sync service
+	syncService := services.NewSyncService(
+		holdingRepo,
+		transactionRepo,
+		assetRepo,
+		assetCategoryRepo,
+		syncLogRepo,
+		mockEscoService,
+	)
+
+	ctx := context.Background()
+	clientID := "test-client-force-refresh"
+	startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC)
+
+	init_test.CleanupTestDataByClientID(t, pool, clientID)
+	init_test.CleanupTestDataByAssetName(t, pool, "Test Asset")
+	init_test.CleanupTestDataByAssetCategoryName(t, pool, "Test Category")
+	// Cleanup after test
+	t.Cleanup(func() {
+		init_test.CleanupTestDataByClientID(t, pool, clientID)
+		init_test.CleanupTestDataByAssetName(t, pool, "Test Asset")
+		init_test.CleanupTestDataByAssetCategoryName(t, pool, "Test Category")
+	})
+
+	// Create test data
+	_, err := pool.Exec(ctx, "INSERT INTO asset_categories (name, description) VALUES ($1, $2)",
+		"Test Category", "Test Category Description")
+	assert.NoError(t, err)
+
+	// Get the generated category ID
+	var categoryID int
+	err = pool.QueryRow(ctx, "SELECT id FROM asset_categories WHERE name = $1", "Test Category").Scan(&categoryID)
+	assert.NoError(t, err)
+
+	_, err = pool.Exec(ctx, "INSERT INTO assets (external_id, name, asset_type, category_id, currency) VALUES ($1, $2, $3, $4, $5)",
+		"test-asset", "Test Asset", "STOCK", categoryID, "PESOS")
+	assert.NoError(t, err)
+
+	// Get the generated asset ID
+	var assetID int
+	err = pool.QueryRow(ctx, "SELECT id FROM assets WHERE external_id = $1", "test-asset").Scan(&assetID)
+	assert.NoError(t, err)
+
+	// Insert test holdings
+	holdings := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), // Outside range
+	}
+
+	for i, date := range holdings {
+		_, err := pool.Exec(ctx, "INSERT INTO holdings (client_id, asset_id, value, units, date, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+			clientID, assetID, float64(100*(i+1)), 10.0, date, time.Now())
+		assert.NoError(t, err)
+	}
+
+	// Insert test transactions
+	transactions := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), // Outside range
+	}
+
+	for i, date := range transactions {
+		_, err := pool.Exec(ctx, "INSERT INTO transactions (client_id, asset_id, transaction_type, units, price_per_unit, total_value, date, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+			clientID, assetID, "BUY", 10.0, float64(200*(i+1)), float64(200*(i+1)), date, time.Now())
+		assert.NoError(t, err)
+	}
+
+	// Insert test sync logs
+	syncLogs := []time.Time{
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC),
+		time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), // Outside range
+	}
+
+	for _, date := range syncLogs {
+		_, err := pool.Exec(ctx, "INSERT INTO sync_logs (client_id, sync_date) VALUES ($1, $2)",
+			clientID, date)
+		assert.NoError(t, err)
+	}
+
+	// Insert data for different client (should not be deleted)
+	_, err = pool.Exec(ctx, "INSERT INTO holdings (client_id, asset_id, value, units, date, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+		"other-client", assetID, 500.0, 10.0, time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC), time.Now())
+	assert.NoError(t, err)
+
+	// Verify initial data
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM holdings WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, count)
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM transactions WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, count)
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, count)
+
+	// Test force refresh
+	err = syncService.ForceRefreshData(ctx, clientID, startDate, endDate)
+	assert.NoError(t, err)
+
+	// Verify deletions
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM holdings WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count) // Only the one outside the range should remain
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM transactions WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count) // Only the one outside the range should remain
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", clientID).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count) // Only the one outside the range should remain
+
+	// Verify other client's data is untouched
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM holdings WHERE client_id = $1", "other-client").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Verify the remaining data is outside the range
+	var remainingDate time.Time
+	err = pool.QueryRow(ctx, "SELECT date FROM holdings WHERE client_id = $1", clientID).Scan(&remainingDate)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
+
+	err = pool.QueryRow(ctx, "SELECT date FROM transactions WHERE client_id = $1", clientID).Scan(&remainingDate)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
+
+	err = pool.QueryRow(ctx, "SELECT sync_date FROM sync_logs WHERE client_id = $1", clientID).Scan(&remainingDate)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
 }

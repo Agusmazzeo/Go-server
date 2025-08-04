@@ -157,7 +157,7 @@ func TruncateTables(t *testing.T, pool *pgxpool.Pool) {
 
 // CleanupTestData deletes specific test data by client ID or other identifiers
 // This allows each test to clean up only its own data
-func CleanupTestData(t *testing.T, pool *pgxpool.Pool, clientID string) {
+func CleanupTestDataByClientID(t *testing.T, pool *pgxpool.Pool, clientID string) {
 	if pool == nil {
 		t.Fatal("Database connection not initialized")
 	}
@@ -166,22 +166,52 @@ func CleanupTestData(t *testing.T, pool *pgxpool.Pool, clientID string) {
 
 	// Delete in reverse order of dependencies to avoid foreign key constraints
 	queries := []string{
-		fmt.Sprintf("DELETE FROM transactions WHERE client_id = $1"),
-		fmt.Sprintf("DELETE FROM holdings WHERE client_id = $1"),
-		fmt.Sprintf("DELETE FROM assets WHERE external_id LIKE $1"),
-		fmt.Sprintf("DELETE FROM asset_categories WHERE name LIKE $1"),
+		"DELETE FROM transactions WHERE client_id = $1",
+		"DELETE FROM holdings WHERE client_id = $1",
+		"DELETE FROM sync_logs WHERE client_id = $1",
 	}
 
 	for _, query := range queries {
 		var err error
-		if query == "DELETE FROM assets WHERE external_id LIKE $1" {
-			_, err = pool.Exec(ctx, query, "EXT-%")
-		} else if query == "DELETE FROM asset_categories WHERE name LIKE $1" {
-			// More specific cleanup for categories - only delete exact matches
-			_, err = pool.Exec(ctx, "DELETE FROM asset_categories WHERE name IN ('Test Category', 'Test Category By Name', 'Category 1', 'Category 2')")
-		} else {
-			_, err = pool.Exec(ctx, query, clientID)
+		_, err = pool.Exec(ctx, query, clientID)
+		if err != nil {
+			t.Logf("Warning: Failed to cleanup test data with query '%s': %v", query, err)
 		}
+	}
+}
+
+func CleanupTestDataByAssetName(t *testing.T, pool *pgxpool.Pool, assetName string) {
+	if pool == nil {
+		t.Fatal("Database connection not initialized")
+	}
+
+	ctx := context.Background()
+
+	queries := []string{
+		"DELETE FROM assets WHERE name = $1",
+	}
+
+	for _, query := range queries {
+		_, err := pool.Exec(ctx, query, assetName)
+		if err != nil {
+			t.Logf("Warning: Failed to cleanup test data with query '%s': %v", query, err)
+		}
+	}
+}
+
+func CleanupTestDataByAssetCategoryName(t *testing.T, pool *pgxpool.Pool, assetCategoryName string) {
+	if pool == nil {
+		t.Fatal("Database connection not initialized")
+	}
+
+	ctx := context.Background()
+
+	queries := []string{
+		"DELETE FROM asset_categories WHERE name = $1",
+	}
+
+	for _, query := range queries {
+		_, err := pool.Exec(ctx, query, assetCategoryName)
 		if err != nil {
 			t.Logf("Warning: Failed to cleanup test data with query '%s': %v", query, err)
 		}

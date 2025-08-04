@@ -14,6 +14,7 @@ import (
 type SyncServiceI interface {
 	GetDatesToSync(ctx context.Context, token, accountID string, startDate, endDate time.Time) ([]time.Time, error)
 	SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) error
+	ForceRefreshData(ctx context.Context, accountID string, startDate, endDate time.Time) error
 }
 
 type SyncService struct {
@@ -271,4 +272,32 @@ func (s *SyncService) filterTransactionsByDates(transactions []schemas.Transacti
 		}
 	}
 	return filteredTransactions
+}
+
+// ForceRefreshData deletes all holdings, transactions, and sync logs for the given client and date range
+// This is used when the x-force-refresh header is present to ensure fresh data sync
+func (s *SyncService) ForceRefreshData(ctx context.Context, accountID string, startDate, endDate time.Time) error {
+	logger := utils.LoggerFromContext(ctx)
+	logger.Infof("Force refreshing data for account %s from %s to %s", accountID, startDate, endDate)
+
+	// Delete holdings for the client and date range (will create its own transaction)
+	err := s.holdingRepository.DeleteByClientIDAndDateRange(ctx, accountID, startDate, endDate, nil)
+	if err != nil {
+		return fmt.Errorf("failed to delete holdings: %w", err)
+	}
+
+	// Delete transactions for the client and date range (will create its own transaction)
+	err = s.transactionRepository.DeleteByClientIDAndDateRange(ctx, accountID, startDate, endDate, nil)
+	if err != nil {
+		return fmt.Errorf("failed to delete transactions: %w", err)
+	}
+
+	// Delete sync logs for the client and date range
+	err = s.syncLogRepository.DeleteByClientIDAndDateRange(ctx, accountID, startDate, endDate)
+	if err != nil {
+		return fmt.Errorf("failed to delete sync logs: %w", err)
+	}
+
+	logger.Infof("Successfully force refreshed data for account %s", accountID)
+	return nil
 }
