@@ -148,7 +148,7 @@ func (rc *ReportParserService) generateLineGraphHTML(report *ReportConfig) (stri
 		colorIndex++
 	}
 	// Load HTML template
-	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", render.GetTemplatePath()))
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/bar_graph.html", render.GetTemplatePath()))
 	if err != nil {
 		return "", fmt.Errorf("failed to load bar graph template: %w", err)
 	}
@@ -227,7 +227,7 @@ func (rc *ReportParserService) generateStackBarGraphHTML(report *ReportConfig) (
 		colorIndex++
 	}
 	// Load HTML template
-	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/bar_graph.html", render.GetTemplatePath()))
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/bar_graph.html", render.GetTemplatePath()))
 	if err != nil {
 		return "", fmt.Errorf("failed to load bar graph template: %w", err)
 	}
@@ -292,7 +292,7 @@ func (rc *ReportParserService) generatePieChartHTML(report *ReportConfig) (strin
 	)
 
 	// Load HTML template
-	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/templates/pie_graph.html", render.GetTemplatePath()))
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s/pie_graph.html", render.GetTemplatePath()))
 	if err != nil {
 		return "", fmt.Errorf("failed to load pie graph template: %w", err)
 	}
