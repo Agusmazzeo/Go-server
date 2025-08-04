@@ -21,6 +21,7 @@ databases:
     username: user
     password: pass
     driver: postgres
+    sslmode: disable
 
 externalClients:
   esco:
@@ -29,3 +30,19 @@ externalClients:
     categoryMapFile: /settings/configFiles/denominaciones.csv
   bcra:
     baseUrl: https://api.bcra.gob.ar
+
+cors:
+  allowedOrigins:
+    - "*"
+  allowedMethods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allowedHeaders:
+    - "Authorization"
+    - "Content-Type"
+    - "X-Requested-With"
+  allowCredentials: true
+  debug: true

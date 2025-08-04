@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth"
-	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -131,23 +130,66 @@ func NewHTTPServer(cfg *config.Config, logger *logrus.Logger) (*http.Server, err
 		return nil, err
 	}
 
-	// Configure CORS options
-	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*"}, // Allow any localhost config
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
-		AllowCredentials: true,
-		Debug:            true, // Enable debug for development; remove in production
-	})
+	// Create a custom CORS handler that's more lenient
+	corsHandler := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
 
-	// Apply the CORS middleware to your router
-	corsHandler := corsMiddleware.Handler(server.Router)
+			// Always allow requests without Origin header (server-to-server calls)
+			if origin == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Check if origin is allowed
+			allowed := false
+			for _, allowedOrigin := range cfg.CORS.AllowedOrigins {
+				if allowedOrigin == "*" {
+					allowed = true
+					break
+				}
+				if allowedOrigin == origin {
+					allowed = true
+					break
+				}
+				// Handle wildcard patterns like "https://*"
+				if len(allowedOrigin) > 2 && allowedOrigin[len(allowedOrigin)-2:] == "/*" {
+					prefix := allowedOrigin[:len(allowedOrigin)-1]
+					if len(origin) >= len(prefix) && origin[:len(prefix)] == prefix {
+						allowed = true
+						break
+					}
+				}
+			}
+
+			if allowed {
+				// Set CORS headers
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
+				if cfg.CORS.AllowCredentials {
+					w.Header().Set("Access-Control-Allow-Credentials", "true")
+				}
+			}
+
+			// Handle preflight requests
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Apply the custom CORS handler
+	handler := corsHandler(server.Router)
 
 	httpServer := &http.Server{
 		Addr:         ":" + cfg.Service.Port,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
-		Handler:      corsHandler, // Use the router with CORS enabled
+		Handler:      handler,
 	}
 
 	return httpServer, nil

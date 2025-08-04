@@ -11,6 +11,7 @@ type Config struct {
 	Databases       DatabasesConfig      `mapstructure:"databases"`
 	ExternalClients ExternalClientConfig `mapstructure:"externalClients"`
 	Logger          LoggerConfig         `mapstructure:"logger"`
+	CORS            CORSConfig           `mapstructure:"cors"`
 }
 
 type ServiceType string
@@ -37,6 +38,7 @@ type SQLConfig struct {
 	Password         string `mapstructure:"password"`
 	Driver           string `mapstructure:"driver"`
 	Database         string `mapstructure:"database"`
+	SSLMode          string `mapstructure:"sslmode"`
 	ConnectionString string `mapstructure:"connection_string"`
 }
 
@@ -66,6 +68,14 @@ type BCRAConfig struct {
 type LoggerConfig struct {
 	Level string `mapstructure:"level"`
 	File  string `mapstructure:"file"`
+}
+
+type CORSConfig struct {
+	AllowedOrigins   []string `mapstructure:"allowedOrigins"`
+	AllowedMethods   []string `mapstructure:"allowedMethods"`
+	AllowedHeaders   []string `mapstructure:"allowedHeaders"`
+	AllowCredentials bool     `mapstructure:"allowCredentials"`
+	Debug            bool     `mapstructure:"debug"`
 }
 
 // LoadConfig loads the base appsettings file and the environment-specific settings file.

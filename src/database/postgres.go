@@ -11,12 +11,16 @@ import (
 func SetupDB(cfg *config.Config) (*pgxpool.Pool, error) {
 	dsn := cfg.Databases.SQL.ConnectionString
 	if dsn == "" {
-		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
+		if cfg.Databases.SQL.SSLMode == "" {
+			cfg.Databases.SQL.SSLMode = "require"
+		}
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 			cfg.Databases.SQL.Host,
 			cfg.Databases.SQL.Username,
 			cfg.Databases.SQL.Password,
 			cfg.Databases.SQL.Database,
-			cfg.Databases.SQL.Port)
+			cfg.Databases.SQL.Port,
+			cfg.Databases.SQL.SSLMode)
 	}
 
 	// Create connection pool
