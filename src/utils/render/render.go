@@ -13,26 +13,8 @@ import (
 )
 
 // findProjectRoot finds the project root directory by looking for go.mod file
-func findProjectRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		// Check if go.mod exists in current directory
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-
-		// Move up one directory
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root directory without finding go.mod
-			return "", fmt.Errorf("could not find go.mod file in any parent directory")
-		}
-		dir = parent
-	}
+func GetTemplatePath() string {
+	return os.Getenv("TEMPLATE_PATH")
 }
 
 func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {
@@ -40,13 +22,9 @@ func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	baseDir, err := findProjectRoot()
-	if err != nil {
-		return nil, fmt.Errorf("failed to find project root: %w", err)
-	}
 
 	// Define the template path
-	imagePath := filepath.Join(baseDir, "assets", "criteria_logo.png")
+	imagePath := filepath.Join(GetTemplatePath(), "assets", "criteria_logo.png")
 	cover, err := GetReportCoverHTML("Reporte de Rendimientos", "Criteria 2025", imagePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cover: %w", err)
@@ -83,13 +61,9 @@ func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {
 // getReportCoverHTML reads the cover template and injects the title, subtitle, and image path
 func GetReportCoverHTML(title, subtitle, imagePath string) (string, error) {
 	// Get the project root directory
-	baseDir, err := findProjectRoot()
-	if err != nil {
-		return "", fmt.Errorf("failed to find project root: %w", err)
-	}
 
 	// Define the template path
-	templatePath := filepath.Join(baseDir, "templates", "cover.html")
+	templatePath := filepath.Join(GetTemplatePath(), "cover.html")
 
 	// Read and parse the template file
 	tmpl, err := template.ParseFiles(templatePath)
@@ -120,13 +94,9 @@ func GetTableHTML(title string, df *dataframe.DataFrame) (string, error) {
 	}
 
 	// Get the project root directory
-	baseDir, err := findProjectRoot()
-	if err != nil {
-		return "", fmt.Errorf("failed to find project root: %w", err)
-	}
 
 	// Define the template path
-	templatePath := filepath.Join(baseDir, "templates", "table.html")
+	templatePath := filepath.Join(GetTemplatePath(), "table.html")
 
 	// Parse the HTML template file
 	tmpl, err := template.ParseFiles(templatePath)
@@ -165,11 +135,7 @@ func GetTableHTML(title string, df *dataframe.DataFrame) (string, error) {
 
 // getSeparatorPageHTML generates a separator page HTML with a given title and subtitle
 func GetSeparatorPageHTML(title string) (string, error) {
-	baseDir, err := findProjectRoot()
-	if err != nil {
-		return "", fmt.Errorf("failed to find project root: %w", err)
-	}
-	tmplPath := filepath.Join(baseDir, "templates", "separator.html")
+	tmplPath := filepath.Join(GetTemplatePath(), "separator.html")
 
 	// Parse the HTML template
 	tmpl, err := template.ParseFiles(tmplPath)

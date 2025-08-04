@@ -61,4 +61,6 @@ COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /go/bin/app
 COPY --from=builder /go/src/app/assets /go/src/app/assets
 
+ENV TEMPLATE_PATH /templates
+
 CMD ["/go/bin/app"]
