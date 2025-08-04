@@ -15,3 +15,4 @@ databases:
     username: doadmin
     password: AVNS_d4IvgqZTx_R1nz19xTU
     driver: postgres
+    sslmode: require
