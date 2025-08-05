@@ -248,20 +248,33 @@ func ComputeValuationVariations(input *schemas.VariableWithValuationResponse, in
 	// Compute variations over interval
 	var variations []schemas.VariableValuation
 	var accumulatedDelta = 1.0
+	var lastValidValue float64
+
 	for _, date := range dateList {
-		prevDate := date.Add(-interval)
-		prevVal := valuationMap[prevDate]
 		currVal := valuationMap[date]
 
-		if prevVal == 0 {
+		// Skip if current value is zero
+		if currVal == 0 {
 			continue
 		}
-		accumulatedDelta *= (1 + (currVal-prevVal)/prevVal)
+
+		// For the first valid value, just store it
+		if lastValidValue == 0 {
+			lastValidValue = currVal
+			continue
+		}
+
+		// Calculate variation from last valid value
+		variation := (currVal - lastValidValue) / lastValidValue
+		accumulatedDelta *= (1 + variation)
+
 		variations = append(variations, schemas.VariableValuation{
 			Date:  date.Format("2006-01-02"),
 			Value: accumulatedDelta - 1,
 		})
 
+		// Update last valid value
+		lastValidValue = currVal
 	}
 
 	return &schemas.VariableWithValuationResponse{
