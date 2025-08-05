@@ -480,9 +480,9 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 				continue
 			}
 			currencySign = "$"
-			units = -ins.C
-			value = ins.N
-			categoryKey = "CCL"
+			units = -ins.N
+			value = 0
+			categoryKey = id
 		} else if strings.Contains(ins.D, "Boleto") && ins.TI == "Instrumentos" {
 			denominationSplit := strings.Split(ins.D, " / ")
 			if len(denominationSplit) < 5 {
