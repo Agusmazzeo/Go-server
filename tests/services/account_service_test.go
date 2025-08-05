@@ -84,7 +84,7 @@ func TestAccountService(t *testing.T) {
 		require.NoError(t, err)
 
 		// Test GetAccountState
-		accountState, err := accountService.GetAccountState(ctx, clientID, time.Now())
+		accountState, err := accountService.GetAccountState(ctx, clientID, time.Now(), false)
 		require.NoError(t, err)
 		assert.NotNil(t, accountState)
 		assert.NotNil(t, accountState.Assets)
@@ -157,7 +157,7 @@ func TestAccountService(t *testing.T) {
 		// Test GetMultiAccountStateWithTransactions
 		startDate := time.Now().AddDate(0, 0, -1)
 		endDate := time.Now().AddDate(0, 0, 1)
-		accountStates, err := accountService.GetMultiAccountStateWithTransactions(ctx, clientIDs, startDate, endDate, time.Hour*24)
+		accountStates, err := accountService.GetMultiAccountStateWithTransactions(ctx, clientIDs, startDate, endDate, time.Hour*24, false)
 		require.NoError(t, err)
 		assert.Len(t, accountStates, 2)
 
@@ -212,7 +212,7 @@ func TestAccountService(t *testing.T) {
 		// Test GetMultiAccountStateByCategory
 		startDate := time.Now().AddDate(0, 0, -1)
 		endDate := time.Now().AddDate(0, 0, 1)
-		accountStateByCategory, err := accountService.GetMultiAccountStateByCategory(ctx, clientIDs, startDate, endDate, time.Hour*24)
+		accountStateByCategory, err := accountService.GetMultiAccountStateByCategory(ctx, clientIDs, startDate, endDate, time.Hour*24, false)
 		require.NoError(t, err)
 		assert.NotNil(t, accountStateByCategory)
 		assert.NotNil(t, accountStateByCategory.AssetsByCategory)

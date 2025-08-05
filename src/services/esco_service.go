@@ -15,14 +15,14 @@ import (
 
 type ESCOServiceI interface {
 	GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error)
-	GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error)
-	GetAccountStateWithTransactions(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
-	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
-	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
-	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
-	GetMultiAccountStateWithTransactions(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error)
-	GetMultiAccountStateByCategory(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
-	GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
+	GetAccountState(ctx context.Context, token, id string, date time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetAccountStateWithTransactions(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error)
+	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error)
+	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetMultiAccountStateWithTransactions(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) ([]*schemas.AccountState, error)
+	GetMultiAccountStateByCategory(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error)
+	GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error)
 }
 
 type ESCOService struct {
@@ -47,19 +47,19 @@ func (s *ESCOService) GetAccountByID(ctx context.Context, token, id string) (*es
 	return &acc[0], nil
 }
 
-func (s *ESCOService) GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error) {
+func (s *ESCOService) GetAccountState(ctx context.Context, token, id string, date time.Time, refreshCache bool) (*schemas.AccountState, error) {
 	account, err := s.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	accStateData, err := s.client.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "0", date, false)
+	accStateData, err := s.client.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "0", date, refreshCache)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseEstadoToAccountState(&accStateData, &date)
 }
 
-func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 	var err error
 	logger := utils.LoggerFromContext(ctx)
 	var wg sync.WaitGroup
@@ -71,7 +71,7 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 	var instrumentos *schemas.AccountState
 
 	go func() {
-		accountState, err = s.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval)
+		accountState, err = s.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval, refreshCache)
 		if err != nil {
 			logger.Errorf("error while on GetAccountStateDateRange: %v", err)
 		}
@@ -117,7 +117,7 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 	go func() {
 		retries := 3
 		for {
-			instrumentos, err = s.GetCtaCteConsolidadoDateRange(ctx, token, id, startDate, endDate)
+			instrumentos, err = s.GetCtaCteConsolidadoDateRange(ctx, token, id, startDate, endDate, refreshCache)
 			if err != nil {
 				logger.Errorf("error while on GetCtaCteConsolidadoDateRange: %v. Retrying...", err)
 				retries--
@@ -165,7 +165,7 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 	return accountState, nil
 }
 
-func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 	logger := utils.LoggerFromContext(ctx)
 	account, err := s.GetAccountByID(ctx, token, id)
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 			var accStateData []esco.EstadoCuentaSchema
 			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
 			for {
-				accStateData, err = s.client.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "0", date, false)
+				accStateData, err = s.client.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "0", date, refreshCache)
 				if err != nil || accStateData == nil {
 					retries -= 1
 					logger.Warnf("error while on GetEstadoCuenta: %v. Retrying..", err)
@@ -233,38 +233,38 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 	return &schemas.AccountState{Assets: &assets}, <-errChan
 }
 
-func (s *ESCOService) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (s *ESCOService) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {
 	account, err := s.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	liquidaciones, err := s.client.GetLiquidaciones(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
+	liquidaciones, err := s.client.GetLiquidaciones(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, refreshCache)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseLiquidacionesToAccountState(&liquidaciones)
 }
 
-func (s *ESCOService) GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (s *ESCOService) GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {
 	account, err := s.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	boletos, err := s.client.GetBoletos(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
+	boletos, err := s.client.GetBoletos(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, refreshCache)
 	if err != nil {
 		return nil, err
 	}
 	return s.parseBoletosToAccountState(&boletos)
 }
 
-func (s *ESCOService) GetMultiAccountStateWithTransactions(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error) {
+func (s *ESCOService) GetMultiAccountStateWithTransactions(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) ([]*schemas.AccountState, error) {
 	logger := utils.LoggerFromContext(ctx)
 	accountsStates := make([]*schemas.AccountState, 0, len(ids))
 	var err error
 
 	for _, id := range ids {
 		var accountState *schemas.AccountState
-		accountState, err = s.GetAccountStateWithTransactions(ctx, token, id, startDate, endDate, interval)
+		accountState, err = s.GetAccountStateWithTransactions(ctx, token, id, startDate, endDate, interval, refreshCache)
 		if err != nil {
 			logger.Error(err)
 			return nil, err
@@ -275,8 +275,8 @@ func (s *ESCOService) GetMultiAccountStateWithTransactions(ctx context.Context, 
 	return accountsStates, nil
 }
 
-func (s *ESCOService) GetMultiAccountStateByCategory(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
-	accountStates, err := s.GetMultiAccountStateWithTransactions(ctx, token, ids, startDate, endDate, interval)
+func (s *ESCOService) GetMultiAccountStateByCategory(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error) {
+	accountStates, err := s.GetMultiAccountStateWithTransactions(ctx, token, ids, startDate, endDate, interval, refreshCache)
 	if err != nil {
 		logger := utils.LoggerFromContext(ctx)
 		logger.Error(err)
@@ -436,12 +436,12 @@ func (s *ESCOService) parseLiquidacionesToAccountState(liquidaciones *[]esco.Liq
 	return accStateRes, nil
 }
 
-func (s *ESCOService) GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
+func (s *ESCOService) GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {
 	account, err := s.GetAccountByID(ctx, token, id)
 	if err != nil {
 		return nil, err
 	}
-	instrumentos, err := s.client.GetCtaCteConsolidado(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, false)
+	instrumentos, err := s.client.GetCtaCteConsolidado(token, account.ID, account.FI, strconv.Itoa(account.N), "0", startDate, endDate, refreshCache)
 	if err != nil {
 		return nil, err
 	}

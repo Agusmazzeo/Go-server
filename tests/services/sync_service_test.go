@@ -92,7 +92,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 		}()
 
 		// Setup mock ESCO service that returns error
-		mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+		mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 			return nil, assert.AnError
 		})
 
@@ -107,7 +107,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 		)
 
 		// Execute sync
-		err := service.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)
+		err := service.SyncDataFromAccount(ctx, token, accountID, startDate, endDate, false)
 		assert.Error(t, err)
 	})
 
@@ -124,7 +124,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 		testService, _ := setupTest(t, holdingRepo, transactionRepo, assetRepo, assetCategoryRepo)
 
 		// Execute sync
-		err := testService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)
+		err := testService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate, false)
 		require.NoError(t, err)
 
 		// Verify asset category was created
@@ -188,7 +188,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 		}()
 
 		// Setup mock ESCO service that should not be called
-		mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+		mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 			t.Error("ESCO service should not be called when data is already synced")
 			return nil, nil
 		})
@@ -204,7 +204,7 @@ func TestSyncDataFromAccount(t *testing.T) {
 		)
 
 		// Execute sync
-		err = service.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)
+		err = service.SyncDataFromAccount(ctx, token, accountID, startDate, endDate, false)
 		require.NoError(t, err)
 	})
 }
@@ -221,7 +221,7 @@ func TestStoreAccountStateWithDateFiltering(t *testing.T) {
 	syncLogRepo := repositories.NewSyncLogRepository(db)
 
 	// Setup mock ESCO service
-	mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+	mockESCO := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 		return nil, nil
 	})
 
@@ -388,7 +388,7 @@ func TestSyncService_ForceRefreshData(t *testing.T) {
 	syncLogRepo := repositories.NewSyncLogRepository(pool)
 
 	// Create mock ESCO service
-	mockEscoService := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
+	mockEscoService := esco_test.NewMockESCOService(func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
 		return nil, nil
 	})
 

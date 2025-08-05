@@ -10,6 +10,7 @@ import (
 	"server/src/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/subosito/gotenv"
 )
 
 var (
@@ -86,6 +87,12 @@ func SetupTestDB(t *testing.T) *pgxpool.Pool {
 
 // loadTestConfig loads the test configuration from appsettings.TESTING.yaml
 func loadTestConfig() (*config.Config, error) {
+	// Load environment variables from .env file for tests
+	if err := gotenv.Load(); err != nil {
+		// Don't fail if .env file doesn't exist, just log it
+		fmt.Printf("Warning: Could not load .env file for tests: %v\n", err)
+	}
+
 	// Get the service root path (where go.mod is located)
 	serviceRoot, err := getServiceRoot()
 	if err != nil {

@@ -6,7 +6,7 @@ endif
 
 .PHONY: build run deps tidy clean test coverage lint help default
 
-GO_CMD=go
+GO_CMD=. ./.env && go
 BIN_NAME=Carvana.VDI.DescriptionMapperAndValuations
 COVERAGE_FILE=profile.cov
 DOCKER_COMPOSE=docker compose

@@ -14,7 +14,8 @@ import (
 
 // findProjectRoot finds the project root directory by looking for go.mod file
 func GetTemplatePath() string {
-	return os.Getenv("TEMPLATE_PATH")
+	templatePath := os.Getenv("TEMPLATE_PATH")
+	return templatePath
 }
 
 func GeneratePDF(htmlContents []string) (*bytes.Buffer, error) {

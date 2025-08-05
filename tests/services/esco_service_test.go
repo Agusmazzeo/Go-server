@@ -72,7 +72,7 @@ func TestGetAccountState(t *testing.T) {
 	mockClient := setupMockClient(t)
 	service := services.NewESCOService(mockClient)
 
-	state, err := service.GetAccountState(ctx, "token", "4014D4EFDD5DE27B", date)
+	state, err := service.GetAccountState(ctx, "token", "4014D4EFDD5DE27B", date, false)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -113,7 +113,7 @@ func TestGetAccountStateWithTransactions(t *testing.T) {
 	mockClient := setupMockClient(t)
 	service := services.NewESCOService(mockClient)
 
-	state, err := service.GetAccountStateWithTransactions(ctx, "token", "4014D4EFDD5DE27B", startDate, endDate, 24*time.Hour)
+	state, err := service.GetAccountStateWithTransactions(ctx, "token", "4014D4EFDD5DE27B", startDate, endDate, 24*time.Hour, false)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -159,7 +159,7 @@ func TestGetMultiAccountStateByCategory(t *testing.T) {
 	mockClient := setupMockClient(t)
 	service := services.NewESCOService(mockClient)
 
-	state, err := service.GetMultiAccountStateByCategory(ctx, "token", []string{"4014D4EFDD5DE27B"}, startDate, endDate, 24*time.Hour)
+	state, err := service.GetMultiAccountStateByCategory(ctx, "token", []string{"4014D4EFDD5DE27B"}, startDate, endDate, 24*time.Hour, false)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}

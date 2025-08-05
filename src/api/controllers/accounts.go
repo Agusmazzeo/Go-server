@@ -16,11 +16,11 @@ import (
 type AccountsControllerI interface {
 	GetAllAccounts(ctx context.Context, token, filter string) ([]*schemas.AccountReponse, error)
 	GetAccountByID(ctx context.Context, token, id string) (*esco.CuentaSchema, error)
-	GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error)
-	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
-	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
-	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error)
-	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
+	GetAccountState(ctx context.Context, token, id string, date time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error)
+	GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error)
 	SyncAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time, forceRefresh bool) (*schemas.AccountState, error)
 }
 
@@ -59,24 +59,24 @@ func (c *AccountsController) GetAccountByID(ctx context.Context, token, id strin
 	return c.ESCOService.GetAccountByID(ctx, token, id)
 }
 
-func (c *AccountsController) GetAccountState(ctx context.Context, token, id string, date time.Time) (*schemas.AccountState, error) {
-	return c.ESCOService.GetAccountState(ctx, token, id, date)
+func (c *AccountsController) GetAccountState(ctx context.Context, token, id string, date time.Time, refreshCache bool) (*schemas.AccountState, error) {
+	return c.ESCOService.GetAccountState(ctx, token, id, date, refreshCache)
 }
 
-func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
-	return c.ESCOService.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval)
+func (c *AccountsController) GetAccountStateDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
+	return c.ESCOService.GetAccountStateDateRange(ctx, token, id, startDate, endDate, interval, refreshCache)
 }
 
-func (c *AccountsController) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
-	return c.ESCOService.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate)
+func (c *AccountsController) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {
+	return c.ESCOService.GetLiquidacionesDateRange(ctx, token, id, startDate, endDate, refreshCache)
 }
 
-func (c *AccountsController) GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
-	return c.ESCOService.GetBoletosDateRange(ctx, token, id, startDate, endDate)
+func (c *AccountsController) GetBoletosDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {
+	return c.ESCOService.GetBoletosDateRange(ctx, token, id, startDate, endDate, refreshCache)
 }
 
-func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
-	return c.AccountService.GetMultiAccountStateByCategory(ctx, ids, startDate, endDate, interval)
+func (c *AccountsController) GetMultiAccountStateByCategoryDateRange(ctx context.Context, token string, ids []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error) {
+	return c.AccountService.GetMultiAccountStateByCategory(ctx, ids, startDate, endDate, interval, refreshCache)
 }
 
 func (c *AccountsController) GetCtaCteConsolidadoDateRange(ctx context.Context, token, id string, startDate, endDate time.Time) (*schemas.AccountState, error) {
@@ -428,13 +428,13 @@ func (c *AccountsController) SyncAccount(ctx context.Context, token, accountID s
 	}
 
 	// Use syncService to sync the data
-	err := c.SyncService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate)
+	err := c.SyncService.SyncDataFromAccount(ctx, token, accountID, startDate, endDate, forceRefresh)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the synced account state
-	accountState, err := c.ESCOService.GetAccountStateWithTransactions(ctx, token, accountID, startDate, endDate, time.Hour*24)
+	accountState, err := c.ESCOService.GetAccountStateWithTransactions(ctx, token, accountID, startDate, endDate, time.Hour*24, forceRefresh)
 	if err != nil {
 		return nil, err
 	}

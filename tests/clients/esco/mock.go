@@ -119,17 +119,17 @@ func (c *ESCOServiceClientMock) GetCategoryMap() map[string]string {
 // MockESCOService is a mock implementation of services.ESCOServiceI
 type MockESCOService struct {
 	services.ESCOServiceI
-	getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)
+	getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error)
 }
 
 // NewMockESCOService creates a new instance of MockESCOService
-func NewMockESCOService(getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error)) *MockESCOService {
+func NewMockESCOService(getAccountStateFunc func(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error)) *MockESCOService {
 	return &MockESCOService{
 		getAccountStateFunc: getAccountStateFunc,
 	}
 }
 
 // GetAccountStateWithTransactions implements the ESCOServiceI interface
-func (m *MockESCOService) GetAccountStateWithTransactions(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountState, error) {
-	return m.getAccountStateFunc(ctx, token, accountID, startDate, endDate, interval)
+func (m *MockESCOService) GetAccountStateWithTransactions(ctx context.Context, token, accountID string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountState, error) {
+	return m.getAccountStateFunc(ctx, token, accountID, startDate, endDate, interval, refreshCache)
 }

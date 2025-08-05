@@ -13,7 +13,7 @@ import (
 
 type SyncServiceI interface {
 	GetDatesToSync(ctx context.Context, token, accountID string, startDate, endDate time.Time) ([]time.Time, error)
-	SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) error
+	SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time, refreshCache bool) error
 	ForceRefreshData(ctx context.Context, accountID string, startDate, endDate time.Time) error
 }
 
@@ -45,7 +45,7 @@ func NewSyncService(
 	}
 }
 
-func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time) error {
+func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID string, startDate, endDate time.Time, refreshCache bool) error {
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Starting sync for account %s from %s to %s", accountID, startDate, endDate)
 
@@ -58,7 +58,7 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 		return nil
 	}
 
-	accountState, err := s.escoService.GetAccountStateWithTransactions(ctx, token, accountID, startDate, endDate, time.Hour*24)
+	accountState, err := s.escoService.GetAccountStateWithTransactions(ctx, token, accountID, startDate, endDate, time.Hour*24, refreshCache)
 	if err != nil {
 		logger.Error(err)
 		return err

@@ -39,7 +39,7 @@ func TestGetAccountState(t *testing.T) {
 
 	// Use a valid account ID and date here
 	date := time.Now()
-	accountState, err := accountsController.GetAccountState(context.Background(), token.AccessToken, "11170", date)
+	accountState, err := accountsController.GetAccountState(context.Background(), token.AccessToken, "11170", date, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -55,7 +55,7 @@ func TestGetAccountStateDateRange(t *testing.T) {
 	startDate := time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 0, 6)
 	interval, _ := utils.ParseTimeInterval("1w:0d")
-	accountState, err := accountsController.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate, interval.ToDuration())
+	accountState, err := accountsController.GetAccountStateDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate, interval.ToDuration(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -70,7 +70,7 @@ func TestGetBoletosDateRange(t *testing.T) {
 	// Use a valid account ID and date range here
 	startDate := time.Date(2024, 6, 25, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 0, 6)
-	accountState, err := accountsController.GetBoletosDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	accountState, err := accountsController.GetBoletosDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -85,7 +85,7 @@ func TestGetLiquidacionesDateRange(t *testing.T) {
 	// Use a valid account ID and date range here
 	startDate := time.Date(2024, 6, 25, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 0, 6)
-	accountState, err := accountsController.GetLiquidacionesDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate)
+	accountState, err := accountsController.GetLiquidacionesDateRange(context.Background(), token.AccessToken, "11170", startDate, endDate, false)
 	if err != nil {
 		t.Error(err)
 	}

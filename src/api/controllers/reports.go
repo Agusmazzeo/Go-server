@@ -54,14 +54,14 @@ func (rc *ReportsController) GetReport(
 ) (*schemas.AccountsReports, error) {
 	// Sync data from client IDs
 	for _, id := range clientIDs {
-		err := rc.SyncService.SyncDataFromAccount(ctx, token, id, startDate, endDate)
+		err := rc.SyncService.SyncDataFromAccount(ctx, token, id, startDate, endDate, false)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Build account state from client ID using existing AccountService
-	accountStateByCategory, err := rc.AccountService.GetMultiAccountStateByCategory(ctx, clientIDs, startDate, endDate, interval)
+	accountStateByCategory, err := rc.AccountService.GetMultiAccountStateByCategory(ctx, clientIDs, startDate, endDate, interval, false)
 	if err != nil {
 		return nil, err
 	}

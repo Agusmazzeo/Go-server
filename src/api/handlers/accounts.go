@@ -78,7 +78,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		date = (date.Add(26 * time.Hour)).In(location)
-		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, date, date, interval.ToDuration())
+		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, date, date, interval.ToDuration(), false)
 	} else if startDateStr != "" && endDateStr != "" {
 		startDate, err = time.Parse(utils.ShortDashDateLayout, startDateStr)
 		if err != nil {
@@ -93,7 +93,7 @@ func (h *Handler) GetAccountState(w http.ResponseWriter, r *http.Request) {
 		//Set +26 hours since we use ARG timezone (UTC-3)
 		startDate = (startDate.Add(26 * time.Hour)).In(location)
 		endDate = (endDate.Add(26 * time.Hour)).In(location)
-		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration())
+		accountState, err = h.AccountsController.GetMultiAccountStateByCategoryDateRange(ctx, token, ids, startDate, endDate, interval.ToDuration(), false)
 	}
 
 	if err != nil {

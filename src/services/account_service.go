@@ -10,9 +10,9 @@ import (
 )
 
 type AccountServiceI interface {
-	GetAccountState(ctx context.Context, clientID string, date time.Time) (*schemas.AccountState, error)
-	GetMultiAccountStateWithTransactions(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error)
-	GetMultiAccountStateByCategory(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error)
+	GetAccountState(ctx context.Context, clientID string, date time.Time, refreshCache bool) (*schemas.AccountState, error)
+	GetMultiAccountStateWithTransactions(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) ([]*schemas.AccountState, error)
+	GetMultiAccountStateByCategory(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error)
 }
 
 type AccountService struct {
@@ -34,7 +34,7 @@ func NewAccountService(
 }
 
 // GetAccountState returns the account state for a specific date
-func (s *AccountService) GetAccountState(ctx context.Context, clientID string, date time.Time) (*schemas.AccountState, error) {
+func (s *AccountService) GetAccountState(ctx context.Context, clientID string, date time.Time, refreshCache bool) (*schemas.AccountState, error) {
 	// Get holdings for the specific date
 	holdings, err := s.holdingRepo.GetByClientID(ctx, clientID, date, date)
 	if err != nil {
@@ -51,7 +51,7 @@ func (s *AccountService) GetAccountState(ctx context.Context, clientID string, d
 }
 
 // GetMultiAccountStateWithTransactions returns account states for multiple clients
-func (s *AccountService) GetMultiAccountStateWithTransactions(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration) ([]*schemas.AccountState, error) {
+func (s *AccountService) GetMultiAccountStateWithTransactions(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) ([]*schemas.AccountState, error) {
 	// Get all holdings for the client IDs
 	holdings, err := s.holdingRepo.GetByClientIDs(ctx, clientIDs, startDate, endDate)
 	if err != nil {
@@ -85,7 +85,7 @@ func (s *AccountService) GetMultiAccountStateWithTransactions(ctx context.Contex
 }
 
 // GetMultiAccountStateByCategory returns account states grouped by category for multiple clients
-func (s *AccountService) GetMultiAccountStateByCategory(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration) (*schemas.AccountStateByCategory, error) {
+func (s *AccountService) GetMultiAccountStateByCategory(ctx context.Context, clientIDs []string, startDate, endDate time.Time, interval time.Duration, refreshCache bool) (*schemas.AccountStateByCategory, error) {
 	// Get grouped data from database
 	categoryHoldings, err := s.holdingRepo.GetGroupedByCategoryAndDate(ctx, clientIDs, startDate, endDate)
 	if err != nil {
@@ -114,7 +114,7 @@ func (s *AccountService) GetMultiAccountStateByCategory(ctx context.Context, cli
 	}
 
 	// Get individual account states for asset details
-	accountStates, err := s.GetMultiAccountStateWithTransactions(ctx, clientIDs, startDate, endDate, interval)
+	accountStates, err := s.GetMultiAccountStateWithTransactions(ctx, clientIDs, startDate, endDate, interval, refreshCache)
 	if err != nil {
 		return nil, err
 	}
