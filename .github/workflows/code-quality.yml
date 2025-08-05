@@ -94,4 +94,5 @@ jobs:
       - name: Test
         env:
           ENV: TESTING
+          TEMPLATE_PATH: ./templates
         run: make test
