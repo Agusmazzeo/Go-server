@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type ESCOServiceI interface {
@@ -174,49 +176,82 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 	}
 	intervalHours := interval.Hours()
 	numDays := int(endDate.Sub(startDate).Hours()/intervalHours) + 1
-	assets := make(map[string]schemas.Asset)
 
-	var wg sync.WaitGroup
-	var errChan = make(chan error, numDays)
-	var assetChan = make(chan *schemas.AccountState, numDays)
-	wg.Add(numDays)
+	// Use errgroup for automatic error handling and context cancellation
+	g, ctx := errgroup.WithContext(ctx)
 
+	// Limit concurrent goroutines to 5 to avoid overloading the external provider
+	g.SetLimit(5)
+
+	// Channel to collect successful results
+	assetChan := make(chan *schemas.AccountState, numDays)
+
+	// Launch a goroutine for each day
 	for i := 0; i < numDays; i++ {
-		go func(i int) {
-			defer wg.Done()
-			var retries = 3
-			var accStateData []esco.EstadoCuentaSchema
+		i := i // Capture loop variable
+		g.Go(func() error {
 			date := startDate.AddDate(0, 0, i*int(intervalHours/24))
-			for {
+
+			// Retry logic for each day
+			var accStateData []esco.EstadoCuentaSchema
+			var err error
+			retries := 3
+
+			for retries > 0 {
+				// Check if context was cancelled
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
+
 				accStateData, err = s.client.GetEstadoCuenta(token, account.ID, account.FI, strconv.Itoa(account.N), "0", date, refreshCache)
 				if err != nil || accStateData == nil {
-					retries -= 1
-					logger.Warnf("error while on GetEstadoCuenta: %v. Retrying..", err)
-					time.Sleep(100 * time.Millisecond)
+					retries--
+					logger.Warnf("error while on GetEstadoCuenta for date %s: %v. Retries left: %d", date.Format("2006-01-02"), err, retries)
+
+					if retries > 0 {
+						// Context-aware sleep
+						select {
+						case <-ctx.Done():
+							return ctx.Err()
+						case <-time.After(100 * time.Millisecond):
+						}
+					}
 				} else {
 					break
 				}
-				if retries == 0 {
-					errChan <- err
-					logger.Errorf("retries exceeded for GetEstadoCuenta: %v", err)
-					return
-				}
 			}
+
+			// If retries exhausted, return error (errgroup will cancel other goroutines)
+			if retries == 0 {
+				return fmt.Errorf("failed to get account state for date %s after 3 retries: %w", date.Format("2006-01-02"), err)
+			}
+
+			// Parse the account state
 			accountState, err := s.parseEstadoToAccountState(&accStateData, &date)
 			if err != nil {
-				errChan <- err
-				return
+				return fmt.Errorf("failed to parse account state for date %s: %w", date.Format("2006-01-02"), err)
 			}
-			assetChan <- accountState
-		}(i)
+
+			// Send result to channel (with context check)
+			select {
+			case assetChan <- accountState:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		})
 	}
 
+	// Start a goroutine to close the channel when all workers are done
 	go func() {
-		wg.Wait()
-		close(errChan)
+		g.Wait()
 		close(assetChan)
 	}()
 
+	// Collect results
+	assets := make(map[string]schemas.Asset)
 	for accountState := range assetChan {
 		for key, value := range *accountState.Assets {
 			if v, ok := assets[key]; ok {
@@ -227,10 +262,18 @@ func (s *ESCOService) GetAccountStateDateRange(ctx context.Context, token, id st
 			}
 		}
 	}
+
+	// Wait for all goroutines to complete and check for errors
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	// Sort holdings by date for each asset
 	for _, asset := range assets {
 		sortHoldingsByDateRequested(&asset)
 	}
-	return &schemas.AccountState{Assets: &assets}, <-errChan
+
+	return &schemas.AccountState{Assets: &assets}, nil
 }
 
 func (s *ESCOService) GetLiquidacionesDateRange(ctx context.Context, token, id string, startDate, endDate time.Time, refreshCache bool) (*schemas.AccountState, error) {

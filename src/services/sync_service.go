@@ -68,7 +68,7 @@ func (s *SyncService) SyncDataFromAccount(ctx context.Context, token, accountID 
 		logger.Infof("No account state returned for account %s", accountID)
 		return nil
 	}
-
+	logger.Infof("Data to sync: %v", datesToSync)
 	err = s.StoreAccountState(ctx, accountID, accountState, datesToSync)
 	if err != nil {
 		logger.Error(err)
@@ -98,6 +98,7 @@ func (s *SyncService) GetDatesToSync(ctx context.Context, token, accountID strin
 			datesToSync = append(datesToSync, date)
 		}
 	}
+	logger.Infof("Dates to sync: %v", len(datesToSync))
 
 	return datesToSync, nil
 }
