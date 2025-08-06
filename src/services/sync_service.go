@@ -120,37 +120,71 @@ func (s *SyncService) StoreAccountState(ctx context.Context, accountID string, a
 		return fmt.Errorf("error storing assets in batch: %w", err)
 	}
 
-	// Second pass: store holdings and transactions for each asset
+	// Second pass: collect all holdings and transactions for batch creation
+	allHoldings := make([]models.Holding, 0)
+	allTransactions := make([]models.Transaction, 0)
+	totalFilteredHoldings := 0
+	totalFilteredTransactions := 0
+
 	for _, asset := range *accountState.Assets {
-		// Filter holdings to only include dates in datesToSync
+		assetIDInt, err := strconv.Atoi(asset.ID)
+		if err != nil {
+			return fmt.Errorf("error converting asset ID %s to int: %w", asset.ID, err)
+		}
+
+		// Filter and collect holdings
 		filteredHoldings := s.filterHoldingsByDates(asset.Holdings, datesToSyncMap)
-		logger.Infof("Filtered holdings for asset %s: %d out of %d", asset.ID, len(filteredHoldings), len(asset.Holdings))
-		if len(filteredHoldings) > 0 {
-			err = s.storeHoldings(ctx, accountID, asset.ID, filteredHoldings)
-			if err != nil {
-				return fmt.Errorf("error storing holdings for asset %s: %w", asset.ID, err)
-			}
-		}
+		totalFilteredHoldings += len(filteredHoldings)
 
-		// Filter transactions to only include dates in datesToSync
-		filteredTransactions := s.filterTransactionsByDates(asset.Transactions, datesToSyncMap)
-		logger.Infof("Filtered transactions for asset %s: %d out of %d", asset.ID, len(filteredTransactions), len(asset.Transactions))
-		if len(filteredTransactions) > 0 {
-			err = s.storeTransactions(ctx, accountID, asset.ID, filteredTransactions)
-			if err != nil {
-				return fmt.Errorf("error storing transactions for asset %s: %w", asset.ID, err)
-			}
-		}
-
-		// Only collect dates that are in datesToSync
 		for _, holding := range filteredHoldings {
+			allHoldings = append(allHoldings, models.Holding{
+				ClientID:  accountID,
+				AssetID:   assetIDInt,
+				Value:     holding.Value,
+				Units:     holding.Units,
+				Date:      *holding.DateRequested,
+				CreatedAt: time.Now(),
+			})
 			dates[*holding.DateRequested] = true
 		}
+
+		// Filter and collect transactions
+		filteredTransactions := s.filterTransactionsByDates(asset.Transactions, datesToSyncMap)
+		totalFilteredTransactions += len(filteredTransactions)
+
 		for _, transaction := range filteredTransactions {
+			allTransactions = append(allTransactions, models.Transaction{
+				ClientID:  accountID,
+				AssetID:   assetIDInt,
+				Units:     transaction.Units,
+				Date:      *transaction.Date,
+				CreatedAt: time.Now(),
+			})
 			dates[*transaction.Date] = true
 		}
 	}
 
+	logger.Infof("Collected %d holdings and %d transactions for batch creation", totalFilteredHoldings, totalFilteredTransactions)
+
+	// Third pass: create all holdings in batch
+	if len(allHoldings) > 0 {
+		logger.Infof("Creating %d holdings in batch", len(allHoldings))
+		err = s.holdingRepository.CreateBatch(ctx, allHoldings, nil)
+		if err != nil {
+			return fmt.Errorf("error creating holdings in batch: %w", err)
+		}
+	}
+
+	// Fourth pass: create all transactions in batch
+	if len(allTransactions) > 0 {
+		logger.Infof("Creating %d transactions in batch", len(allTransactions))
+		err = s.transactionRepository.CreateBatch(ctx, allTransactions, nil)
+		if err != nil {
+			return fmt.Errorf("error creating transactions in batch: %w", err)
+		}
+	}
+
+	// Mark dates as synced
 	datesList := make([]time.Time, 0)
 	for date := range dates {
 		datesList = append(datesList, date)
@@ -163,6 +197,8 @@ func (s *SyncService) StoreAccountState(ctx context.Context, accountID string, a
 		}
 	}
 
+	logger.Infof("Successfully stored account state for account %s with %d holdings and %d transactions",
+		accountID, len(allHoldings), len(allTransactions))
 	return nil
 }
 
@@ -264,55 +300,6 @@ func (s *SyncService) markDatesAsSynced(ctx context.Context, accountID string, d
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Marking dates as synced for account %s", accountID)
 	return s.syncLogRepository.MarkClientForDates(ctx, accountID, dates)
-}
-
-func (s *SyncService) storeHoldings(ctx context.Context, accountID, assetID string, holdings []schemas.Holding) error {
-	logger := utils.LoggerFromContext(ctx)
-	logger.Infof("Storing holdings for account %s", accountID)
-	assetIDInt, err := strconv.Atoi(assetID)
-	if err != nil {
-		return err
-	}
-	holdingsToCreate := make([]models.Holding, 0)
-	for _, holding := range holdings {
-		holdingsToCreate = append(holdingsToCreate, models.Holding{
-			ClientID:  accountID,
-			AssetID:   assetIDInt,
-			Value:     holding.Value,
-			Units:     holding.Units,
-			Date:      *holding.DateRequested,
-			CreatedAt: time.Now(),
-		})
-	}
-	err = s.holdingRepository.CreateBatch(ctx, holdingsToCreate, nil)
-	if err != nil {
-		return fmt.Errorf("error creating holding: %w", err)
-	}
-	return nil
-}
-
-func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID string, transactions []schemas.Transaction) error {
-	logger := utils.LoggerFromContext(ctx)
-	logger.Infof("Storing transactions for account %s", accountID)
-	assetIDInt, err := strconv.Atoi(assetID)
-	if err != nil {
-		return fmt.Errorf("error creating transaction: %w", err)
-	}
-	transactionsToCreate := make([]models.Transaction, 0)
-	for _, transaction := range transactions {
-		transactionsToCreate = append(transactionsToCreate, models.Transaction{
-			ClientID:  accountID,
-			AssetID:   assetIDInt,
-			Units:     transaction.Units,
-			Date:      *transaction.Date,
-			CreatedAt: time.Now(),
-		})
-	}
-	err = s.transactionRepository.CreateBatch(ctx, transactionsToCreate, nil)
-	if err != nil {
-		return fmt.Errorf("error creating transaction: %w", err)
-	}
-	return nil
 }
 
 // filterHoldingsByDates filters holdings to only include those with dates in the datesToSync map
