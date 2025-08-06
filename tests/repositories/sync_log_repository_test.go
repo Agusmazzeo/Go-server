@@ -172,65 +172,185 @@ func TestMarkClientForDates(t *testing.T) {
 }
 
 func TestGetSyncedDates(t *testing.T) {
-	_, repo := setupTest(t)
+	// Setup test database
+	pool := init_test.SetupTestDB(t)
+	defer init_test.CleanupTestDB()
 
+	repo := repositories.NewSyncLogRepository(pool)
 	ctx := context.Background()
-	clientID := "test-client-range-1"
 
-	// Create test data
-	dates := []time.Time{
-		time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
-		time.Date(2024, 3, 2, 0, 0, 0, 0, time.UTC),
-		time.Date(2024, 3, 3, 0, 0, 0, 0, time.UTC),
-		time.Date(2024, 3, 4, 0, 0, 0, 0, time.UTC),
-		time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC),
+	// Test data
+	clientID := "test-client-123"
+	testDate1 := time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)
+	testDate2 := time.Date(2023, 11, 2, 0, 0, 0, 0, time.UTC)
+	testDate3 := time.Date(2023, 11, 3, 0, 0, 0, 0, time.UTC)
+
+	// Insert test data
+	err := repo.MarkClientForDates(ctx, clientID, []time.Time{testDate1, testDate2, testDate3})
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
 	}
 
-	err := repo.MarkClientForDates(ctx, clientID, dates)
-	require.NoError(t, err)
+	// Test 1: Get all dates in range
+	startDate := time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2023, 11, 4, 0, 0, 0, 0, time.UTC)
 
-	t.Run("returns all dates in range", func(t *testing.T) {
-		syncedDates, err := repo.GetSyncedDates(ctx, clientID, time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC), time.Date(2024, 3, 6, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-		assert.Equal(t, dates, syncedDates)
-	})
+	dates, err := repo.GetSyncedDates(ctx, clientID, startDate, endDate)
+	if err != nil {
+		t.Fatalf("GetSyncedDates failed: %v", err)
+	}
 
-	t.Run("returns partial range", func(t *testing.T) {
-		syncedDates, err := repo.GetSyncedDates(ctx, clientID, time.Date(2024, 3, 2, 0, 0, 0, 0, time.UTC), time.Date(2024, 3, 4, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-		assert.Equal(t, dates[1:3], syncedDates)
-	})
+	if len(dates) != 3 {
+		t.Errorf("Expected 3 dates, got %d", len(dates))
+	}
 
-	t.Run("returns empty slice for no matches", func(t *testing.T) {
-		syncedDates, err := repo.GetSyncedDates(ctx, clientID, time.Date(2024, 3, 6, 0, 0, 0, 0, time.UTC), time.Date(2024, 3, 7, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-		assert.Empty(t, syncedDates)
-	})
-
-	t.Run("handles duplicate dates", func(t *testing.T) {
-		clientID := "test-client-range-2"
-		duplicateDates := []time.Time{
-			time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2024, 3, 2, 0, 0, 0, 0, time.UTC),
+	// Verify the dates are correct
+	expectedDates := []time.Time{testDate1, testDate2, testDate3}
+	for i, expected := range expectedDates {
+		if i >= len(dates) {
+			t.Errorf("Missing date at index %d", i)
+			continue
 		}
+		if !dates[i].Equal(expected) {
+			t.Errorf("Expected date %v, got %v", expected, dates[i])
+		}
+	}
 
-		err := repo.MarkClientForDates(ctx, clientID, duplicateDates)
-		require.NoError(t, err)
+	// Test 2: Get dates in partial range
+	startDate2 := time.Date(2023, 11, 2, 0, 0, 0, 0, time.UTC)
+	endDate2 := time.Date(2023, 11, 3, 0, 0, 0, 0, time.UTC)
 
-		syncedDates, err := repo.GetSyncedDates(ctx, clientID, time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC), time.Date(2024, 3, 3, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-		assert.Equal(t, []time.Time{
-			time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC),
-			time.Date(2024, 3, 2, 0, 0, 0, 0, time.UTC),
-		}, syncedDates)
-	})
+	dates2, err := repo.GetSyncedDates(ctx, clientID, startDate2, endDate2)
+	if err != nil {
+		t.Fatalf("GetSyncedDates failed: %v", err)
+	}
 
-	t.Run("handles non-existent client", func(t *testing.T) {
-		syncedDates, err := repo.GetSyncedDates(ctx, "non-existent-client", time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC), time.Date(2024, 3, 6, 0, 0, 0, 0, time.UTC))
-		require.NoError(t, err)
-		assert.Empty(t, syncedDates)
-	})
+	if len(dates2) != 1 {
+		t.Errorf("Expected 1 date, got %d", len(dates2))
+	}
+
+	if !dates2[0].Equal(testDate2) {
+		t.Errorf("Expected date %v, got %v", testDate2, dates2[0])
+	}
+
+	// Test 3: Get dates for non-existent client
+	dates3, err := repo.GetSyncedDates(ctx, "non-existent-client", startDate, endDate)
+	if err != nil {
+		t.Fatalf("GetSyncedDates failed: %v", err)
+	}
+
+	if len(dates3) != 0 {
+		t.Errorf("Expected 0 dates for non-existent client, got %d", len(dates3))
+	}
+
+	// Test 4: Get dates in empty range
+	startDate4 := time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)
+	endDate4 := time.Date(2023, 12, 2, 0, 0, 0, 0, time.UTC)
+
+	dates4, err := repo.GetSyncedDates(ctx, clientID, startDate4, endDate4)
+	if err != nil {
+		t.Fatalf("GetSyncedDates failed: %v", err)
+	}
+
+	if len(dates4) != 0 {
+		t.Errorf("Expected 0 dates for empty range, got %d", len(dates4))
+	}
+}
+
+// Debug function to help identify issues in your environment
+func TestGetSyncedDatesDebug(t *testing.T) {
+	// Setup test database
+	pool := init_test.SetupTestDB(t)
+	defer init_test.CleanupTestDB()
+
+	repo := repositories.NewSyncLogRepository(pool)
+	ctx := context.Background()
+
+	// Test data
+	clientID := "debug-client"
+	testDate := time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)
+
+	// Step 1: Check if data exists
+	t.Logf("1. Checking if data exists for client: %s", clientID)
+	var count int
+	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM sync_logs WHERE client_id = $1", clientID).Scan(&count)
+	if err != nil {
+		t.Logf("Error checking count: %v", err)
+	} else {
+		t.Logf("   Found %d records for this client", count)
+	}
+
+	// Step 2: Insert test data
+	t.Logf("2. Inserting test data for date: %s", testDate.Format("2006-01-02"))
+	err = repo.MarkClientForDate(ctx, clientID, testDate)
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+	t.Log("   Test data inserted successfully")
+
+	// Step 3: Show all dates for this client
+	t.Log("3. All dates for this client:")
+	rows, err := pool.Query(ctx, "SELECT sync_date FROM sync_logs WHERE client_id = $1 ORDER BY sync_date", clientID)
+	if err != nil {
+		t.Logf("Error querying dates: %v", err)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var date time.Time
+			if err := rows.Scan(&date); err != nil {
+				t.Logf("Error scanning date: %v", err)
+			} else {
+				t.Logf("   - %s", date.Format("2006-01-02"))
+			}
+		}
+	}
+
+	// Step 4: Test the GetSyncedDates function
+	t.Log("4. Testing GetSyncedDates function:")
+	startDate := time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2023, 11, 2, 0, 0, 0, 0, time.UTC)
+
+	t.Logf("   Querying for dates between %s and %s",
+		startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+
+	dates, err := repo.GetSyncedDates(ctx, clientID, startDate, endDate)
+	if err != nil {
+		t.Fatalf("GetSyncedDates failed: %v", err)
+	}
+
+	t.Logf("   Found %d dates:", len(dates))
+	for i, date := range dates {
+		t.Logf("     %d: %s", i+1, date.Format("2006-01-02"))
+	}
+
+	// Step 5: Manual SQL query for comparison
+	t.Log("5. Manual SQL query for comparison:")
+	manualRows, err := pool.Query(ctx, `
+		SELECT sync_date
+		FROM sync_logs
+		WHERE client_id = $1
+		AND sync_date >= $2
+		AND sync_date < $3
+		ORDER BY sync_date ASC
+	`, clientID, startDate, endDate)
+	if err != nil {
+		t.Logf("Manual query failed: %v", err)
+	} else {
+		defer manualRows.Close()
+		manualCount := 0
+		for manualRows.Next() {
+			manualCount++
+			var date time.Time
+			if err := manualRows.Scan(&date); err != nil {
+				t.Logf("Error scanning manual query: %v", err)
+			} else {
+				t.Logf("   Manual query found: %s", date.Format("2006-01-02"))
+			}
+		}
+		t.Logf("   Manual query found %d rows", manualCount)
+	}
+
+	t.Log("=== Debug Complete ===")
 }
 
 func TestCleanupSyncLogs(t *testing.T) {

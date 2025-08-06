@@ -114,12 +114,14 @@ func (s *SyncService) StoreAccountState(ctx context.Context, accountID string, a
 		datesToSyncMap[date.Format("2006-01-02")] = true
 	}
 
-	for _, asset := range *accountState.Assets {
-		err = s.storeAsset(ctx, &asset)
-		if err != nil {
-			return fmt.Errorf("error storing asset %s: %w", asset.ID, err)
-		}
+	// First pass: collect all unique categories and assets for batch creation
+	err = s.storeAssetsInBatch(ctx, accountState.Assets)
+	if err != nil {
+		return fmt.Errorf("error storing assets in batch: %w", err)
+	}
 
+	// Second pass: store holdings and transactions for each asset
+	for _, asset := range *accountState.Assets {
 		// Filter holdings to only include dates in datesToSync
 		filteredHoldings := s.filterHoldingsByDates(asset.Holdings, datesToSyncMap)
 		logger.Infof("Filtered holdings for asset %s: %d out of %d", asset.ID, len(filteredHoldings), len(asset.Holdings))
@@ -164,41 +166,104 @@ func (s *SyncService) StoreAccountState(ctx context.Context, accountID string, a
 	return nil
 }
 
+// storeAssetsInBatch efficiently stores all categories and assets in batches
+func (s *SyncService) storeAssetsInBatch(ctx context.Context, assetsMap *map[string]schemas.Asset) error {
+	logger := utils.LoggerFromContext(ctx)
+	logger.Infof("Starting batch storage of %d assets", len(*assetsMap))
+
+	// Collect all unique categories
+	categoryMap := make(map[string]*models.AssetCategory)
+	for _, asset := range *assetsMap {
+		if _, exists := categoryMap[asset.Category]; !exists {
+			categoryMap[asset.Category] = &models.AssetCategory{
+				Name:        asset.Category,
+				Description: fmt.Sprintf("Category for %s assets", asset.Category),
+			}
+		}
+	}
+
+	// Create categories in batch
+	if len(categoryMap) > 0 {
+		categories := make([]models.AssetCategory, 0, len(categoryMap))
+		for _, category := range categoryMap {
+			categories = append(categories, *category)
+		}
+
+		logger.Infof("Creating %d categories in batch", len(categories))
+		err := s.assetCategoryRepository.CreateBatch(ctx, categories, nil)
+		if err != nil {
+			return fmt.Errorf("error creating asset categories in batch: %w", err)
+		}
+
+		// Update the category map with the created IDs by fetching them back
+		for categoryName := range categoryMap {
+			dbCategory, err := s.assetCategoryRepository.GetByName(ctx, categoryName)
+			if err != nil {
+				return fmt.Errorf("error getting created category %s: %w", categoryName, err)
+			}
+			if dbCategory != nil {
+				categoryMap[categoryName] = dbCategory
+			}
+		}
+	}
+
+	// Collect all assets for batch creation
+	assetsToCreate := make([]models.Asset, 0, len(*assetsMap))
+
+	for _, asset := range *assetsMap {
+		category := categoryMap[asset.Category]
+		if category == nil {
+			return fmt.Errorf("category %s not found after batch creation", asset.Category)
+		}
+
+		dbAsset := models.Asset{
+			ExternalID: asset.ID,
+			Name:       asset.Denomination,
+			AssetType:  asset.Type,
+			CategoryID: category.ID,
+			Currency:   utils.AssetCurrencyPesos,
+		}
+		assetsToCreate = append(assetsToCreate, dbAsset)
+	}
+
+	// Create assets in batch
+	if len(assetsToCreate) > 0 {
+		logger.Infof("Creating %d assets in batch", len(assetsToCreate))
+		err := s.assetRepository.CreateBatch(ctx, assetsToCreate, nil)
+		if err != nil {
+			return fmt.Errorf("error creating assets in batch: %w", err)
+		}
+
+		// Update the original assets with their new internal IDs
+		// We need to fetch them back since batch insert doesn't return IDs
+		allAssets, err := s.assetRepository.GetAll(ctx)
+		if err != nil {
+			return fmt.Errorf("error getting assets after batch creation: %w", err)
+		}
+
+		// Create a map for quick lookup of internal IDs by external ID
+		externalToInternalID := make(map[string]int)
+		for _, dbAsset := range allAssets {
+			externalToInternalID[dbAsset.ExternalID] = dbAsset.ID
+		}
+
+		// Update the original assets map with internal IDs
+		for externalID, asset := range *assetsMap {
+			if internalID, exists := externalToInternalID[asset.ID]; exists {
+				asset.ID = strconv.Itoa(internalID)
+				(*assetsMap)[externalID] = asset
+			}
+		}
+	}
+
+	logger.Infof("Successfully completed batch storage of assets")
+	return nil
+}
+
 func (s *SyncService) markDatesAsSynced(ctx context.Context, accountID string, dates []time.Time) error {
 	logger := utils.LoggerFromContext(ctx)
 	logger.Infof("Marking dates as synced for account %s", accountID)
 	return s.syncLogRepository.MarkClientForDates(ctx, accountID, dates)
-}
-
-func (s *SyncService) storeAsset(ctx context.Context, asset *schemas.Asset) error {
-	logger := utils.LoggerFromContext(ctx)
-	logger.Infof("Storing asset %s", asset.ID)
-	dbAssetCategory, err := s.assetCategoryRepository.GetByName(ctx, asset.Category)
-	if err != nil {
-		return fmt.Errorf("error getting asset category: %w", err)
-	}
-	if dbAssetCategory == nil {
-		dbAssetCategory = &models.AssetCategory{
-			Name: asset.Category,
-		}
-		err = s.assetCategoryRepository.Create(ctx, dbAssetCategory, nil)
-		if err != nil {
-			return fmt.Errorf("error creating asset category: %w", err)
-		}
-	}
-	dbAsset := models.Asset{
-		ExternalID: asset.ID,
-		Name:       asset.Denomination,
-		AssetType:  asset.Type,
-		CategoryID: dbAssetCategory.ID,
-		Currency:   utils.AssetCurrencyPesos,
-	}
-	err = s.assetRepository.Create(ctx, &dbAsset, nil)
-	if err != nil {
-		return fmt.Errorf("error creating asset: %w", err)
-	}
-	asset.ID = strconv.Itoa(dbAsset.ID)
-	return nil
 }
 
 func (s *SyncService) storeHoldings(ctx context.Context, accountID, assetID string, holdings []schemas.Holding) error {
@@ -208,18 +273,20 @@ func (s *SyncService) storeHoldings(ctx context.Context, accountID, assetID stri
 	if err != nil {
 		return err
 	}
+	holdingsToCreate := make([]models.Holding, 0)
 	for _, holding := range holdings {
-		err := s.holdingRepository.Create(ctx, &models.Holding{
+		holdingsToCreate = append(holdingsToCreate, models.Holding{
 			ClientID:  accountID,
 			AssetID:   assetIDInt,
 			Value:     holding.Value,
 			Units:     holding.Units,
 			Date:      *holding.DateRequested,
 			CreatedAt: time.Now(),
-		}, nil)
-		if err != nil {
-			return fmt.Errorf("error creating holding: %w", err)
-		}
+		})
+	}
+	err = s.holdingRepository.CreateBatch(ctx, holdingsToCreate, nil)
+	if err != nil {
+		return fmt.Errorf("error creating holding: %w", err)
 	}
 	return nil
 }
@@ -231,17 +298,19 @@ func (s *SyncService) storeTransactions(ctx context.Context, accountID, assetID 
 	if err != nil {
 		return fmt.Errorf("error creating transaction: %w", err)
 	}
+	transactionsToCreate := make([]models.Transaction, 0)
 	for _, transaction := range transactions {
-		err = s.transactionRepository.Create(ctx, &models.Transaction{
+		transactionsToCreate = append(transactionsToCreate, models.Transaction{
 			ClientID:  accountID,
 			AssetID:   assetIDInt,
 			Units:     transaction.Units,
 			Date:      *transaction.Date,
 			CreatedAt: time.Now(),
-		}, nil)
-		if err != nil {
-			return fmt.Errorf("error creating transaction: %w", err)
-		}
+		})
+	}
+	err = s.transactionRepository.CreateBatch(ctx, transactionsToCreate, nil)
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
 	}
 	return nil
 }

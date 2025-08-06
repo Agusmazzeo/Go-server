@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"server/src/models"
@@ -16,6 +18,7 @@ type TransactionRepository interface {
 	GetGroupedByCategoryAndDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]map[string]float64, error)
 	GetTotalByDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]float64, error)
 	Create(ctx context.Context, t *models.Transaction, tx pgx.Tx) error
+	CreateBatch(ctx context.Context, transactions []models.Transaction, tx pgx.Tx) error
 	DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error
 }
 
@@ -197,6 +200,55 @@ func (r *transactionRepo) Create(ctx context.Context, t *models.Transaction, tx 
 	return tx.QueryRow(ctx, query,
 		t.ClientID, t.AssetID, t.TransactionType, t.Units, t.PricePerUnit, t.TotalValue, t.Date,
 	).Scan(&t.ID)
+}
+
+func (r *transactionRepo) CreateBatch(ctx context.Context, transactions []models.Transaction, tx pgx.Tx) error {
+	if len(transactions) == 0 {
+		return nil
+	}
+
+	// Build the batch insert query
+	query := `
+		INSERT INTO transactions (client_id, asset_id, transaction_type, units, price_per_unit, total_value, date)
+		VALUES `
+
+	// Build value placeholders and arguments
+	args := make([]interface{}, 0, len(transactions)*7)
+	valueStrings := make([]string, 0, len(transactions))
+
+	for i, transaction := range transactions {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			i*7+1, i*7+2, i*7+3, i*7+4, i*7+5, i*7+6, i*7+7))
+		args = append(args, transaction.ClientID, transaction.AssetID, transaction.TransactionType,
+			transaction.Units, transaction.PricePerUnit, transaction.TotalValue, transaction.Date)
+	}
+
+	query += strings.Join(valueStrings, ",")
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, args...)
+	return err
 }
 
 func (r *transactionRepo) DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error {

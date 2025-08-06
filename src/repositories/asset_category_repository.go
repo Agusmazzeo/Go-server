@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"server/src/models"
 
@@ -15,6 +17,7 @@ type AssetCategoryRepository interface {
 	GetByName(ctx context.Context, name string) (*models.AssetCategory, error)
 
 	Create(ctx context.Context, ac *models.AssetCategory, tx pgx.Tx) error
+	CreateBatch(ctx context.Context, categories []models.AssetCategory, tx pgx.Tx) error
 }
 
 type assetCategoryRepo struct {
@@ -116,4 +119,54 @@ func (r *assetCategoryRepo) Create(ctx context.Context, ac *models.AssetCategory
 
 	// Use the provided transaction
 	return tx.QueryRow(ctx, query, ac.Name, ac.Description).Scan(&ac.ID)
+}
+
+func (r *assetCategoryRepo) CreateBatch(ctx context.Context, categories []models.AssetCategory, tx pgx.Tx) error {
+	if len(categories) == 0 {
+		return nil
+	}
+
+	// Build the batch insert query
+	query := `
+		INSERT INTO asset_categories (name, description)
+		VALUES `
+
+	// Build value placeholders and arguments
+	args := make([]interface{}, 0, len(categories)*2)
+	valueStrings := make([]string, 0, len(categories))
+
+	for i, category := range categories {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+		args = append(args, category.Name, category.Description)
+	}
+
+	query += strings.Join(valueStrings, ",")
+	query += `
+		ON CONFLICT (name) DO UPDATE SET
+			description = EXCLUDED.description`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, args...)
+	return err
 }

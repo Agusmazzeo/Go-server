@@ -2,6 +2,7 @@ package repositories_test
 
 import (
 	"context"
+	"fmt"
 	"server/src/models"
 	"server/src/repositories"
 	"testing"
@@ -197,4 +198,218 @@ func TestTransactionRepository_DeleteByClientIDAndDateRange(t *testing.T) {
 	err = pool.QueryRow(ctx, "SELECT date FROM transactions WHERE client_id = $1", clientID).Scan(&remainingDate)
 	assert.NoError(t, err)
 	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
+}
+
+func TestTransactionRepository_CreateBatch(t *testing.T) {
+	// Setup test database connection
+	db := init_test.SetupTestDB(t)
+
+	// Create repository instances
+	repo := repositories.NewTransactionRepository(db)
+	assetRepo := repositories.NewAssetRepository(db)
+	categoryRepo := repositories.NewAssetCategoryRepository(db)
+
+	ctx := context.Background()
+	clientID := "test-client-batch-tx"
+
+	// Cleanup test data after test
+	defer func() {
+		init_test.CleanupTestDataByClientID(t, db, clientID)
+		init_test.CleanupTestDataByAssetName(t, db, "Batch TX Asset 1")
+		init_test.CleanupTestDataByAssetName(t, db, "Batch TX Asset 2")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Batch TX Category")
+	}()
+
+	// Create test category
+	category := &models.AssetCategory{
+		Name:        "Batch TX Category",
+		Description: "Category for batch transaction testing",
+	}
+	err := categoryRepo.Create(ctx, category, nil)
+	require.NoError(t, err)
+
+	// Create test assets
+	asset1 := &models.Asset{
+		ExternalID: "BATCH-TX-001",
+		Name:       "Batch TX Asset 1",
+		AssetType:  "STOCK",
+		CategoryID: category.ID,
+		Currency:   "USD",
+	}
+	err = assetRepo.Create(ctx, asset1, nil)
+	require.NoError(t, err)
+
+	asset2 := &models.Asset{
+		ExternalID: "BATCH-TX-002",
+		Name:       "Batch TX Asset 2",
+		AssetType:  "BOND",
+		CategoryID: category.ID,
+		Currency:   "USD",
+	}
+	err = assetRepo.Create(ctx, asset2, nil)
+	require.NoError(t, err)
+
+	t.Run("CreateBatch with multiple transactions", func(t *testing.T) {
+		// Create batch of transactions
+		transactions := []models.Transaction{
+			{
+				ClientID:        clientID,
+				AssetID:         asset1.ID,
+				TransactionType: "BUY",
+				Units:           100.0,
+				PricePerUnit:    10.0,
+				TotalValue:      1000.0,
+				Date:            time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				ClientID:        clientID,
+				AssetID:         asset2.ID,
+				TransactionType: "BUY",
+				Units:           50.0,
+				PricePerUnit:    10.0,
+				TotalValue:      500.0,
+				Date:            time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				ClientID:        clientID,
+				AssetID:         asset1.ID,
+				TransactionType: "SELL",
+				Units:           25.0,
+				PricePerUnit:    12.0,
+				TotalValue:      300.0,
+				Date:            time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		// Execute batch create
+		err := repo.CreateBatch(ctx, transactions, nil)
+		require.NoError(t, err)
+
+		// Verify all transactions were created
+		startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC)
+
+		createdTransactions, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdTransactions, 3)
+
+		// Verify the transactions have correct data
+		transactionMap := make(map[string]models.Transaction)
+		for _, tx := range createdTransactions {
+			key := fmt.Sprintf("%d-%s-%s", tx.AssetID, tx.TransactionType, tx.Date.Format("2006-01-02"))
+			transactionMap[key] = tx
+		}
+
+		// Check first transaction
+		key1 := fmt.Sprintf("%d-%s-%s", asset1.ID, "BUY", "2024-01-01")
+		tx1, exists := transactionMap[key1]
+		assert.True(t, exists)
+		assert.Equal(t, 100.0, tx1.Units)
+		assert.Equal(t, 10.0, tx1.PricePerUnit)
+		assert.Equal(t, 1000.0, tx1.TotalValue)
+
+		// Check second transaction
+		key2 := fmt.Sprintf("%d-%s-%s", asset2.ID, "BUY", "2024-01-01")
+		tx2, exists := transactionMap[key2]
+		assert.True(t, exists)
+		assert.Equal(t, 50.0, tx2.Units)
+		assert.Equal(t, 10.0, tx2.PricePerUnit)
+		assert.Equal(t, 500.0, tx2.TotalValue)
+
+		// Check third transaction
+		key3 := fmt.Sprintf("%d-%s-%s", asset1.ID, "SELL", "2024-01-02")
+		tx3, exists := transactionMap[key3]
+		assert.True(t, exists)
+		assert.Equal(t, 25.0, tx3.Units)
+		assert.Equal(t, 12.0, tx3.PricePerUnit)
+		assert.Equal(t, 300.0, tx3.TotalValue)
+	})
+
+	t.Run("CreateBatch with empty array", func(t *testing.T) {
+		// Should handle empty array gracefully
+		err := repo.CreateBatch(ctx, []models.Transaction{}, nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("CreateBatch with transaction context", func(t *testing.T) {
+		// Test with explicit transaction
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer tx.Rollback(ctx)
+
+		transactions := []models.Transaction{
+			{
+				ClientID:        clientID,
+				AssetID:         asset1.ID,
+				TransactionType: "BUY",
+				Units:           75.0,
+				PricePerUnit:    15.0,
+				TotalValue:      1125.0,
+				Date:            time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		err = repo.CreateBatch(ctx, transactions, tx)
+		require.NoError(t, err)
+
+		// Commit the transaction
+		err = tx.Commit(ctx)
+		require.NoError(t, err)
+
+		// Verify the transaction was created
+		startDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 11, 0, 0, 0, 0, time.UTC)
+
+		createdTransactions, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdTransactions, 1)
+		assert.Equal(t, 75.0, createdTransactions[0].Units)
+		assert.Equal(t, 15.0, createdTransactions[0].PricePerUnit)
+		assert.Equal(t, 1125.0, createdTransactions[0].TotalValue)
+	})
+
+	t.Run("CreateBatch with large batch", func(t *testing.T) {
+		// Test with a larger batch to verify performance
+		batchSize := 100
+		transactions := make([]models.Transaction, batchSize)
+
+		for i := 0; i < batchSize; i++ {
+			transactions[i] = models.Transaction{
+				ClientID:        clientID,
+				AssetID:         asset1.ID,
+				TransactionType: "BUY",
+				Units:           float64(i + 1),
+				PricePerUnit:    10.0,
+				TotalValue:      float64((i + 1) * 10),
+				Date:            time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC),
+			}
+		}
+
+		// Execute batch create
+		err := repo.CreateBatch(ctx, transactions, nil)
+		require.NoError(t, err)
+
+		// Verify all transactions were created
+		startDate := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 2, 2, 0, 0, 0, 0, time.UTC)
+
+		createdTransactions, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdTransactions, batchSize)
+
+		// Verify some sample transactions
+		assert.Equal(t, 1.0, createdTransactions[0].Units)
+		assert.Equal(t, 10.0, createdTransactions[0].TotalValue)
+
+		// Find the last transaction (should have units = 100)
+		var lastTransaction *models.Transaction
+		for _, tx := range createdTransactions {
+			if tx.Units == 100.0 {
+				lastTransaction = &tx
+				break
+			}
+		}
+		require.NotNil(t, lastTransaction)
+		assert.Equal(t, 1000.0, lastTransaction.TotalValue)
+	})
 }

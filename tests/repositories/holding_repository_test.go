@@ -2,6 +2,7 @@ package repositories_test
 
 import (
 	"context"
+	"fmt"
 	"server/src/models"
 	"server/src/repositories"
 	"testing"
@@ -191,4 +192,216 @@ func TestHoldingRepository_DeleteByClientIDAndDateRange(t *testing.T) {
 	err = pool.QueryRow(ctx, "SELECT date FROM holdings WHERE client_id = $1", clientID).Scan(&remainingDate)
 	assert.NoError(t, err)
 	assert.Equal(t, time.Date(2024, 1, 4, 0, 0, 0, 0, time.UTC), remainingDate)
+}
+
+func TestHoldingRepository_CreateBatch(t *testing.T) {
+	// Setup test database connection
+	db := init_test.SetupTestDB(t)
+
+	// Create repository instances
+	repo := repositories.NewHoldingRepository(db)
+	assetRepo := repositories.NewAssetRepository(db)
+	categoryRepo := repositories.NewAssetCategoryRepository(db)
+
+	ctx := context.Background()
+	clientID := "test-client-batch"
+
+	// Cleanup test data after test
+	defer func() {
+		init_test.CleanupTestDataByClientID(t, db, clientID)
+		init_test.CleanupTestDataByAssetName(t, db, "Batch Asset 1")
+		init_test.CleanupTestDataByAssetName(t, db, "Batch Asset 2")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Batch Category")
+	}()
+
+	// Create test category
+	category := &models.AssetCategory{
+		Name:        "Batch Category",
+		Description: "Category for batch testing",
+	}
+	err := categoryRepo.Create(ctx, category, nil)
+	require.NoError(t, err)
+
+	// Create test assets
+	asset1 := &models.Asset{
+		ExternalID: "BATCH-001",
+		Name:       "Batch Asset 1",
+		AssetType:  "STOCK",
+		CategoryID: category.ID,
+		Currency:   "USD",
+	}
+	err = assetRepo.Create(ctx, asset1, nil)
+	require.NoError(t, err)
+
+	asset2 := &models.Asset{
+		ExternalID: "BATCH-002",
+		Name:       "Batch Asset 2",
+		AssetType:  "BOND",
+		CategoryID: category.ID,
+		Currency:   "USD",
+	}
+	err = assetRepo.Create(ctx, asset2, nil)
+	require.NoError(t, err)
+
+	t.Run("CreateBatch with multiple holdings", func(t *testing.T) {
+		// Create batch of holdings
+		holdings := []models.Holding{
+			{
+				ClientID: clientID,
+				AssetID:  asset1.ID,
+				Units:    100.0,
+				Value:    1000.0,
+				Date:     time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				ClientID: clientID,
+				AssetID:  asset2.ID,
+				Units:    50.0,
+				Value:    500.0,
+				Date:     time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				ClientID: clientID,
+				AssetID:  asset1.ID,
+				Units:    200.0,
+				Value:    2000.0,
+				Date:     time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		// Execute batch create
+		err := repo.CreateBatch(ctx, holdings, nil)
+		require.NoError(t, err)
+
+		// Verify all holdings were created
+		startDate := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 3, 0, 0, 0, 0, time.UTC)
+
+		createdHoldings, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdHoldings, 3)
+
+		// Verify the holdings have correct data
+		holdingMap := make(map[string]models.Holding)
+		for _, h := range createdHoldings {
+			key := fmt.Sprintf("%d-%s", h.AssetID, h.Date.Format("2006-01-02"))
+			holdingMap[key] = h
+		}
+
+		// Check first holding
+		key1 := fmt.Sprintf("%d-%s", asset1.ID, "2024-01-01")
+		holding1, exists := holdingMap[key1]
+		assert.True(t, exists)
+		assert.Equal(t, 100.0, holding1.Units)
+		assert.Equal(t, 1000.0, holding1.Value)
+
+		// Check second holding
+		key2 := fmt.Sprintf("%d-%s", asset2.ID, "2024-01-01")
+		holding2, exists := holdingMap[key2]
+		assert.True(t, exists)
+		assert.Equal(t, 50.0, holding2.Units)
+		assert.Equal(t, 500.0, holding2.Value)
+
+		// Check third holding
+		key3 := fmt.Sprintf("%d-%s", asset1.ID, "2024-01-02")
+		holding3, exists := holdingMap[key3]
+		assert.True(t, exists)
+		assert.Equal(t, 200.0, holding3.Units)
+		assert.Equal(t, 2000.0, holding3.Value)
+	})
+
+	t.Run("CreateBatch with conflict resolution", func(t *testing.T) {
+		// First, create a holding
+		initialHolding := models.Holding{
+			ClientID: clientID,
+			AssetID:  asset1.ID,
+			Units:    75.0,
+			Value:    750.0,
+			Date:     time.Date(2024, 1, 5, 0, 0, 0, 0, time.UTC),
+		}
+		err := repo.Create(ctx, &initialHolding, nil)
+		require.NoError(t, err)
+
+		// Now create a batch with a conflicting holding (same client_id, asset_id, date)
+		holdings := []models.Holding{
+			{
+				ClientID: clientID,
+				AssetID:  asset1.ID,
+				Units:    150.0, // Different values
+				Value:    1500.0,
+				Date:     time.Date(2024, 1, 5, 0, 0, 0, 0, time.UTC), // Same date as initial
+			},
+			{
+				ClientID: clientID,
+				AssetID:  asset2.ID,
+				Units:    25.0,
+				Value:    250.0,
+				Date:     time.Date(2024, 1, 5, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		// Execute batch create - should update the existing holding
+		err = repo.CreateBatch(ctx, holdings, nil)
+		require.NoError(t, err)
+
+		// Verify the conflict was resolved (updated, not duplicated)
+		startDate := time.Date(2024, 1, 5, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 6, 0, 0, 0, 0, time.UTC)
+
+		createdHoldings, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdHoldings, 2) // Should have exactly 2 holdings, not 3
+
+		// Find the updated holding
+		var updatedHolding *models.Holding
+		for _, h := range createdHoldings {
+			if h.AssetID == asset1.ID {
+				updatedHolding = &h
+				break
+			}
+		}
+
+		require.NotNil(t, updatedHolding)
+		assert.Equal(t, 150.0, updatedHolding.Units) // Should have the new values
+		assert.Equal(t, 1500.0, updatedHolding.Value)
+	})
+
+	t.Run("CreateBatch with empty array", func(t *testing.T) {
+		// Should handle empty array gracefully
+		err := repo.CreateBatch(ctx, []models.Holding{}, nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("CreateBatch with transaction", func(t *testing.T) {
+		// Test with explicit transaction
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer tx.Rollback(ctx)
+
+		holdings := []models.Holding{
+			{
+				ClientID: clientID,
+				AssetID:  asset1.ID,
+				Units:    300.0,
+				Value:    3000.0,
+				Date:     time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		err = repo.CreateBatch(ctx, holdings, tx)
+		require.NoError(t, err)
+
+		// Commit the transaction
+		err = tx.Commit(ctx)
+		require.NoError(t, err)
+
+		// Verify the holding was created
+		startDate := time.Date(2024, 1, 10, 0, 0, 0, 0, time.UTC)
+		endDate := time.Date(2024, 1, 11, 0, 0, 0, 0, time.UTC)
+
+		createdHoldings, err := repo.GetByClientID(ctx, clientID, startDate, endDate)
+		require.NoError(t, err)
+		assert.Len(t, createdHoldings, 1)
+		assert.Equal(t, 300.0, createdHoldings[0].Units)
+	})
 }

@@ -2,8 +2,10 @@ package repositories_test
 
 import (
 	"context"
+	"fmt"
 	"server/src/models"
 	"server/src/repositories"
+	"strings"
 	"testing"
 
 	"server/tests/init_test"
@@ -100,5 +102,168 @@ func TestAssetCategoryRepository(t *testing.T) {
 
 		// Cleanup after this subtest
 		init_test.CleanupTestDataByClientID(t, db, "test-client")
+	})
+}
+
+func TestAssetCategoryRepository_CreateBatch(t *testing.T) {
+	// Setup test database connection
+	db := init_test.SetupTestDB(t)
+
+	// Create repository instance
+	repo := repositories.NewAssetCategoryRepository(db)
+
+	ctx := context.Background()
+
+	// Cleanup test data after test
+	defer func() {
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Batch Category 1")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Batch Category 2")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Batch Category 3")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Large Batch Category 1")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "Large Batch Category 50")
+		init_test.CleanupTestDataByAssetCategoryName(t, db, "TX Category")
+	}()
+
+	t.Run("CreateBatch with multiple categories", func(t *testing.T) {
+		// Create batch of categories
+		categories := []models.AssetCategory{
+			{
+				Name:        "Batch Category 1",
+				Description: "First batch category",
+			},
+			{
+				Name:        "Batch Category 2",
+				Description: "Second batch category",
+			},
+			{
+				Name:        "Batch Category 3",
+				Description: "Third batch category",
+			},
+		}
+
+		// Execute batch create
+		err := repo.CreateBatch(ctx, categories, nil)
+		require.NoError(t, err)
+
+		// Verify all categories were created
+		for _, expectedCategory := range categories {
+			category, err := repo.GetByName(ctx, expectedCategory.Name)
+			require.NoError(t, err)
+			assert.NotNil(t, category)
+			assert.Equal(t, expectedCategory.Name, category.Name)
+			assert.Equal(t, expectedCategory.Description, category.Description)
+			assert.NotZero(t, category.ID)
+		}
+	})
+
+	t.Run("CreateBatch with conflict resolution", func(t *testing.T) {
+		// First, create a category
+		initialCategories := []models.AssetCategory{
+			{
+				Name:        "Batch Category 1",
+				Description: "Original description",
+			},
+		}
+
+		err := repo.CreateBatch(ctx, initialCategories, nil)
+		require.NoError(t, err)
+
+		// Get the original category to check ID
+		originalCategory, err := repo.GetByName(ctx, "Batch Category 1")
+		require.NoError(t, err)
+		require.NotNil(t, originalCategory)
+
+		// Now create batch with same name but different description (should update)
+		conflictCategories := []models.AssetCategory{
+			{
+				Name:        "Batch Category 1",    // Same name
+				Description: "Updated description", // Different description
+			},
+		}
+
+		err = repo.CreateBatch(ctx, conflictCategories, nil)
+		require.NoError(t, err)
+
+		// Verify the category was updated, not duplicated
+		updatedCategory, err := repo.GetByName(ctx, "Batch Category 1")
+		require.NoError(t, err)
+		assert.NotNil(t, updatedCategory)
+		assert.Equal(t, originalCategory.ID, updatedCategory.ID)            // Same ID
+		assert.Equal(t, "Updated description", updatedCategory.Description) // Updated description
+	})
+
+	t.Run("CreateBatch with empty array", func(t *testing.T) {
+		// Should handle empty array gracefully
+		err := repo.CreateBatch(ctx, []models.AssetCategory{}, nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("CreateBatch with transaction context", func(t *testing.T) {
+		// Test with explicit transaction
+		tx, err := db.Begin(ctx)
+		require.NoError(t, err)
+		defer tx.Rollback(ctx)
+
+		categories := []models.AssetCategory{
+			{
+				Name:        "TX Category",
+				Description: "Category created in transaction",
+			},
+		}
+
+		err = repo.CreateBatch(ctx, categories, tx)
+		require.NoError(t, err)
+
+		// Commit the transaction
+		err = tx.Commit(ctx)
+		require.NoError(t, err)
+
+		// Verify the category was created
+		category, err := repo.GetByName(ctx, "TX Category")
+		require.NoError(t, err)
+		assert.NotNil(t, category)
+		assert.Equal(t, "TX Category", category.Name)
+		assert.Equal(t, "Category created in transaction", category.Description)
+	})
+
+	t.Run("CreateBatch with large batch", func(t *testing.T) {
+		// Test with a larger batch to verify performance
+		batchSize := 50
+		categories := make([]models.AssetCategory, batchSize)
+
+		for i := 0; i < batchSize; i++ {
+			categories[i] = models.AssetCategory{
+				Name:        fmt.Sprintf("Large Batch Category %d", i+1),
+				Description: fmt.Sprintf("Description for category %d", i+1),
+			}
+		}
+
+		// Execute batch create
+		err := repo.CreateBatch(ctx, categories, nil)
+		require.NoError(t, err)
+
+		// Verify some sample categories were created
+		firstCategory, err := repo.GetByName(ctx, "Large Batch Category 1")
+		require.NoError(t, err)
+		assert.NotNil(t, firstCategory)
+		assert.Equal(t, "Description for category 1", firstCategory.Description)
+
+		lastCategory, err := repo.GetByName(ctx, "Large Batch Category 50")
+		require.NoError(t, err)
+		assert.NotNil(t, lastCategory)
+		assert.Equal(t, "Description for category 50", lastCategory.Description)
+
+		// Verify all categories exist
+		allCategories, err := repo.GetAll(ctx)
+		require.NoError(t, err)
+
+		// Count how many of our test categories exist
+		testCategoryCount := 0
+		for _, category := range allCategories {
+			if strings.Contains(category.Name, "Large Batch Category") {
+				testCategoryCount++
+			}
+		}
+		assert.Equal(t, batchSize, testCategoryCount)
 	})
 }

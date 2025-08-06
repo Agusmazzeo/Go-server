@@ -17,7 +17,7 @@ import (
 
 // HandleGenerateXLSX is the HTTP handler to generate an Excel file
 func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.LONG_TIMEOUT)
 	defer cancel()
 	ctx = utils.WithLogger(ctx, h.Logger)
 
@@ -90,7 +90,7 @@ func (h *Handler) GetReportByIDs(w http.ResponseWriter, r *http.Request) {
 
 // HandleGenerateXLSX is the HTTP handler to generate an Excel file
 func (h *Handler) GetReportFileByIDs(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.LONG_TIMEOUT)
 	defer cancel()
 	location, _ := time.LoadLocation("America/Argentina/Buenos_Aires")
 
@@ -182,7 +182,7 @@ func (h *Handler) GetReportFileByIDs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.LONG_TIMEOUT)
 	defer cancel()
 
 	_, err := h.ReportScheduleController.GetAllReportSchedules(ctx)
@@ -196,7 +196,7 @@ func (h *Handler) GetAllReportSchedules(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.LONG_TIMEOUT)
 	defer cancel()
 
 	// Get the ID from the URL parameter
@@ -218,7 +218,7 @@ func (h *Handler) GetReportScheduleByID(w http.ResponseWriter, r *http.Request) 
 
 // CreateReportSchedule creates a new report schedule
 func (h *Handler) CreateReportSchedule(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.SHORT_TIMEOUT)
 	defer cancel()
 
 	var reportSchedule schemas.CreateReportScheduleRequest
@@ -238,7 +238,7 @@ func (h *Handler) CreateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 // UpdateReportSchedule updates an existing report schedule
 func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.SHORT_TIMEOUT)
 	defer cancel()
 
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
@@ -266,7 +266,7 @@ func (h *Handler) UpdateReportSchedule(w http.ResponseWriter, r *http.Request) {
 
 // DeleteReportSchedule deletes an existing report schedule
 func (h *Handler) DeleteReportSchedule(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), utils.SHORT_TIMEOUT)
 	defer cancel()
 
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))

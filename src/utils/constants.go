@@ -1,5 +1,7 @@
 package utils
 
+import "time"
+
 const ShortSlashDateLayout = "2006/01/02"
 const ShortDashDateLayout = "2006-01-02"
 
@@ -37,3 +39,8 @@ var ChartColors = []string{
 func GetChartColor(index int) string {
 	return ChartColors[index%len(ChartColors)]
 }
+
+const (
+	SHORT_TIMEOUT = 10 * time.Second
+	LONG_TIMEOUT  = 30 * time.Second
+)

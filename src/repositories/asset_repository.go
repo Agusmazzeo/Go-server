@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"server/src/models"
 
@@ -15,6 +17,7 @@ type AssetRepository interface {
 	GetByIDs(ctx context.Context, ids []int) ([]models.Asset, error)
 	GetWithCategories(ctx context.Context) ([]models.AssetWithCategory, error)
 	Create(ctx context.Context, asset *models.Asset, tx pgx.Tx) error
+	CreateBatch(ctx context.Context, assets []models.Asset, tx pgx.Tx) error
 }
 
 type assetRepo struct {
@@ -148,4 +151,58 @@ func (r *assetRepo) Create(ctx context.Context, asset *models.Asset, tx pgx.Tx) 
 	return tx.QueryRow(ctx, query,
 		asset.ExternalID, asset.Name, asset.AssetType, asset.CategoryID, asset.Currency,
 	).Scan(&asset.ID)
+}
+
+func (r *assetRepo) CreateBatch(ctx context.Context, assets []models.Asset, tx pgx.Tx) error {
+	if len(assets) == 0 {
+		return nil
+	}
+
+	// Build the batch insert query
+	query := `
+		INSERT INTO assets (external_id, name, asset_type, category_id, currency)
+		VALUES `
+
+	// Build value placeholders and arguments
+	args := make([]interface{}, 0, len(assets)*5)
+	valueStrings := make([]string, 0, len(assets))
+
+	for i, asset := range assets {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			i*5+1, i*5+2, i*5+3, i*5+4, i*5+5))
+		args = append(args, asset.ExternalID, asset.Name, asset.AssetType, asset.CategoryID, asset.Currency)
+	}
+
+	query += strings.Join(valueStrings, ",")
+	query += `
+		ON CONFLICT (external_id) DO UPDATE SET
+			name = EXCLUDED.name,
+			asset_type = EXCLUDED.asset_type,
+			category_id = EXCLUDED.category_id,
+			currency = EXCLUDED.currency`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, args...)
+	return err
 }

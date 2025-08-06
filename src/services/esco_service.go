@@ -66,8 +66,8 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 	wg.Add(2)
 
 	var accountState *schemas.AccountState
-	var liquidaciones *schemas.AccountState
-	var boletos *schemas.AccountState
+	// var liquidaciones *schemas.AccountState
+	// var boletos *schemas.AccountState
 	var instrumentos *schemas.AccountState
 
 	go func() {
@@ -143,18 +143,18 @@ func (s *ESCOService) GetAccountStateWithTransactions(ctx context.Context, token
 
 	for id := range *accountState.Assets {
 		asset := (*accountState.Assets)[id]
-		if boletos != nil {
-			if boleto, ok := (*boletos.Assets)[id]; ok {
-				asset.Transactions = append(asset.Transactions, boleto.Transactions...)
-				(*accountState.Assets)[id] = asset
-			}
-		}
-		if liquidaciones != nil {
-			if liquidacion, ok := (*liquidaciones.Assets)[id]; ok {
-				asset.Transactions = append(asset.Transactions, liquidacion.Transactions...)
-				(*accountState.Assets)[id] = asset
-			}
-		}
+		// if boletos != nil {
+		// 	if boleto, ok := (*boletos.Assets)[id]; ok {
+		// 		asset.Transactions = append(asset.Transactions, boleto.Transactions...)
+		// 		(*accountState.Assets)[id] = asset
+		// 	}
+		// }
+		// if liquidaciones != nil {
+		// 	if liquidacion, ok := (*liquidaciones.Assets)[id]; ok {
+		// 		asset.Transactions = append(asset.Transactions, liquidacion.Transactions...)
+		// 		(*accountState.Assets)[id] = asset
+		// 	}
+		// }
 		if instrumentos != nil {
 			if instrumento, ok := (*instrumentos.Assets)[id]; ok {
 				asset.Transactions = append(asset.Transactions, instrumento.Transactions...)

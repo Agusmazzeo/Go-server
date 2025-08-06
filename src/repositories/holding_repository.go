@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"server/src/models"
@@ -16,6 +18,7 @@ type HoldingRepository interface {
 	GetGroupedByCategoryAndDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]map[string]float64, error)
 	GetTotalByDate(ctx context.Context, clientIDs []string, startDate, endDate time.Time) (map[string]float64, error)
 	Create(ctx context.Context, h *models.Holding, tx pgx.Tx) error
+	CreateBatch(ctx context.Context, holdings []models.Holding, tx pgx.Tx) error
 	DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error
 }
 
@@ -200,6 +203,58 @@ func (r *holdingRepo) Create(ctx context.Context, h *models.Holding, tx pgx.Tx) 
 	return tx.QueryRow(ctx, query,
 		h.ClientID, h.AssetID, h.Units, h.Value, h.Date,
 	).Scan(&h.ID)
+}
+
+func (r *holdingRepo) CreateBatch(ctx context.Context, holdings []models.Holding, tx pgx.Tx) error {
+	if len(holdings) == 0 {
+		return nil
+	}
+
+	// Build the batch insert query with conflict resolution
+	query := `
+		INSERT INTO holdings (client_id, asset_id, units, value, date)
+		VALUES `
+
+	// Build value placeholders and arguments
+	args := make([]interface{}, 0, len(holdings)*5)
+	valueStrings := make([]string, 0, len(holdings))
+
+	for i, holding := range holdings {
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
+			i*5+1, i*5+2, i*5+3, i*5+4, i*5+5))
+		args = append(args, holding.ClientID, holding.AssetID, holding.Units, holding.Value, holding.Date)
+	}
+
+	query += strings.Join(valueStrings, ",")
+	query += `
+		ON CONFLICT (client_id, asset_id, date) DO UPDATE SET
+			units = EXCLUDED.units,
+			value = EXCLUDED.value`
+
+	var err error
+	if tx == nil {
+		// If no transaction is provided, create a new one
+		tx, err = r.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err != nil {
+				_ = tx.Rollback(ctx)
+			}
+		}()
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			return err
+		}
+
+		return tx.Commit(ctx)
+	}
+
+	// Use the provided transaction
+	_, err = tx.Exec(ctx, query, args...)
+	return err
 }
 
 func (r *holdingRepo) DeleteByClientIDAndDateRange(ctx context.Context, clientID string, startDate, endDate time.Time, tx pgx.Tx) error {
