@@ -526,6 +526,25 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			units = -ins.N
 			value = 0
 			categoryKey = id
+		} else if strings.Contains(ins.D, "MINISTERIO") && ins.TI == "Instrumentos" {
+			idSplit := strings.Split(ins.I, " - ")
+			id = strings.Split(idSplit[len(idSplit)-1], " /")[0]
+			if id == "$" {
+				continue
+			}
+			currencySign = "$"
+			units = -ins.C
+			value = 0
+			categoryKey = id
+		} else if strings.Contains(ins.D, "Transferencia Interna") && ins.TI == "Instrumentos" {
+			id = strings.Split(strings.Split(ins.I, " - ")[1], " /")[0]
+			if id == "$" {
+				continue
+			}
+			currencySign = "$"
+			units = -ins.C
+			value = 0
+			categoryKey = id
 		} else if strings.Contains(ins.D, "Boleto") && ins.TI == "Instrumentos" {
 			denominationSplit := strings.Split(ins.D, " / ")
 			if len(denominationSplit) < 5 {
@@ -535,6 +554,15 @@ func (s *ESCOService) parseInstrumentosRecoveriesToAccountState(instrumentos *[]
 			currencySign = "$"
 			units = -ins.C
 			value = ins.N
+			categoryKey = id
+		} else if strings.Contains(ins.D, "Boleto") && ins.TI == "Monedas" {
+			id = strings.Split(ins.I, " - ")[1]
+			if id == "$" {
+				continue
+			}
+			currencySign = "USD"
+			units = -ins.N
+			value = 0
 			categoryKey = id
 		} else if strings.Contains(ins.D, "Liquidación de Suscripción") {
 			id = strings.Split(ins.I, " - ")[1]
